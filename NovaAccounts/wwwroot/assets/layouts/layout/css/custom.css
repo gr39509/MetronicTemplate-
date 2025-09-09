@@ -1,0 +1,38 @@
+/* here you can put your own css to customize and override the theme */
+.bg-hoki {
+    color: #FFFFFF;
+    background-color: #67809F !important;
+}
+
+.bg-green-army {
+    color: #FFFFFF;
+    background-color: #26C281 !important;
+}
+
+.leadBold{
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.7;
+}
+.leadEdem{
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.7;
+}
+.miButton{
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.6;
+}
+a.nostyle{
+    text-decoration: none;
+    color: inherit;
+    cursor: auto;
+}
+
+a.nostyle:visited {
+    text-decoration: none;
+    color: inherit;
+    cursor: auto;
+}

@@ -1,0 +1,69 @@
+﻿@page "/"
+@using NovaAccounts.Components.Dashboard.Statistics
+@using NovaAccounts.Components.Dashboard.Table
+@using NovaAccounts.Components.Layout
+
+<PageTitle>Home</PageTitle>
+
+
+<!-- BEGIN CONTAINER -->
+<div class="page-container">
+    <SideMenu></SideMenu>
+
+    <!-- BEGIN CONTENT -->
+    <div class="page-content-wrapper">
+        <!-- BEGIN CONTENT BODY -->
+        <div class="page-content">
+            <!-- BEGIN PAGE HEADER-->
+            <!-- BEGIN PAGE BAR -->
+
+            <!-- END PAGE BAR -->
+            <!-- BEGIN PAGE TITLE-->
+            <h1 class="page-title">
+                @*<marquee style="color:red;">***Alert!!! This is a Novalotto test platform***</marquee>*@
+                <small></small>
+            </h1>
+            <!-- END PAGE TITLE-->
+            <!-- END PAGE HEADER-->
+            
+          <StatisticCard></StatisticCard>
+            <DataTable></DataTable>
+            <DetailsTable></DetailsTable>
+            
+         
+
+            <!-- Modal -->
+            <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="exampleModalLabel">Modal title</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            ...
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary">Save changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+        <!-- END CONTENT BODY -->
+    </div>
+    <!-- END CONTENT -->
+    <!-- BEGIN QUICK SIDEBAR -->
+    <a href="javascript:;" class="page-quick-sidebar-toggler">
+        <i class="icon-login"></i>
+    </a>
+    <div class="page-quick-sidebar-wrapper" data-close-on-body-click="false" id="activities">
+
+    </div>
+    <!-- END QUICK SIDEBAR -->
+</div>
+<!-- END CONTAINER -->
+

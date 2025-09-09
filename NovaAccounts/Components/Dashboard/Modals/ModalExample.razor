@@ -1,0 +1,276 @@
+@page "/modal-examples"
+@using NovaAccounts.Components.ModalFields
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Components.UsageModes
+@inject IJSRuntime JSRuntime
+
+<h3>Reusable Modal Examples</h3>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Simple Modal</h5>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#@simpleModal.Id">
+                    Launch Simple Modal
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Large Form Modal</h5>
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#@formModal.Id">
+                    Add New User
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Confirmation Modal</h5>
+                <button type="button" class="btn btn-danger" @onclick="ShowDeleteConfirmation">
+                    Delete Item
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Full Screen Modal</h5>
+                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#@fullScreenModal.Id">
+                    View Details
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simple Modal -->
+<ReusableModal Options="@simpleModal">
+    <BodyContent>
+        <p>This is a simple modal with default settings.</p>
+        <p>You can put any content here including forms, tables, images, etc.</p>
+    </BodyContent>
+</ReusableModal>
+
+<!-- Form Modal -->
+<ReusableModal Options="@formModal">
+    <BodyContent>
+        <EditForm Model="@newUser" OnValidSubmit="SaveUser">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">First Name</label>
+                    <InputText @bind-Value="newUser.FirstName" class="form-control" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Last Name</label>
+                    <InputText @bind-Value="newUser.LastName" class="form-control" />
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <InputText @bind-Value="newUser.Email" class="form-control" type="email" />
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Department</label>
+                    <InputSelect @bind-Value="newUser.Department" class="form-select">
+                        <option value="">Select Department</option>
+                        <option value="IT">IT</option>
+                        <option value="HR">HR</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Marketing">Marketing</option>
+                    </InputSelect>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Date of Birth</label>
+                    <InputDate @bind-Value="newUser.DateOfBirth" class="form-control" />
+                </div>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <InputCheckbox @bind-Value="newUser.IsActive" class="form-check-input" id="isActive" />
+                <label class="form-check-label" for="isActive">Active User</label>
+            </div>
+        </EditForm>
+    </BodyContent>
+</ReusableModal>
+
+<!-- Confirmation Modal -->
+<ReusableModal Options="@confirmationModal">
+    <BodyContent>
+        <div class="text-center">
+            <i class="fas fa-exclamation-triangle text-warning fs-1 mb-3"></i>
+            <h5>Are you sure you want to delete this item?</h5>
+            <p class="text-muted">This action cannot be undone.</p>
+        </div>
+    </BodyContent>
+</ReusableModal>
+
+<!-- Full Screen Modal -->
+<ReusableModal Options="@fullScreenModal">
+    <HeaderContent>
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <h1 class="modal-title fs-4">Product Catalog</h1>
+            <div>
+                <button type="button" class="btn btn-outline-secondary me-2">Export</button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+        </div>
+    </HeaderContent>
+    <BodyContent>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Category</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in products)
+                    {
+                        <tr>
+                            <td>@product.Id</td>
+                            <td>@product.Name</td>
+                            <td>@product.Description</td>
+                            <td>@product.Price.ToString("C")</td>
+                            <td>@product.Stock</td>
+                            <td>@product.Category</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private User newUser = new();
+    private List<Product> products = new();
+    private ModalOptions simpleModal = new();
+    private ModalOptions formModal = new();
+    private ModalOptions confirmationModal = new();
+    private ModalOptions fullScreenModal = new();
+
+    protected override void OnInitialized()
+    {
+        LoadSampleData();
+        ConfigureModals();
+    }
+
+    private void LoadSampleData()
+    {
+        products = new List<Product>
+        {
+            new() { Id = 1, Name = "Laptop", Description = "High-performance laptop", Price = 1299.99m, Stock = 15, Category = "Electronics" },
+            new() { Id = 2, Name = "Mouse", Description = "Wireless optical mouse", Price = 29.99m, Stock = 50, Category = "Accessories" },
+            new() { Id = 3, Name = "Keyboard", Description = "Mechanical gaming keyboard", Price = 89.99m, Stock = 25, Category = "Accessories" }
+        };
+    }
+
+    private void ConfigureModals()
+    {
+        // Simple Modal Configuration
+        simpleModal = new ModalOptions
+        {
+            Id = "simpleModal",
+            Title = "Simple Modal Example",
+            Size = ModalSize.Default,
+            FooterButtons = new List<ModalButton>
+            {
+                new() { Text = "Close", CssClass = "btn btn-secondary", CloseModal = true },
+                new() { Text = "Save", CssClass = "btn btn-primary", OnClick = EventCallback.Factory.Create(this, SaveSimpleModal) }
+            }
+        };
+
+        // Form Modal Configuration
+        formModal = new ModalOptions
+        {
+            Id = "formModal",
+            Title = "Add New User",
+            Size = ModalSize.Large,
+            FooterButtons = new List<ModalButton>
+            {
+                new() { Text = "Cancel", CssClass = "btn btn-outline-secondary", CloseModal = true },
+                new() { Text = "Save User", CssClass = "btn btn-success", Icon = "fas fa-save", OnClick = EventCallback.Factory.Create(this, SaveUser) }
+            }
+        };
+
+        // Confirmation Modal Configuration
+        confirmationModal = new ModalOptions
+        {
+            Id = "confirmationModal",
+            Title = "Confirm Deletion",
+            Size = ModalSize.Default,
+            Centered = true,
+            HeaderCssClass = "bg-danger text-white",
+            FooterButtons = new List<ModalButton>
+            {
+                new() { Text = "Cancel", CssClass = "btn btn-outline-secondary", CloseModal = true },
+                new() { Text = "Delete", CssClass = "btn btn-danger", Icon = "fas fa-trash", OnClick = EventCallback.Factory.Create(this, ConfirmDelete) }
+            }
+        };
+
+        // Full Screen Modal Configuration
+        fullScreenModal = new ModalOptions
+        {
+            Id = "fullScreenModal",
+            Title = "Product Catalog",
+            Size = ModalSize.FullScreen,
+            ShowFooter = false,
+            BodyCssClass = "p-4"
+        };
+    }
+
+    private async Task ShowDeleteConfirmation()
+    {
+        // You can also show modals programmatically
+        var modal = confirmationModal;
+        await JSRuntime.InvokeVoidAsync("showModal", modal.Id);
+    }
+
+    private async Task SaveSimpleModal()
+    {
+        // Handle simple modal save
+        Console.WriteLine("Simple modal saved!");
+        await JSRuntime.InvokeVoidAsync("hideModal", simpleModal.Id);
+    }
+
+    private async Task SaveUser()
+    {
+        // Handle user save
+        Console.WriteLine($"Saving user: {newUser.FirstName} {newUser.LastName}");
+        // Add your save logic here
+        
+        // Close modal after save
+        await JSRuntime.InvokeVoidAsync("hideModal", formModal.Id);
+        
+        // Reset form
+        newUser = new User();
+    }
+
+    private async Task ConfirmDelete()
+    {
+        // Handle deletion
+        Console.WriteLine("Item deleted!");
+        await JSRuntime.InvokeVoidAsync("hideModal", confirmationModal.Id);
+    }
+}

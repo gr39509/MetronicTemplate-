@@ -1,0 +1,371 @@
+@using NovaAccounts.Components.DataFields
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Components.UsageModes
+<h3>Transaction Management</h3>
+
+
+
+<ReusableDataTable TItem="Transaction" 
+                   Data="@transactions" 
+                   Columns="@transactionColumns"
+                   
+                   Options="@transactionOptions" />
+
+<h3 class="mt-5">Employee Management</h3>
+
+<ReusableDataTable TItem="Employee" 
+                   Data="@employees" 
+                   Columns="@employeeColumns" 
+                   Options="@employeeOptions" />
+
+@code {
+    private List<Transaction> transactions = new();
+    private List<Employee> employees = new();
+    private List<DataTableColumn> transactionColumns = new();
+    private List<DataTableColumn> employeeColumns = new();
+    private DataTableOptions transactionOptions = new();
+    private DataTableOptions employeeOptions = new();
+
+    protected override void OnInitialized()
+    {
+        LoadTransactionData();
+        LoadEmployeeData();
+        ConfigureTransactionTable();
+        ConfigureEmployeeTable();
+    }
+
+    private void LoadTransactionData()
+    {
+        transactions = new List<Transaction>
+        {
+            new() { TransDate = DateTime.Now.AddDays(-1), Amount = 1250.00m, Status = "Completed", Reference = "TXN001234" },
+            new() { TransDate = DateTime.Now.AddDays(-2), Amount = 750.50m, Status = "Pending", Reference = "TXN001235" },
+            new() { TransDate = DateTime.Now.AddDays(-3), Amount = 2100.00m, Status = "Completed", Reference = "TXN001236" },
+            new() { TransDate = DateTime.Now.AddDays(-4), Amount = 455.75m, Status = "Failed", Reference = "TXN001237" }
+        };
+    }
+
+    private void LoadEmployeeData()
+    {
+        employees = new List<Employee>
+        {
+            new() { Id = 1, FirstName = "John", LastName = "Doe", Email = "john.doe@company.com", Department = "IT", Salary = 75000, HireDate = DateTime.Now.AddYears(-2), IsActive = true },
+            new() { Id = 2, FirstName = "Jane", LastName = "Smith", Email = "jane.smith@company.com", Department = "HR", Salary = 65000, HireDate = DateTime.Now.AddYears(-1), IsActive = true },
+            new() { Id = 3, FirstName = "Bob", LastName = "Johnson", Email = "bob.johnson@company.com", Department = "Finance", Salary = 80000, HireDate = DateTime.Now.AddYears(-3), IsActive = false }
+        };
+    }
+
+    private void ConfigureTransactionTable()
+    {
+        transactionColumns = new List<DataTableColumn>
+        {
+            new() { Header = "TRANS DATE", PropertyName = nameof(Transaction.TransDate), DataType = "date"},
+            new() { 
+                Header = "AMOUNT", 
+                PropertyName = nameof(Transaction.Amount), 
+                DataType = "currency",
+                CustomRenderer = (item) => ((Transaction)item).Amount.ToString("C")
+            },
+            new() { 
+                Header = "STATUS", 
+                PropertyName = nameof(Transaction.Status), 
+                Sortable = false,
+                CustomRenderer = (item) => ((Transaction)item).StatusBadge
+            },
+            new() { Header = "REFERENCE", PropertyName = nameof(Transaction.Reference) },
+            new() { 
+                Header = "ACTION", 
+                PropertyName = "", 
+                Sortable = false, 
+                Searchable = false,
+                CustomRenderer = (item) => "<button class='btn btn-sm btn-outline-primary'>View</button>"
+            }
+        };
+
+        transactionOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            SearchPlaceholder = "Search Transactions",
+            TableId = "transactionTable",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "lead font-blue-ebonyclay"
+         
+        };
+    }
+
+    private void ConfigureEmployeeTable()
+    {
+        employeeColumns = new List<DataTableColumn>
+        {
+            new() { Header = "ID", PropertyName = nameof(Employee.Id), DataType = "number", Width = 80 },
+            new() { 
+                Header = "FULL NAME", 
+                PropertyName = nameof(Employee.FullName),
+                CustomRenderer = (item) => $"<strong>{((Employee)item).FullName}</strong>"
+            },
+            new() { Header = "EMAIL", PropertyName = nameof(Employee.Email) },
+            new() { Header = "DEPARTMENT", PropertyName = nameof(Employee.Department) },
+            new() { 
+                Header = "SALARY", 
+                PropertyName = nameof(Employee.Salary), 
+                DataType = "currency",
+                CustomRenderer = (item) => ((Employee)item).Salary.ToString("C")
+            },
+            new() { Header = "HIRE DATE", PropertyName = nameof(Employee.HireDate), DataType = "date" },
+            new() { 
+                Header = "STATUS", 
+                PropertyName = nameof(Employee.IsActive),
+                CustomRenderer = (item) => ((Employee)item).IsActive 
+                    ? "<span class='badge badge-success'>Active</span>" 
+                    : "<span class='badge badge-secondary'>Inactive</span>"
+            }
+        };
+
+        employeeOptions = new DataTableOptions
+        {
+            PageLength = 5,
+            LengthMenu = new[] { 5, 10, 20 },
+            LengthMenuLabels = new[] { "5", "10", "20" },
+            SearchPlaceholder = "Search Employees",
+            TableId = "employeeTable",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "lead font-blue-ebonyclay"
+        };
+    }
+}
+
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#transactionTable').DataTable({
+            // Basic configuration
+            "pageLength": 10,
+            "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
+            "searching": true,
+            "ordering": true,
+            "select": true,
+            "info": true,
+            "paging": true,
+
+            // Language customization
+            "language": {
+                "search": "Search Transactions:",
+                "lengthMenu": "Show _MENU_ transactions per page",
+                "info": "Showing _START_ to _END_ of _TOTAL_ transactions",
+                "infoEmpty": "No transactions found",
+                "infoFiltered": "(filtered from _MAX_ total transactions)",
+                "paginate": {
+                    "first": "First",
+                    "last": "Last",
+                    "next": "Next",
+                    "previous": "Previous"
+                },
+                "emptyTable": "No transaction data available",
+                "zeroRecords": "No matching transactions found"
+            },
+
+            // Column configuration
+            "columnDefs": [
+                {
+                    "targets": 0, // TRANS DATE column
+                    "type": "date"
+                },
+                {
+                    "targets": 1, // AMOUNT column
+                    "type": "currency"
+                },
+                {
+                    "targets": 4, // ACTION column
+                    "orderable": false,
+                    "searchable": false
+                }
+            ],
+
+            // Default sorting
+            "order": [[0, "desc"]], // Sort by date, newest first
+
+            // Responsive configuration
+            "responsive": true,
+
+            // DOM layout
+            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                "<'row'<'col-sm-12't>>" +
+                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+
+            // Additional features
+            "autoWidth": false,
+            "processing": true
+        });
+    });
+
+</script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#employeeTable').DataTable({
+            // Basic configuration
+            "pageLength": 10,
+            "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
+            "searching": true,
+            "ordering": true,
+            "select": true,
+            "info": true,
+            "paging": true,
+
+            // Language customization
+            "language": {
+                "search": "Search Transactions:",
+                "lengthMenu": "Show _MENU_ transactions per page",
+                "info": "Showing _START_ to _END_ of _TOTAL_ transactions",
+                "infoEmpty": "No transactions found",
+                "infoFiltered": "(filtered from _MAX_ total transactions)",
+                "paginate": {
+                    "first": "First",
+                    "last": "Last",
+                    "next": "Next",
+                    "previous": "Previous"
+                },
+                "emptyTable": "No transaction data available",
+                "zeroRecords": "No matching transactions found"
+            },
+
+            // Column configuration
+            "columnDefs": [
+                {
+                    "targets": 0, // TRANS DATE column
+                    "type": "date"
+                },
+                {
+                    "targets": 1, // AMOUNT column
+                    "type": "currency"
+                },
+                {
+                    "targets": 4, // ACTION column
+                    "orderable": false,
+                    "searchable": false
+                }
+            ],
+
+            // Default sorting
+            "order": [[0, "desc"]], // Sort by date, newest first
+
+            // Responsive configuration
+            "responsive": true,
+
+            // DOM layout
+            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                "<'row'<'col-sm-12't>>" +
+                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+
+            // Additional features
+            "autoWidth": false,
+            "processing": true
+        });
+    });
+
+</script>
+
+
+
+@* *@
+@* <div class="table-responsive table-responsive-sm"> *@
+@*     <table class="table table-striped no-footer" id="GlTable" data-page-length='10'> *@
+@*         <thead> *@
+@*         <tr class="leadBold bg-blue-chambray font-white"> *@
+@*             <th>TRANS DATE</th> *@
+@*             <th>AMOUNT</th> *@
+@*             <th>STATUS</th> *@
+@*             <th>REFERENCE</th> *@
+@*             <th>ACTION</th> *@
+@*         </tr> *@
+@*         </thead> *@
+@*         <tbody> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-15</td> *@
+@*             <td>$1,250.00</td> *@
+@*             <td><span class="badge badge-success">Completed</span></td> *@
+@*             <td>TXN001234</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-14</td> *@
+@*             <td>$750.50</td> *@
+@*             <td><span class="badge badge-warning">Pending</span></td> *@
+@*             <td>TXN001235</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-13</td> *@
+@*             <td>$2,100.00</td> *@
+@*             <td><span class="badge badge-success">Completed</span></td> *@
+@*             <td>TXN001236</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-12</td> *@
+@*             <td>$455.75</td> *@
+@*             <td><span class="badge badge-danger">Failed</span></td> *@
+@*             <td>TXN001237</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-11</td> *@
+@*             <td>$3,200.25</td> *@
+@*             <td><span class="badge badge-success">Completed</span></td> *@
+@*             <td>TXN001238</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-10</td> *@
+@*             <td>$875.00</td> *@
+@*             <td><span class="badge badge-info">Processing</span></td> *@
+@*             <td>TXN001239</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-09</td> *@
+@*             <td>$1,650.80</td> *@
+@*             <td><span class="badge badge-success">Completed</span></td> *@
+@*             <td>TXN001240</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-08</td> *@
+@*             <td>$520.30</td> *@
+@*             <td><span class="badge badge-warning">Pending</span></td> *@
+@*             <td>TXN001241</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-07</td> *@
+@*             <td>$2,850.00</td> *@
+@*             <td><span class="badge badge-success">Completed</span></td> *@
+@*             <td>TXN001242</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-06</td> *@
+@*             <td>$425.90</td> *@
+@*             <td><span class="badge badge-danger">Failed</span></td> *@
+@*             <td>TXN001243</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-05</td> *@
+@*             <td>$1,980.75</td> *@
+@*             <td><span class="badge badge-success">Completed</span></td> *@
+@*             <td>TXN001244</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         <tr class="lead font-blue-ebonyclay"> *@
+@*             <td>2024-01-04</td> *@
+@*             <td>$680.40</td> *@
+@*             <td><span class="badge badge-info">Processing</span></td> *@
+@*             <td>TXN001245</td> *@
+@*             <td><button class="btn btn-sm btn-outline-primary">View</button></td> *@
+@*         </tr> *@
+@*         </tbody> *@
+@*     </table> *@
+@* </div> *@
+
+

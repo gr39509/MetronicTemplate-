@@ -1,0 +1,174 @@
+@using NovaAccounts.Components.ModalFields
+@inject IJSRuntime JSRuntime
+
+<!-- Modal -->
+<div class="modal fade" id="@Options.Id" tabindex="-1" aria-labelledby="@($"{Options.Id}Label")" aria-hidden="true"
+     data-bs-backdrop="@(Options.Backdrop ? "true" : "false")" 
+     data-bs-keyboard="@(Options.Keyboard ? "true" : "false")">
+    <div class="modal-dialog @GetModalSizeClass() @(Options.Centered ? "modal-dialog-centered" : "") @(Options.Scrollable ? "modal-dialog-scrollable" : "")">
+        <div class="modal-content">
+            @if (Options.ShowHeader)
+            {
+                <div class="modal-header @Options.HeaderCssClass">
+                    @if (HeaderContent != null)
+                    {
+                        @HeaderContent
+                    }
+                    else
+                    {
+                        <h1 class="@Options.TitleCssClass" id="@($"{Options.Id}Label")">@Options.Title</h1>
+                    }
+                    @if (Options.ShowCloseButton)
+                    {
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    }
+                </div>
+            }
+            <div class="modal-body @Options.BodyCssClass">
+                @BodyContent
+            </div>
+            @if (Options.ShowFooter)
+            {
+                <div class="modal-footer @Options.FooterCssClass">
+                    @if (FooterContent != null)
+                    {
+                        @FooterContent
+                    }
+                    else
+                    {
+                        @foreach (var button in Options.FooterButtons)
+                        {
+                            <button type="button" 
+                                    class="@button.CssClass" 
+                                    @onclick="() => HandleButtonClick(button)"
+                                    disabled="@button.Disabled"
+                                    data-bs-dismiss="@(button.CloseModal ? "modal" : "")">
+                                @if (!string.IsNullOrEmpty(button.Icon))
+                                {
+                                    <i class="@button.Icon"></i>
+                                }
+                                @button.Text
+                            </button>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ModalOptions Options { get; set; } = new();
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+    [Parameter] public RenderFragment? BodyContent { get; set; }
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SetupModalEventListeners();
+        }
+    }
+
+    private async Task SetupModalEventListeners()
+    {
+        var dotNetRef = DotNetObjectReference.Create(this);
+        await JSRuntime.InvokeVoidAsync("setupModalEvents", Options.Id, dotNetRef);
+    }
+
+    [JSInvokable]
+    public async Task OnModalShow()
+    {
+        if (Options.OnShow.HasDelegate)
+            await Options.OnShow.InvokeAsync();
+    }
+
+    [JSInvokable]
+    public async Task OnModalHide()
+    {
+        if (Options.OnHide.HasDelegate)
+            await Options.OnHide.InvokeAsync();
+    }
+
+    [JSInvokable]
+    public async Task OnModalShown()
+    {
+        if (Options.OnShown.HasDelegate)
+            await Options.OnShown.InvokeAsync();
+    }
+
+    [JSInvokable]
+    public async Task OnModalHidden()
+    {
+        if (Options.OnHidden.HasDelegate)
+            await Options.OnHidden.InvokeAsync();
+    }
+
+    private async Task HandleButtonClick(ModalButton button)
+    {
+        if (button.OnClick.HasDelegate)
+        {
+            await button.OnClick.InvokeAsync();
+        }
+    }
+
+    private string GetModalSizeClass()
+    {
+        return Options.Size switch
+        {
+            ModalSize.Small => "modal-sm",
+            ModalSize.Large => "modal-lg",
+            ModalSize.ExtraLarge => "modal-xl",
+            ModalSize.FullScreen => "modal-fullscreen",
+            _ => ""
+        };
+    }
+
+    public async Task ShowAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("showModal", Options.Id);
+    }
+
+    public async Task HideAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal", Options.Id);
+    }
+}
+
+<script>
+    window.setupModalEvents = function (modalId, dotNetRef) {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            modalElement.addEventListener('show.bs.modal', function () {
+                dotNetRef.invokeMethodAsync('OnModalShow');
+            });
+
+            modalElement.addEventListener('hide.bs.modal', function () {
+                dotNetRef.invokeMethodAsync('OnModalHide');
+            });
+
+            modalElement.addEventListener('shown.bs.modal', function () {
+                dotNetRef.invokeMethodAsync('OnModalShown');
+            });
+
+            modalElement.addEventListener('hidden.bs.modal', function () {
+                dotNetRef.invokeMethodAsync('OnModalHidden');
+            });
+        }
+    };
+
+    window.showModal = function (modalId) {
+        const modal = new bootstrap.Modal(document.getElementById(modalId));
+        modal.show();
+    };
+
+    window.hideModal = function (modalId) {
+        const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+        if (modal) {
+            modal.hide();
+        }
+    };
+</script>
+
+

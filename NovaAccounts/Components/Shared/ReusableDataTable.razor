@@ -1,0 +1,133 @@
+@using System.Reflection
+@using System.Text.Json
+@using NovaAccounts.Components.DataFields
+@typeparam TItem
+@inject IJSRuntime JSRuntime
+
+<div class="table-responsive">
+    <table class="@Options.TableCssClass no-footer" id="@Options.TableId" data-page-length="@Options.PageLength">
+        <thead>
+            <tr class="@Options.HeaderCssClass">
+                @foreach (var column in Columns)
+                {
+                    <th style="@(column.Width > 0 ? $"width: {column.Width}px;" : "")" class="@column.CssClass">
+                        @column.Header
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Data)
+            {
+                <tr class="@Options.RowCssClass">
+                    @foreach (var column in Columns)
+                    {
+                        <td class="@column.CssClass">
+                            @if (column.CustomRenderer != null)
+                            {
+                                @((MarkupString)column.CustomRenderer(item))
+                            }
+                            else
+                            {
+                                @GetPropertyValue(item, column.PropertyName)
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<TItem> Data { get; set; } = new List<TItem>();
+    [Parameter] public List<DataTableColumn> Columns { get; set; } = new();
+    [Parameter] public DataTableOptions Options { get; set; } = new();
+    [Parameter] public EventCallback<TItem> OnRowClick { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeDataTable();
+        }
+    }
+
+    private async Task InitializeDataTable()
+    {
+        var columnDefs = Columns.Select((col, index) => new
+        {
+            targets = index,
+            type = col.DataType,
+            orderable = col.Sortable,
+            searchable = col.Searchable
+        }).ToArray();
+
+        var config = new
+        {
+            pageLength = Options.PageLength,
+            lengthMenu = new object[] { Options.LengthMenu, Options.LengthMenuLabels },
+            searching = Options.ShowSearch,
+            ordering = true,
+            info = Options.ShowInfo,
+            paging = Options.ShowPaging,
+            responsive = Options.Responsive,
+            autoWidth = false,
+            processing = true,
+            columnDefs = columnDefs,
+            language = new
+            {
+                search = $"{Options.SearchPlaceholder}:",
+                lengthMenu = "Show _MENU_ entries per page",
+                info = "Showing _START_ to _END_ of _TOTAL_ entries",
+                infoEmpty = "No entries found",
+                infoFiltered = "(filtered from _MAX_ total entries)",
+                paginate = new
+                {
+                    first = "First",
+                    last = "Last",
+                    next = "Next",
+                    previous = "Previous"
+                },
+                emptyTable = "No data available",
+                zeroRecords = "No matching records found"
+            },
+            dom = Options.ShowLengthMenu 
+                ? "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>><'row'<'col-sm-12't>><'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
+                : "<'row'<'col-sm-12'f>><'row'<'col-sm-12't>><'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
+        };
+
+        // Merge additional options
+        var finalConfig = JsonSerializer.Serialize(config);
+        var additionalOptionsJson = JsonSerializer.Serialize(Options.AdditionalOptions);
+        
+        await JSRuntime.InvokeVoidAsync("initializeDataTable", Options.TableId, finalConfig, additionalOptionsJson);
+    }
+
+    private object GetPropertyValue(TItem item, string propertyName)
+    {
+        if (item == null) return string.Empty;
+        
+        var property = typeof(TItem).GetProperty(propertyName);
+        if (property == null) return string.Empty;
+        
+        var value = property.GetValue(item);
+        return value?.ToString() ?? string.Empty;
+    }
+}
+<script>
+    window.initializeDataTable = function (tableId, configJson, additionalOptionsJson) {
+        try {
+            const config = JSON.parse(configJson);
+            const additionalOptions = JSON.parse(additionalOptionsJson);
+
+            // Merge additional options
+            const finalConfig = { ...config, ...additionalOptions };
+
+            // Initialize DataTable
+            $('#' + tableId).DataTable(finalConfig);
+        } catch (error) {
+            console.error('Error initializing DataTable:', error);
+        }
+    };
+</script>

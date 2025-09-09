@@ -1,0 +1,49 @@
+<div class="row margin-top-30">
+    <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+        <a class="dashboard-stat dashboard-stat-v2 @ColorClass" href="@Href" @onclick="OnClick" @onclick:preventDefault="@(!string.IsNullOrEmpty(Href))">
+            <div class="visual">
+                <i class="fa @IconClass"></i>
+            </div>
+            <div class="details">
+                <div class="number">
+                    @if (!string.IsNullOrEmpty(Currency))
+                    {
+                        <span class="lead">@Currency</span>
+                    }
+                    <span data-counter="@CounterType" data-value="@Value" id="@ElementId">@DisplayValue</span>
+                </div>
+                <div class="desc">@Description</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+
+
+@code {
+    [Parameter] public string IconClass { get; set; } = "fa-comments";
+    [Parameter] public string Currency { get; set; } = "GH₵";
+    [Parameter] public decimal Value { get; set; } = 0;
+    [Parameter] public string DisplayValue { get; set; } = "";
+    [Parameter] public string Description { get; set; } = "Total income";
+    [Parameter] public string ColorClass { get; set; } = "blue";
+    [Parameter] public string Href { get; set; } = "#";
+    [Parameter] public string ElementId { get; set; } = "";
+    [Parameter] public string CounterType { get; set; } = "counterup";
+    [Parameter] public EventCallback OnClick { get; set; }
+    
+    protected override void OnInitialized()
+    {
+        // Generate a unique ID if not provided
+        if (string.IsNullOrEmpty(ElementId))
+        {
+            ElementId = $"stat_{Guid.NewGuid().ToString("N")[..8]}";
+        }
+        
+        // Use Value as DisplayValue if DisplayValue is not set
+        if (string.IsNullOrEmpty(DisplayValue))
+        {
+            DisplayValue = Value.ToString("N0");
+        }
+    }
+}

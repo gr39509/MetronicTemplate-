@@ -1,0 +1,251 @@
+﻿@inherits LayoutComponentBase
+
+<!-- BEGIN HEAD -->
+<HeadContent>
+    <!-- jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <style>
+        .bg-blue-chambray {
+            background-color: #3e5875 !important;
+        }
+        .font-white {
+            color: white !important;
+        }
+        .font-blue-ebonyclay {
+            color: #324155;
+        }
+        .leadBold {
+            font-weight: bold;
+        }
+        .lead {
+            font-size: 1.1rem;
+        }
+        
+        /* Custom DataTables styling */
+        .dataTables_wrapper .dataTables_filter input {
+            margin-left: 0.5em;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        
+        .dataTables_wrapper .dataTables_length select {
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            padding: 3px;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #3e5875 !important;
+            color: white !important;
+            border-color: #3e5875 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #2d4560 !important;
+            color: white !important;
+            border-color: #2d4560 !important;
+        }
+
+        /* Status badges */
+        .badge-success { background-color: #28a745; }
+        .badge-warning { background-color: #ffc107; color: #212529; }
+        .badge-danger { background-color: #dc3545; }
+        .badge-info { background-color: #17a2b8; }
+
+      
+    </style>
+</HeadContent>
+<!-- END HEAD -->
+
+    <div class="page-wrapper">
+        <!-- BEGIN HEADER -->
+        <div class="page-header navbar navbar-fixed-top">
+            <!-- BEGIN HEADER INNER -->
+            <div class="page-header-inner ">
+                <!-- BEGIN LOGO -->
+                <div class="page-logo">
+                    <a href="/Home/">
+                        <img src="@Assets["/assets/layouts/layout/img/logo.png"]" alt="logo" class="logo-default" />
+                    </a>
+                    <div class="menu-toggler sidebar-toggler">
+                        <span></span>
+                    </div>
+                    <a></a>
+                </div>
+                <!-- END LOGO -->
+                <!-- BEGIN RESPONSIVE MENU TOGGLER -->
+                <a href="javascript:;" class="menu-toggler responsive-toggler" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span></span>
+                </a>
+                <!-- END RESPONSIVE MENU TOGGLER -->
+                <!-- BEGIN TOP NAVIGATION MENU -->
+                <div class="top-menu">
+                    <ul class="nav navbar-nav pull-right">
+                        <!-- BEGIN NOTIFICATION DROPDOWN -->
+                        <!-- DOC: Apply "dropdown-dark" class after "dropdown-extended" to change the dropdown styte -->
+                        <!-- DOC: Apply "dropdown-hoverable" class after below "dropdown" and remove data-toggle="dropdown" data-hover="dropdown" data-close-others="true" attributes to enable hover dropdown mode -->
+                        <!-- DOC: Remove "dropdown-hoverable" and add data-toggle="dropdown" data-hover="dropdown" data-close-others="true" attributes to the below A element with dropdown-toggle class -->
+                        <li class="dropdown dropdown-extended dropdown-notification" id="header_notification_bar">
+
+                        </li>
+                        <!-- END NOTIFICATION DROPDOWN -->
+                        <!-- BEGIN INBOX DROPDOWN -->
+                        <!-- DOC: Apply "dropdown-dark" class after below "dropdown-extended" to change the dropdown styte -->
+                        <li class="dropdown dropdown-extended dropdown-inbox" id="header_inbox_bar">
+                            <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
+                                <i class="icon-envelope-open"></i>
+                                <span class="badge badge-default"> 0 </span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                @*<li class="external">
+                                        <h3>
+                                            You have
+                                            <span class="bold">7 New</span> Messages
+                                        </h3>
+                                        <a href="app_inbox.html">view all</a>
+                                    </li>
+                                    <li>
+                                        <ul class="dropdown-menu-list scroller" style="height: 275px;" data-handle-color="#637283">
+                                            <li>
+                                                <a href="#">
+                                                    <span class="photo">
+                                                        <img src="~/assets/layouts/layout3/img/avatar2.jpg" class="img-circle" alt="">
+                                                    </span>
+                                                    <span class="subject">
+                                                        <span class="from"> Lisa Wong </span>
+                                                        <span class="time">Just Now </span>
+                                                    </span>
+                                                    <span class="message"> Vivamus sed auctor nibh congue nibh. auctor nibh auctor nibh... </span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#">
+                                                    <span class="photo">
+                                                        <img src="~/assets/layouts/layout3/img/avatar3.jpg" class="img-circle" alt="">
+                                                    </span>
+                                                    <span class="subject">
+                                                        <span class="from"> Richard Doe </span>
+                                                        <span class="time">16 mins </span>
+                                                    </span>
+                                                    <span class="message"> Vivamus sed congue nibh auctor nibh congue nibh. auctor nibh auctor nibh... </span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#">
+                                                    <span class="photo">
+                                                        <img src="~/assets/layouts/layout3/img/avatar1.jpg" class="img-circle" alt="">
+                                                    </span>
+                                                    <span class="subject">
+                                                        <span class="from"> Bob Nilson </span>
+                                                        <span class="time">2 hrs </span>
+                                                    </span>
+                                                    <span class="message"> Vivamus sed nibh auctor nibh congue nibh. auctor nibh auctor nibh... </span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#">
+                                                    <span class="photo">
+                                                        <img src="~/assets/layouts/layout3/img/avatar2.jpg" class="img-circle" alt="">
+                                                    </span>
+                                                    <span class="subject">
+                                                        <span class="from"> Lisa Wong </span>
+                                                        <span class="time">40 mins </span>
+                                                    </span>
+                                                    <span class="message"> Vivamus sed auctor 40% nibh congue nibh... </span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="#">
+                                                    <span class="photo">
+                                                        <img src="~/assets/layouts/layout3/img/avatar3.jpg" class="img-circle" alt="">
+                                                    </span>
+                                                    <span class="subject">
+                                                        <span class="from"> Richard Doe </span>
+                                                        <span class="time">46 mins </span>
+                                                    </span>
+                                                    <span class="message"> Vivamus sed congue nibh auctor nibh congue nibh. auctor nibh auctor nibh... </span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </li>*@
+                            </ul>
+                        </li>
+                        <!-- END INBOX DROPDOWN -->
+                        <!-- BEGIN TODO DROPDOWN -->
+                        <!-- DOC: Apply "dropdown-dark" class after below "dropdown-extended" to change the dropdown styte -->
+                        <li class="dropdown dropdown-extended dropdown-tasks" id="header_task_bar">
+                            <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
+                                <i class="icon-calendar"></i>
+                                <span class="badge badge-default"> 0 </span>
+                            </a>
+                            <ul class="dropdown-menu extended tasks" id="notificate"></ul>
+                        </li>
+                        <!-- END TODO DROPDOWN -->
+                        <!-- BEGIN USER LOGIN DROPDOWN -->
+                        <!-- DOC: Apply "dropdown-dark" class after below "dropdown-extended" to change the dropdown styte -->
+                       
+                        <!-- END USER LOGIN DROPDOWN -->
+                        <!-- BEGIN QUICK SIDEBAR TOGGLER -->
+                        <!-- DOC: Apply "dropdown-dark" class after below "dropdown-extended" to change the dropdown styte -->
+                        <li class="dropdown dropdown-quick-sidebar-toggler">
+                            <a href="javascript:;" class="dropdown-toggle">
+                                <i class="icon-logout"></i>
+                            </a>
+                        </li>
+                        <!-- END QUICK SIDEBAR TOGGLER -->
+                    </ul>
+                   
+                </div>
+                <!-- END TOP NAVIGATION MENU -->
+            </div>
+            <!-- END HEADER INNER -->
+        </div>
+        <!-- END HEADER -->
+        <!-- BEGIN HEADER & CONTENT DIVIDER -->
+        <div class="clearfix"> </div>
+        
+        @Body
+        <!-- END HEADER & CONTENT DIVIDER -->
+
+        
+        <!-- BEGIN FOOTER -->
+        <div class="page-footer">
+            <div class="page-footer-inner">
+                @DateTime.Now.Year &copy; Nova Accounting By
+                <a target="_blank" href="http://www.fnfictsolutions.com" style="text-decoration:none;" class="footer-inner font-yellow-casablanca">F&F ICT SOLUTIONS LTD</a>
+            </div>
+            <div class="scroll-to-top">
+                <i class="icon-arrow-up"></i>
+            </div>
+        </div>
+        <!-- END FOOTER -->
+    </div>
+
+
+  
+
+
+
+@* <div class="page"> *@
+@*     <div class="sidebar"> *@
+@*         <NavMenu/> *@
+@*     </div> *@
+@* *@
+@*     <main> *@
+@*         <div class="top-row px-4"> *@
+@*             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a> *@
+@*         </div> *@
+@* *@
+@*         <article class="content px-4"> *@
+@*             @Body *@
+@*         </article> *@
+@*     </main> *@
+@* </div> *@
+@* *@
+@* <div id="blazor-error-ui" data-nosnippet> *@
+@*     An unhandled error has occurred. *@
+@*     <a href="." class="reload">Reload</a> *@
+@*     <span class="dismiss">🗙</span> *@
+@* </div> *@
