@@ -1,53 +1,85 @@
 @using NovaAccounts.Components.ModalFields
 @inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<!-- Trigger Button (optional) -->
+@if (ShowTriggerButton)
+{
+    <button data-toggle="modal" data-target="#@ModalId" class="@TriggerButtonClass" type="button">
+        @if (!string.IsNullOrEmpty(TriggerButtonText))
+        {
+            <span>@TriggerButtonText</span>
+        }
+        @if (!string.IsNullOrEmpty(TriggerButtonIcon))
+        {
+            <i class="@TriggerButtonIcon"></i>
+        }
+        @if (TriggerButtonContent != null)
+        {
+            @TriggerButtonContent
+        }
+    </button>
+}
 
 <!-- Modal -->
-<div class="modal fade" id="@Options.Id" tabindex="-1" aria-labelledby="@($"{Options.Id}Label")" aria-hidden="true"
-     data-bs-backdrop="@(Options.Backdrop ? "true" : "false")" 
-     data-bs-keyboard="@(Options.Keyboard ? "true" : "false")">
-    <div class="modal-dialog @GetModalSizeClass() @(Options.Centered ? "modal-dialog-centered" : "") @(Options.Scrollable ? "modal-dialog-scrollable" : "")">
-        <div class="modal-content">
-            @if (Options.ShowHeader)
+<div class="modal fade" id="@ModalId" tabindex="-1" role="dialog" aria-labelledby="@(ModalId)Label" aria-hidden="true" data-backdrop="@(CloseOnBackdrop ? "true" : "static")">
+    <div class="modal-dialog @GetModalSizeClass() @AdditionalModalClasses" role="document">
+        <div class="modal-content @ContentClass">
+            
+            <!-- Header -->
+            @if (ShowHeader)
             {
-                <div class="modal-header @Options.HeaderCssClass">
+                <div class="modal-header @HeaderClass">
                     @if (HeaderContent != null)
                     {
                         @HeaderContent
                     }
                     else
                     {
-                        <h1 class="@Options.TitleCssClass" id="@($"{Options.Id}Label")">@Options.Title</h1>
+                        <h5 class="modal-title @TitleClass" id="@(ModalId)Label">@Title</h5>
                     }
-                    @if (Options.ShowCloseButton)
+                    
+                    @if (ShowCloseButton)
                     {
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="close @CloseButtonClass" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     }
                 </div>
             }
-            <div class="modal-body @Options.BodyCssClass">
-                @BodyContent
+
+            <!-- Body -->
+            <div class="modal-body @BodyClass" style="@BodyStyle">
+                @if (BodyContent != null)
+                {
+                    @BodyContent
+                }
+                else if (!string.IsNullOrEmpty(BodyText))
+                {
+                    <p>@BodyText</p>
+                }
             </div>
-            @if (Options.ShowFooter)
+
+            <!-- Footer -->
+            @if (ShowFooter)
             {
-                <div class="modal-footer @Options.FooterCssClass">
+                <div class="modal-footer @FooterClass">
                     @if (FooterContent != null)
                     {
                         @FooterContent
                     }
                     else
                     {
-                        @foreach (var button in Options.FooterButtons)
+                        @if (ShowCancelButton)
                         {
-                            <button type="button" 
-                                    class="@button.CssClass" 
-                                    @onclick="() => HandleButtonClick(button)"
-                                    disabled="@button.Disabled"
-                                    data-bs-dismiss="@(button.CloseModal ? "modal" : "")">
-                                @if (!string.IsNullOrEmpty(button.Icon))
-                                {
-                                    <i class="@button.Icon"></i>
-                                }
-                                @button.Text
+                            <button type="button" class="@CancelButtonClass" data-dismiss="modal">
+                                @CancelButtonText
+                            </button>
+                        }
+                        @if (ShowSaveButton)
+                        {
+                            <button type="button" class="@SaveButtonClass" @onclick="HandleSave" disabled="@SaveButtonDisabled">
+                                @SaveButtonText
                             </button>
                         }
                     }
@@ -58,117 +90,756 @@
 </div>
 
 @code {
-    [Parameter] public ModalOptions Options { get; set; } = new();
+    private string ModalId = Guid.NewGuid().ToString("N")[..8]; // Generate unique modal ID
+    private DotNetObjectReference<ReusableModal>? dotNetRef;
+    private IJSObjectReference? jsModule;
+
+    // Visibility (for programmatic control)
+    [Parameter] public bool IsVisible { get; set; } = false;
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    // Trigger Button
+    [Parameter] public bool ShowTriggerButton { get; set; } = true;
+    [Parameter] public string TriggerButtonText { get; set; } = "Open Modal";
+    [Parameter] public string TriggerButtonIcon { get; set; } = "";
+    [Parameter] public string TriggerButtonClass { get; set; } = "btn btn-primary";
+    [Parameter] public RenderFragment? TriggerButtonContent { get; set; }
+
+    // Modal Configuration
+    [Parameter] public string Title { get; set; } = "Modal Title";
+    [Parameter] public ModalSize Size { get; set; } = ModalSize.Large;
+    [Parameter] public bool CloseOnBackdrop { get; set; } = true;
+    [Parameter] public bool ShowHeader { get; set; } = true;
+    [Parameter] public bool ShowFooter { get; set; } = true;
+    [Parameter] public bool ShowCloseButton { get; set; } = true;
+
+    // Content
     [Parameter] public RenderFragment? HeaderContent { get; set; }
     [Parameter] public RenderFragment? BodyContent { get; set; }
     [Parameter] public RenderFragment? FooterContent { get; set; }
+    [Parameter] public string BodyText { get; set; } = "";
+
+    // Styling
+    [Parameter] public string AdditionalModalClasses { get; set; } = "";
+    [Parameter] public string ContentClass { get; set; } = "";
+    [Parameter] public string HeaderClass { get; set; } = "";
+    [Parameter] public string TitleClass { get; set; } = "";
+    [Parameter] public string BodyClass { get; set; } = "";
+    [Parameter] public string BodyStyle { get; set; } = "";
+    [Parameter] public string FooterClass { get; set; } = "";
+    [Parameter] public string CloseButtonClass { get; set; } = "";
+    
+    [Parameter] public string BodyFontSize { get; set; } = "";
+    [Parameter] public string BodyColor { get; set; } = "";
+    [Parameter] public string TitleColor { get; set; } = "";
+    [Parameter] public string TitleFontSize { get; set; } = "";
+    [Parameter] public string ButtonFontSize { get; set; } = "";
+
+    // Footer Buttons
+    [Parameter] public bool ShowCancelButton { get; set; } = true;
+    [Parameter] public bool ShowSaveButton { get; set; } = true;
+    [Parameter] public string CancelButtonText { get; set; } = "Close";
+    [Parameter] public string SaveButtonText { get; set; } = "Save changes";
+    [Parameter] public string CancelButtonClass { get; set; } = "btn btn-secondary";
+    [Parameter] public string SaveButtonClass { get; set; } = "btn btn-primary";
+    [Parameter] public bool SaveButtonDisabled { get; set; } = false;
+
+    // Events
+    [Parameter] public EventCallback OnOpen { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await SetupModalEventListeners();
+            dotNetRef = DotNetObjectReference.Create(this);
+            
+            // Initialize Bootstrap modal events
+            await JSRuntime.InvokeVoidAsync("eval", $@"
+                $('#{ModalId}').on('show.bs.modal', function (e) {{
+                    DotNet.invokeMethodAsync('{dotNetRef.Value.GetType().Assembly.GetName().Name}', 'OnModalShow', '{ModalId}');
+                }});
+                $('#{ModalId}').on('hidden.bs.modal', function (e) {{
+                    DotNet.invokeMethodAsync('{dotNetRef.Value.GetType().Assembly.GetName().Name}', 'OnModalHide', '{ModalId}');
+                }});
+            ");
+
+            // If programmatically set to visible, show the modal
+            if (IsVisible)
+            {
+                await ShowModal();
+            }
         }
     }
 
-    private async Task SetupModalEventListeners()
+    protected override async Task OnParametersSetAsync()
     {
-        var dotNetRef = DotNetObjectReference.Create(this);
-        await JSRuntime.InvokeVoidAsync("setupModalEvents", Options.Id, dotNetRef);
+        if (dotNetRef != null)
+        {
+            if (IsVisible)
+            {
+                await ShowModal();
+            }
+            else
+            {
+                await HideModal();
+            }
+        }
+    }
+
+    // Public methods for programmatic control
+    public async Task OpenModal()
+    {
+        await ShowModal();
+    }
+
+    public async Task CloseModal()
+    {
+        await HideModal();
+    }
+
+    private async Task ShowModal()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').modal('show');");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error showing modal: {ex.Message}");
+        }
+    }
+
+    private async Task HideModal()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').modal('hide');");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error hiding modal: {ex.Message}");
+        }
     }
 
     [JSInvokable]
     public async Task OnModalShow()
     {
-        if (Options.OnShow.HasDelegate)
-            await Options.OnShow.InvokeAsync();
+        IsVisible = true;
+        await IsVisibleChanged.InvokeAsync(IsVisible);
+        
+        if (OnOpen.HasDelegate)
+        {
+            await OnOpen.InvokeAsync();
+        }
+        
+        StateHasChanged();
     }
 
     [JSInvokable]
     public async Task OnModalHide()
     {
-        if (Options.OnHide.HasDelegate)
-            await Options.OnHide.InvokeAsync();
-    }
-
-    [JSInvokable]
-    public async Task OnModalShown()
-    {
-        if (Options.OnShown.HasDelegate)
-            await Options.OnShown.InvokeAsync();
-    }
-
-    [JSInvokable]
-    public async Task OnModalHidden()
-    {
-        if (Options.OnHidden.HasDelegate)
-            await Options.OnHidden.InvokeAsync();
-    }
-
-    private async Task HandleButtonClick(ModalButton button)
-    {
-        if (button.OnClick.HasDelegate)
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(IsVisible);
+        
+        if (OnClose.HasDelegate)
         {
-            await button.OnClick.InvokeAsync();
+            await OnClose.InvokeAsync();
         }
+        
+        StateHasChanged();
+    }
+
+    private async Task HandleSave()
+    {
+        if (OnSave.HasDelegate)
+        {
+            await OnSave.InvokeAsync();
+        }
+        // Note: Don't auto-close here - let parent decide
     }
 
     private string GetModalSizeClass()
     {
-        return Options.Size switch
+        return Size switch
         {
             ModalSize.Small => "modal-sm",
             ModalSize.Large => "modal-lg",
             ModalSize.ExtraLarge => "modal-xl",
             ModalSize.FullScreen => "modal-fullscreen",
-            _ => ""
+            ModalSize.FullScreenSmDown => "modal-fullscreen-sm-down",
+            ModalSize.FullScreenMdDown => "modal-fullscreen-md-down", 
+            ModalSize.FullScreenLgDown => "modal-fullscreen-lg-down",
+            ModalSize.FullScreenXlDown => "modal-fullscreen-xl-down",
+            _ => "" // Default/Medium
         };
     }
 
-    public async Task ShowAsync()
+    private string GetBodyStyle()
     {
-        await JSRuntime.InvokeVoidAsync("showModal", Options.Id);
+        var styles = new List<string>();
+        
+        // Add custom body style if provided
+        if (!string.IsNullOrEmpty(BodyStyle))
+        {
+            styles.Add(BodyStyle);
+        }
+        
+        // Add font styling for body content
+        styles.Add($"font-size: {BodyFontSize}");
+        styles.Add($"color: {BodyColor}");
+        styles.Add($"color:{TitleColor}");
+        styles.Add($"font-size:{TitleFontSize}");
+        styles.Add($"font-size:{ButtonFontSize}");
+        
+        return string.Join("; ", styles);
     }
 
-    public async Task HideAsync()
+    public async ValueTask DisposeAsync()
     {
-        await JSRuntime.InvokeVoidAsync("hideModal", Options.Id);
+        if (dotNetRef != null)
+        {
+            // Clean up Bootstrap modal events
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').off();");
+            }
+            catch { /* Ignore cleanup errors */ }
+            
+            dotNetRef.Dispose();
+        }
+
+        if (jsModule != null)
+        {
+            await jsModule.DisposeAsync();
+        }
     }
 }
 
-<script>
-    window.setupModalEvents = function (modalId, dotNetRef) {
-        const modalElement = document.getElementById(modalId);
-        if (modalElement) {
-            modalElement.addEventListener('show.bs.modal', function () {
-                dotNetRef.invokeMethodAsync('OnModalShow');
-            });
-
-            modalElement.addEventListener('hide.bs.modal', function () {
-                dotNetRef.invokeMethodAsync('OnModalHide');
-            });
-
-            modalElement.addEventListener('shown.bs.modal', function () {
-                dotNetRef.invokeMethodAsync('OnModalShown');
-            });
-
-            modalElement.addEventListener('hidden.bs.modal', function () {
-                dotNetRef.invokeMethodAsync('OnModalHidden');
-            });
-        }
-    };
-
-    window.showModal = function (modalId) {
-        const modal = new bootstrap.Modal(document.getElementById(modalId));
-        modal.show();
-    };
-
-    window.hideModal = function (modalId) {
-        const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
-        if (modal) {
-            modal.hide();
-        }
-    };
-</script>
 
 
+
+@* @using NovaAccounts.Components.ModalFields *@
+@* @inject IJSRuntime JSRuntime *@
+@* @implements IAsyncDisposable *@
+@* *@
+@* <!-- Trigger Button (optional) --> *@
+@* @if (ShowTriggerButton) *@
+@* { *@
+@*     <button data-toggle="modal" data-target="#@ModalId" class="@TriggerButtonClass" type="button"> *@
+@*         @if (!string.IsNullOrEmpty(TriggerButtonText)) *@
+@*         { *@
+@*             <span>@TriggerButtonText</span> *@
+@*         } *@
+@*         @if (!string.IsNullOrEmpty(TriggerButtonIcon)) *@
+@*         { *@
+@*             <i class="@TriggerButtonIcon"></i> *@
+@*         } *@
+@*         @if (TriggerButtonContent != null) *@
+@*         { *@
+@*             @TriggerButtonContent *@
+@*         } *@
+@*     </button> *@
+@* } *@
+@* *@
+@* <!-- Modal --> *@
+@* <div class="modal fade" id="@ModalId" tabindex="-1" role="dialog" aria-labelledby="@(ModalId)Label" aria-hidden="true" data-backdrop="@(CloseOnBackdrop ? "true" : "static")"> *@
+@*     <div class="modal-dialog @GetModalSizeClass() @AdditionalModalClasses" role="document"> *@
+@*         <div class="modal-content @ContentClass"> *@
+@*              *@
+@*             <!-- Header --> *@
+@*             @if (ShowHeader) *@
+@*             { *@
+@*                 <div class="modal-header @HeaderClass"> *@
+@*                     @if (HeaderContent != null) *@
+@*                     { *@
+@*                         @HeaderContent *@
+@*                     } *@
+@*                     else *@
+@*                     { *@
+@*                         <h5 class="modal-title @TitleClass" id="@(ModalId)Label">@Title</h5> *@
+@*                     } *@
+@*                      *@
+@*                     @if (ShowCloseButton) *@
+@*                     { *@
+@*                         <button type="button" class="close @CloseButtonClass" data-dismiss="modal" aria-label="Close"> *@
+@*                             <span aria-hidden="true">&times;</span> *@
+@*                         </button> *@
+@*                     } *@
+@*                 </div> *@
+@*             } *@
+@* *@
+@*             <!-- Body --> *@
+@*             <div class="modal-body @BodyClass" style="@BodyStyle"> *@
+@*                 @if (BodyContent != null) *@
+@*                 { *@
+@*                     @BodyContent *@
+@*                 } *@
+@*                 else if (!string.IsNullOrEmpty(BodyText)) *@
+@*                 { *@
+@*                     <p>@BodyText</p> *@
+@*                 } *@
+@*             </div> *@
+@* *@
+@*             <!-- Footer --> *@
+@*             @if (ShowFooter) *@
+@*             { *@
+@*                 <div class="modal-footer @FooterClass"> *@
+@*                     @if (FooterContent != null) *@
+@*                     { *@
+@*                         @FooterContent *@
+@*                     } *@
+@*                     else *@
+@*                     { *@
+@*                         @if (ShowCancelButton) *@
+@*                         { *@
+@*                             <button type="button" class="@CancelButtonClass" data-dismiss="modal"> *@
+@*                                 @CancelButtonText *@
+@*                             </button> *@
+@*                         } *@
+@*                         @if (ShowSaveButton) *@
+@*                         { *@
+@*                             <button type="button" class="@SaveButtonClass" @onclick="HandleSave" disabled="@SaveButtonDisabled"> *@
+@*                                 @SaveButtonText *@
+@*                             </button> *@
+@*                         } *@
+@*                     } *@
+@*                 </div> *@
+@*             } *@
+@*         </div> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* @code { *@
+@*     private string ModalId = Guid.NewGuid().ToString("N")[..8]; // Generate unique modal ID *@
+@*     private DotNetObjectReference<ReusableModal>? dotNetRef; *@
+@*     private IJSObjectReference? jsModule; *@
+@* *@
+@*     // Visibility (for programmatic control) *@
+@*     [Parameter] public bool IsVisible { get; set; } = false; *@
+@*     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; } *@
+@* *@
+@*     // Trigger Button *@
+@*     [Parameter] public bool ShowTriggerButton { get; set; } = true; *@
+@*     [Parameter] public string TriggerButtonText { get; set; } = "Open Modal"; *@
+@*     [Parameter] public string TriggerButtonIcon { get; set; } = ""; *@
+@*     [Parameter] public string TriggerButtonClass { get; set; } = "btn btn-primary"; *@
+@*     [Parameter] public RenderFragment? TriggerButtonContent { get; set; } *@
+@* *@
+@*     // Modal Configuration *@
+@*     [Parameter] public string Title { get; set; } = "Modal Title"; *@
+@*     [Parameter] public ModalSize Size { get; set; } = ModalSize.Large; *@
+@*     [Parameter] public bool CloseOnBackdrop { get; set; } = true; *@
+@*     [Parameter] public bool ShowHeader { get; set; } = true; *@
+@*     [Parameter] public bool ShowFooter { get; set; } = true; *@
+@*     [Parameter] public bool ShowCloseButton { get; set; } = true; *@
+@* *@
+@*     // Content *@
+@*     [Parameter] public RenderFragment? HeaderContent { get; set; } *@
+@*     [Parameter] public RenderFragment? BodyContent { get; set; } *@
+@*     [Parameter] public RenderFragment? FooterContent { get; set; } *@
+@*     [Parameter] public string BodyText { get; set; } = ""; *@
+@* *@
+@*     // Styling *@
+@*     [Parameter] public string AdditionalModalClasses { get; set; } = ""; *@
+@*     [Parameter] public string ContentClass { get; set; } = ""; *@
+@*     [Parameter] public string HeaderClass { get; set; } = ""; *@
+@*     [Parameter] public string TitleClass { get; set; } = ""; *@
+@*     [Parameter] public string BodyClass { get; set; } = ""; *@
+@*     [Parameter] public string BodyStyle { get; set; } = ""; *@
+@*     [Parameter] public string FooterClass { get; set; } = ""; *@
+@*     [Parameter] public string CloseButtonClass { get; set; } = ""; *@
+@* *@
+@*     // Footer Buttons *@
+@*     [Parameter] public bool ShowCancelButton { get; set; } = true; *@
+@*     [Parameter] public bool ShowSaveButton { get; set; } = true; *@
+@*     [Parameter] public string CancelButtonText { get; set; } = "Close"; *@
+@*     [Parameter] public string SaveButtonText { get; set; } = "Save changes"; *@
+@*     [Parameter] public string CancelButtonClass { get; set; } = "btn btn-secondary"; *@
+@*     [Parameter] public string SaveButtonClass { get; set; } = "btn btn-primary"; *@
+@*     [Parameter] public bool SaveButtonDisabled { get; set; } = false; *@
+@* *@
+@*     // Events *@
+@*     [Parameter] public EventCallback OnOpen { get; set; } *@
+@*     [Parameter] public EventCallback OnClose { get; set; } *@
+@*     [Parameter] public EventCallback OnSave { get; set; } *@
+@*     [Parameter] public EventCallback OnCancel { get; set; } *@
+@* *@
+@*     protected override async Task OnAfterRenderAsync(bool firstRender) *@
+@*     { *@
+@*         if (firstRender) *@
+@*         { *@
+@*             dotNetRef = DotNetObjectReference.Create(this); *@
+@*              *@
+@*             // Initialize Bootstrap modal events *@
+@*             await JSRuntime.InvokeVoidAsync("eval", $@" *@
+@*                 $('#{ModalId}').on('show.bs.modal', function (e) {{ *@
+@*                     DotNet.invokeMethodAsync('{dotNetRef.Value.GetType().Assembly.GetName().Name}', 'OnModalShow', '{ModalId}'); *@
+@*                 }}); *@
+@*                 $('#{ModalId}').on('hidden.bs.modal', function (e) {{ *@
+@*                     DotNet.invokeMethodAsync('{dotNetRef.Value.GetType().Assembly.GetName().Name}', 'OnModalHide', '{ModalId}'); *@
+@*                 }}); *@
+@*             "); *@
+@* *@
+@*             // If programmatically set to visible, show the modal *@
+@*             if (IsVisible) *@
+@*             { *@
+@*                 await ShowModal(); *@
+@*             } *@
+@*         } *@
+@*     } *@
+@* *@
+@*     protected override async Task OnParametersSetAsync() *@
+@*     { *@
+@*         if (dotNetRef != null) *@
+@*         { *@
+@*             if (IsVisible) *@
+@*             { *@
+@*                 await ShowModal(); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 await HideModal(); *@
+@*             } *@
+@*         } *@
+@*     } *@
+@* *@
+@*     // Public methods for programmatic control *@
+@*     public async Task OpenModal() *@
+@*     { *@
+@*         await ShowModal(); *@
+@*     } *@
+@* *@
+@*     public async Task CloseModal() *@
+@*     { *@
+@*         await HideModal(); *@
+@*     } *@
+@* *@
+@*     private async Task ShowModal() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').modal('show');"); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Console.WriteLine($"Error showing modal: {ex.Message}"); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task HideModal() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').modal('hide');"); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Console.WriteLine($"Error hiding modal: {ex.Message}"); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     [JSInvokable] *@
+@*     public async Task OnModalShow() *@
+@*     { *@
+@*         IsVisible = true; *@
+@*         await IsVisibleChanged.InvokeAsync(IsVisible); *@
+@*          *@
+@*         if (OnOpen.HasDelegate) *@
+@*         { *@
+@*             await OnOpen.InvokeAsync(); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     [JSInvokable] *@
+@*     public async Task OnModalHide() *@
+@*     { *@
+@*         IsVisible = false; *@
+@*         await IsVisibleChanged.InvokeAsync(IsVisible); *@
+@*          *@
+@*         if (OnClose.HasDelegate) *@
+@*         { *@
+@*             await OnClose.InvokeAsync(); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private async Task HandleSave() *@
+@*     { *@
+@*         if (OnSave.HasDelegate) *@
+@*         { *@
+@*             await OnSave.InvokeAsync(); *@
+@*         } *@
+@*         // Note: Don't auto-close here - let parent decide *@
+@*     } *@
+@* *@
+@*     private string GetModalSizeClass() *@
+@*     { *@
+@*         return Size switch *@
+@*         { *@
+@*             ModalSize.Small => "modal-dialog modal-sm", *@
+@*             ModalSize.Large => "modal-dialog modal-lg", *@
+@*             ModalSize.ExtraLarge => "modal-dialog modal-xl", *@
+@*             ModalSize.FullScreen => "modal-dialog modal-fullscreen", *@
+@*             ModalSize.FullScreenSmDown => "modal-dialog modal-fullscreen-sm-down", *@
+@*             ModalSize.FullScreenMdDown => "modal-dialog modal-fullscreen-md-down", *@
+@*             ModalSize.FullScreenLgDown => "modal-dialog modal-fullscreen-lg-down", *@
+@*             ModalSize.FullScreenXlDown => "modal-dialog modal-fullscreen-xl-down", *@
+@*             _ => "" // Default/Medium *@
+@*         }; *@
+@*     } *@
+@* *@
+@*     public async ValueTask DisposeAsync() *@
+@*     { *@
+@*         if (dotNetRef != null) *@
+@*         { *@
+@*             // Clean up Bootstrap modal events *@
+@*             try *@
+@*             { *@
+@*                 await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').off();"); *@
+@*             } *@
+@*             catch { /* Ignore cleanup errors */ } *@
+@*              *@
+@*             dotNetRef.Dispose(); *@
+@*         } *@
+@* *@
+@*         if (jsModule != null) *@
+@*         { *@
+@*             await jsModule.DisposeAsync(); *@
+@*         } *@
+@*     } *@
+@* } *@
+
+
+@* *@
+@* @using NovaAccounts.Components.ModalFields *@
+@* @inject IJSRuntime JSRuntime *@
+@* *@
+@* <!-- Trigger Button (optional) --> *@
+@* @if (ShowTriggerButton) *@
+@* { *@
+@*     <button @onclick="OpenModalHandler" class="@TriggerButtonClass" type="button"> *@
+@*         @if (!string.IsNullOrEmpty(TriggerButtonText)) *@
+@*         { *@
+@*             <span>@TriggerButtonText</span> *@
+@*         } *@
+@*         @if (!string.IsNullOrEmpty(TriggerButtonIcon)) *@
+@*         { *@
+@*             <i class="@TriggerButtonIcon"></i> *@
+@*         } *@
+@*         @if (TriggerButtonContent != null) *@
+@*         { *@
+@*             @TriggerButtonContent *@
+@*         } *@
+@*     </button> *@
+@* } *@
+@* *@
+@* <!-- Modal --> *@
+@* @if (IsVisible) *@
+@* { *@
+@*     <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1" role="dialog" @onclick="HandleBackdropClick"> *@
+@*         <div class="modal-dialog @GetModalSizeClass() @AdditionalModalClasses" role="document" @onclick:stopPropagation="true"> *@
+@*             <div class="modal-content @ContentClass"> *@
+@*                  *@
+@*                 <!-- Header --> *@
+@*                 @if (ShowHeader) *@
+@*                 { *@
+@*                     <div class="modal-header @HeaderClass"> *@
+@*                         @if (HeaderContent != null) *@
+@*                         { *@
+@*                             @HeaderContent *@
+@*                         } *@
+@*                         else *@
+@*                         { *@
+@*                             <h5 class="modal-title @TitleClass">@Title</h5> *@
+@*                         } *@
+@*                          *@
+@*                         @if (ShowCloseButton) *@
+@*                         { *@
+@*                             <button type="button" class="close @CloseButtonClass" @onclick="CloseModalHandler" aria-label="Close"> *@
+@*                                 <span aria-hidden="true">&times;</span> *@
+@*                             </button> *@
+@*                         } *@
+@*                     </div> *@
+@*                 } *@
+@* *@
+@*                 <!-- Body --> *@
+@*                 <div class="modal-body @BodyClass" style="@BodyStyle"> *@
+@*                     @if (BodyContent != null) *@
+@*                     { *@
+@*                         @BodyContent *@
+@*                     } *@
+@*                     else if (!string.IsNullOrEmpty(BodyText)) *@
+@*                     { *@
+@*                         <p>@BodyText</p> *@
+@*                     } *@
+@*                 </div> *@
+@* *@
+@*                 <!-- Footer --> *@
+@*                 @if (ShowFooter) *@
+@*                 { *@
+@*                     <div class="modal-footer @FooterClass"> *@
+@*                         @if (FooterContent != null) *@
+@*                         { *@
+@*                             @FooterContent *@
+@*                         } *@
+@*                         else *@
+@*                         { *@
+@*                             @if (ShowCancelButton) *@
+@*                             { *@
+@*                                 <button type="button" class="@CancelButtonClass" @onclick="HandleCancel"> *@
+@*                                     @CancelButtonText *@
+@*                                 </button> *@
+@*                             } *@
+@*                             @if (ShowSaveButton) *@
+@*                             { *@
+@*                                 <button type="button" class="@SaveButtonClass" @onclick="HandleSave" disabled="@SaveButtonDisabled"> *@
+@*                                     @SaveButtonText *@
+@*                                 </button> *@
+@*                             } *@
+@*                         } *@
+@*                     </div> *@
+@*                 } *@
+@*             </div> *@
+@*         </div> *@
+@*     </div> *@
+@* } *@
+@* *@
+@* @code { *@
+@*     // Visibility *@
+@*     [Parameter] public bool IsVisible { get; set; } = false; *@
+@*     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; } *@
+@* *@
+@*     // Trigger Button *@
+@*     [Parameter] public bool ShowTriggerButton { get; set; } = true; *@
+@*     [Parameter] public string TriggerButtonText { get; set; } = "Open Modal"; *@
+@*     [Parameter] public string TriggerButtonIcon { get; set; } = ""; *@
+@*     [Parameter] public string TriggerButtonClass { get; set; } = "btn btn-primary"; *@
+@*     [Parameter] public RenderFragment? TriggerButtonContent { get; set; } *@
+@* *@
+@*     // Modal Configuration *@
+@*     [Parameter] public string Title { get; set; } = "Modal Title"; *@
+@*     [Parameter] public ModalSize Size { get; set; } = ModalSize.Large; *@
+@*     [Parameter] public bool CloseOnBackdrop { get; set; } = true; *@
+@*     [Parameter] public bool ShowHeader { get; set; } = true; *@
+@*     [Parameter] public bool ShowFooter { get; set; } = true; *@
+@*     [Parameter] public bool ShowCloseButton { get; set; } = true; *@
+@* *@
+@*     // Content *@
+@*     [Parameter] public RenderFragment? HeaderContent { get; set; } *@
+@*     [Parameter] public RenderFragment? BodyContent { get; set; } *@
+@*     [Parameter] public RenderFragment? FooterContent { get; set; } *@
+@*     [Parameter] public string BodyText { get; set; } = ""; *@
+@* *@
+@*     // Styling *@
+@*     [Parameter] public string AdditionalModalClasses { get; set; } = ""; *@
+@*     [Parameter] public string ContentClass { get; set; } = ""; *@
+@*     [Parameter] public string HeaderClass { get; set; } = ""; *@
+@*     [Parameter] public string TitleClass { get; set; } = ""; *@
+@*     [Parameter] public string BodyClass { get; set; } = ""; *@
+@*     [Parameter] public string BodyStyle { get; set; } = ""; *@
+@*     [Parameter] public string FooterClass { get; set; } = ""; *@
+@*     [Parameter] public string CloseButtonClass { get; set; } = ""; *@
+@* *@
+@*     // Footer Buttons *@
+@*     [Parameter] public bool ShowCancelButton { get; set; } = true; *@
+@*     [Parameter] public bool ShowSaveButton { get; set; } = true; *@
+@*     [Parameter] public string CancelButtonText { get; set; } = "Close"; *@
+@*     [Parameter] public string SaveButtonText { get; set; } = "Save changes"; *@
+@*     [Parameter] public string CancelButtonClass { get; set; } = "btn btn-secondary"; *@
+@*     [Parameter] public string SaveButtonClass { get; set; } = "btn btn-primary"; *@
+@*     [Parameter] public bool SaveButtonDisabled { get; set; } = false; *@
+@* *@
+@*     // Events *@
+@*     [Parameter] public EventCallback OnOpen { get; set; } *@
+@*     [Parameter] public EventCallback OnClose { get; set; } *@
+@*     [Parameter] public EventCallback OnSave { get; set; } *@
+@*     [Parameter] public EventCallback OnCancel { get; set; } *@
+@* *@
+@*     // Public methods for external control *@
+@*     public async Task OpenModal() *@
+@*     { *@
+@*         await OpenModalHandler(); *@
+@*     } *@
+@* *@
+@*     public async Task CloseModal() *@
+@*     { *@
+@*         await CloseModalHandler(); *@
+@*     } *@
+@* *@
+@*     // Private event handlers *@
+@*     private async Task OpenModalHandler() *@
+@*     { *@
+@*         IsVisible = true; *@
+@*         await IsVisibleChanged.InvokeAsync(IsVisible); *@
+@*          *@
+@*         if (OnOpen.HasDelegate) *@
+@*         { *@
+@*             await OnOpen.InvokeAsync(); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private async Task CloseModalHandler() *@
+@*     { *@
+@*         IsVisible = false; *@
+@*         await IsVisibleChanged.InvokeAsync(IsVisible); *@
+@*          *@
+@*         if (OnClose.HasDelegate) *@
+@*         { *@
+@*             await OnClose.InvokeAsync(); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private async Task HandleBackdropClick() *@
+@*     { *@
+@*         if (CloseOnBackdrop) *@
+@*         { *@
+@*             await CloseModalHandler(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task HandleSave() *@
+@*     { *@
+@*         if (OnSave.HasDelegate) *@
+@*         { *@
+@*             await OnSave.InvokeAsync(); *@
+@*         } *@
+@*         // Note: Don't auto-close here - let parent decide *@
+@*     } *@
+@* *@
+@*     private async Task HandleCancel() *@
+@*     { *@
+@*         if (OnCancel.HasDelegate) *@
+@*         { *@
+@*             await OnCancel.InvokeAsync(); *@
+@*         } *@
+@*         await CloseModalHandler(); *@
+@*     } *@
+@* *@
+@*     private string GetModalSizeClass() *@
+@*     { *@
+@*         return Size switch *@
+@*         { *@
+@*             ModalSize.Small => "modal-sm", *@
+@*             ModalSize.Large => "modal-lg", *@
+@*             ModalSize.ExtraLarge => "modal-xl", *@
+@*             ModalSize.FullScreen => "modal-fullscreen", *@
+@*             ModalSize.FullScreenSmDown => "modal-fullscreen-sm-down", *@
+@*             ModalSize.FullScreenMdDown => "modal-fullscreen-md-down", *@
+@*             ModalSize.FullScreenLgDown => "modal-fullscreen-lg-down", *@
+@*             ModalSize.FullScreenXlDown => "modal-fullscreen-xl-down", *@
+@*             _ => "" // Default/Medium *@
+@*         }; *@
+@*     } *@
+@* } *@
+@* *@
+@* *@

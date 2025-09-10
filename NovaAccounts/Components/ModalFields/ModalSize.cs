@@ -1,10 +1,13 @@
 namespace NovaAccounts.Components.ModalFields;
-
 public enum ModalSize
 {
-    Small,      // modal-sm
-    Default,    // default size
-    Large,      // modal-lg
-    ExtraLarge, // modal-xl
-    FullScreen  // modal-fullscreen
+    Small,
+    Default,
+    Large,
+    ExtraLarge,
+    FullScreen,
+    FullScreenSmDown,
+    FullScreenMdDown,
+    FullScreenLgDown,
+    FullScreenXlDown
 }
