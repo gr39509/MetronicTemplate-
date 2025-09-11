@@ -1,0 +1,95 @@
+@typeparam TItem
+@using System.Reflection
+@using NovaAccounts.Components.DataFields
+
+<table class="table">
+    <tbody>
+        @if (DisplayItems != null)
+        {
+            @foreach (var item in DisplayItems)
+            {
+                <tr>
+                    <td class="bg-blue-chambray font-white" style="font-size: @LabelFontSize;">@item.Label</td>
+                    <td class="lead" style="font-size: @ValueFontSize;">@item.Value</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public List<DataDisplayItem>? Items { get; set; }
+    
+    // Alternative parameter for automatic property reflection
+    [Parameter] public TItem? Data { get; set; }
+    [Parameter] public Dictionary<string, string>? PropertyLabels { get; set; }
+    [Parameter] public List<string>? PropertiesToShow { get; set; }
+    [Parameter] public Func<object?, string>? ValueFormatter { get; set; }
+    
+    // Font size parameters
+    [Parameter] public string LabelFontSize { get; set; } = "14px";
+    [Parameter] public string ValueFontSize { get; set; } = "16px";
+
+    private List<DataDisplayItem> DisplayItems => Items ?? GenerateItemsFromData();
+
+    private List<DataDisplayItem> GenerateItemsFromData()
+    {
+        if (Data == null) return new List<DataDisplayItem>();
+
+        var properties = typeof(TItem).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        var items = new List<DataDisplayItem>();
+
+        foreach (var prop in properties)
+        {
+            // Skip if PropertiesToShow is specified and this property is not in the list
+            if (PropertiesToShow != null && !PropertiesToShow.Contains(prop.Name))
+                continue;
+
+            var value = prop.GetValue(Data);
+            var label = PropertyLabels?.GetValueOrDefault(prop.Name) ?? FormatPropertyName(prop.Name);
+            var formattedValue = ValueFormatter?.Invoke(value) ?? FormatValue(value, prop.PropertyType);
+
+            items.Add(new DataDisplayItem { Label = label, Value = formattedValue });
+        }
+
+        return items;
+    }
+
+    private string FormatPropertyName(string propertyName)
+    {
+        // Convert PascalCase to UPPER CASE with spaces
+        var result = System.Text.RegularExpressions.Regex.Replace(propertyName, "([A-Z])", " $1").Trim();
+        return result.ToUpperInvariant();
+    }
+
+    private string FormatValue(object? value, Type propertyType)
+    {
+        if (value == null) return string.Empty;
+
+        // Handle numeric formatting
+        if (IsNumericType(propertyType) && decimal.TryParse(value.ToString(), out var numericValue))
+        {
+            return numericValue.ToString("N");
+        }
+
+        return value.ToString() ?? string.Empty;
+    }
+
+    private bool IsNumericType(Type type)
+    {
+        return type == typeof(decimal) || type == typeof(decimal?) ||
+               type == typeof(double) || type == typeof(double?) ||
+               type == typeof(float) || type == typeof(float?) ||
+               type == typeof(int) || type == typeof(int?) ||
+               type == typeof(long) || type == typeof(long?);
+    }
+}
+
+
+
+
+
+
+
+
+

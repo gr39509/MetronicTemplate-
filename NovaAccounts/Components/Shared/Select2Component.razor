@@ -1,0 +1,231 @@
+
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@using NovaAccounts.Components.ModalFields
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<div class="form-group">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label for="@Id">@Label</label>
+    }
+    <select class="form-control" id="@Id" @onchange="HandleChange">
+        @if (ShowPlaceholder && !string.IsNullOrEmpty(Placeholder))
+        {
+            <option value="">@Placeholder</option>
+        }
+        @if (Options != null)
+        {
+            @foreach (var option in Options)
+            {
+                <option value="@option.Value" selected="@(option.Value == SelectedValue)">
+                    @option.Text
+                </option>
+            }
+        }
+        @ChildContent
+    </select>
+</div>
+
+<script>
+    window.blazorSelect2 = window.blazorSelect2 || {
+        components: {},
+        
+        initialize: function(elementId, options, dotNetRef) {
+            const element = document.getElementById(elementId);
+            if (!element) {
+                console.error('Element not found:', elementId);
+                return;
+            }
+
+            // Clean up any existing Select2 instance
+            if (window.blazorSelect2.components[elementId]) {
+                window.blazorSelect2.destroy(elementId);
+            }
+
+            // Wait for Select2 to be available
+            if (typeof $ === 'undefined' || typeof $.fn.select2 === 'undefined') {
+                console.error('jQuery or Select2 not loaded');
+                return;
+            }
+
+            try {
+                // Initialize Select2
+                $(element).select2(options);
+
+                // Store reference
+                window.blazorSelect2.components[elementId] = {
+                    element: element,
+                    dotNetRef: dotNetRef
+                };
+
+                // Handle change events
+                $(element).on('change.select2', function() {
+                    const value = $(this).val() || '';
+                    if (dotNetRef) {
+                        dotNetRef.invokeMethodAsync('NotifyValueChanged', value);
+                    }
+                });
+
+                console.log('Select2 initialized for:', elementId);
+            } catch (error) {
+                console.error('Error initializing Select2:', error);
+            }
+        },
+
+        setValue: function(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element && $(element).hasClass('select2-hidden-accessible')) {
+                $(element).val(value).trigger('change.select2');
+            }
+        },
+
+        clearSelection: function(elementId) {
+            const element = document.getElementById(elementId);
+            if (element && $(element).hasClass('select2-hidden-accessible')) {
+                $(element).val(null).trigger('change.select2');
+            }
+        },
+
+        destroy: function(elementId) {
+            const component = window.blazorSelect2.components[elementId];
+            if (component && component.element) {
+                try {
+                    $(component.element).off('change.select2');
+                    if ($(component.element).hasClass('select2-hidden-accessible')) {
+                        $(component.element).select2('destroy');
+                    }
+                } catch (error) {
+                    console.warn('Error destroying Select2:', error);
+                }
+                delete window.blazorSelect2.components[elementId];
+            }
+        }
+    };
+</script>
+
+@code {
+    private DotNetObjectReference<Select2Component>? dotNetRef;
+    private bool isInitialized = false;
+
+    [Parameter] public string Id { get; set; } = $"select2_{Guid.NewGuid():N}";
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; } = "Please select...";
+    [Parameter] public bool ShowPlaceholder { get; set; } = true;
+    [Parameter] public bool AllowClear { get; set; } = true;
+    [Parameter] public bool AllowSearch { get; set; } = true;
+    [Parameter] public string? SelectedValue { get; set; }
+    [Parameter] public EventCallback<string> SelectedValueChanged { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public List<SelectOption>? Options { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? DropdownParent { get; set; }
+    [Parameter] public string Theme { get; set; } = "bootstrap-4";
+    [Parameter] public string Width { get; set; } = "100%";
+    [Parameter] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isInitialized)
+        {
+            try
+            {
+                dotNetRef = DotNetObjectReference.Create(this);
+                
+                var options = new
+                {
+                    theme = Theme,
+                    width = Width,
+                    placeholder = Placeholder,
+                    allowClear = AllowClear,
+                    minimumResultsForSearch = AllowSearch ? 0 : -1,
+                    dropdownParent = DropdownParent
+                };
+
+                await JSRuntime.InvokeVoidAsync("blazorSelect2.initialize", Id, options, dotNetRef);
+                isInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing Select2: {ex.Message}");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task NotifyValueChanged(string value)
+    {
+        SelectedValue = value;
+        await SelectedValueChanged.InvokeAsync(value);
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? "";
+        SelectedValue = value;
+        await SelectedValueChanged.InvokeAsync(value);
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    public async Task SetValueAsync(string value)
+    {
+        if (isInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("blazorSelect2.setValue", Id, value);
+                SelectedValue = value;
+                await SelectedValueChanged.InvokeAsync(value);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error setting value: {ex.Message}");
+            }
+        }
+    }
+
+    public async Task ClearSelectionAsync()
+    {
+        if (isInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("blazorSelect2.clearSelection", Id);
+                SelectedValue = "";
+                await SelectedValueChanged.InvokeAsync("");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error clearing selection: {ex.Message}");
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (isInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("blazorSelect2.destroy", Id);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error disposing Select2: {ex.Message}");
+            }
+        }
+        dotNetRef?.Dispose();
+    }
+}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+
+<!-- Select2 CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+
+<!-- Select2 Bootstrap Theme (optional but recommended) -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+<!-- Select2 JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>

@@ -100,7 +100,7 @@
                             <h5>Employment Details</h5>
                             <div class="form-group">
                                 <label>Department</label>
-                                <select class="form-control">
+                                <select class="form-control select2">
                                     <option>HR</option>
                                     <option>IT</option>
                                     <option>Finance</option>
@@ -293,6 +293,19 @@
     // Add any necessary component logic here
 }
 
+
+@code {
+    private string selectedDepartment = "";
+    
+    private List<SelectOption> departmentOptions = new()
+    {
+        new SelectOption { Value = "hr", Text = "Human Resources" },
+        new SelectOption { Value = "it", Text = "Information Technology" },
+        new SelectOption { Value = "finance", Text = "Finance" },
+        new SelectOption { Value = "marketing", Text = "Marketing" },
+        new SelectOption { Value = "sales", Text = "Sales" }
+    };
+}
 
 
 @* @page "/modal-examples" *@

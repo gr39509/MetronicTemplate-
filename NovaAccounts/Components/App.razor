@@ -13,7 +13,7 @@
     <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
     <link href="@Assets["/assets/global/plugins/simple-line-icons/simple-line-icons.min.css"]" rel="stylesheet" type="text/css" />
     <link href="@Assets["/assets/global/plugins/bootstrap/css/bootstrap.min.css"]" rel="stylesheet" type="text/css" />
-    <link href="@Assets["/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css"]" rel="stylesheet" type="text/css" />
+    <link href="@Assets["/assets/global/plugins/bootstrap-switch/css/bootstrap4/bootstrap-switch.min.css"]" rel="stylesheet" type="text/css" />
     <link href="@Assets["/assets/global/plugins/bootstrap-toastr/toastr.min.css"]" rel="stylesheet" />
                <!-- END GLOBAL MANDATORY STYLES -->
     <!-- BEGIN PAGE LEVEL PLUGINS -->
@@ -41,14 +41,20 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/manifest.json">
+    @* <link rel="manifest" href="/manifest.json"> *@
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
-    <link href="@Assets["/assets/global/plugins/pace/themes/pace-them-center-cirlce.css"]" rel="stylesheet" />
+    <link href="@Assets["/assets/global/plugins/pace/themes/blue/pace-theme-center-circle.css"]" rel="stylesheet" />
     <link href="@Assets["/assets/global/plugins/datatables/datatables.min.css"]" rel="stylesheet" type="text/css" />
     
+    <!-- Select2 CSS -->
+    <link href="@Assets["/assets/global/plugins/select2/css/select2.min.css"]" rel="stylesheet"/>
+    <link href="@Assets["/app.css"]" rel="stylesheet"/>
+    
+    
+
     
     
     <ImportMap/>
@@ -59,65 +65,30 @@
 <body class="page-header-fixed page-header-top-fixed page-sidebar-closed-hide-logo page-content-white">
 <Routes/>
 
-    <script src="https://www.gstatic.com/firebasejs/5.5.5/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/5.5.5/firebase-messaging.js"></script>
-    <script>
-        // Initialize Firebase
-        var config = {
-            apiKey: "AIzaSyCQG9pQuMVFSq36JqMThgS4iQun_s3UDL8",
-            authDomain: "novaaccounting-8309f.firebaseapp.com",
-            databaseURL: "https://novaaccounting-8309f.firebaseio.com",
-            projectId: "novaaccounting-8309f",
-            storageBucket: "novaaccounting-8309f.appspot.com",
-            messagingSenderId: "12720319376"
-        };
-        firebase.initializeApp(config);
-        const messaging = firebase.messaging();
-        requestPermission();
-        function requestPermission() {
-            console.log('Requesting permission...');
-            // [START request_permission]
-            messaging.requestPermission().then(function () {
-                console.log('Notification permission granted.');
-                return messaging.getToken();
-            }).then(function (token) {
-                console.log(token);
-                var jqxhr = $.get("/Home/FirebaseToken?token=" + encodeURI(token),
-                    function (data) {
-                        console.log('From topic:', data);
-                    });
-            }).catch(function (err) {
-                console.log('Unable to get permission to notify.', err);
-            });
-            // [END request_permission]
-        }
-        messaging.onMessage(function (payload) {
-            console.log('Message received. ', payload);
-            FireToast(payload.notification);
-        });
-    </script>
-    <script src="@Assets["/assets/global/plugins/pace/pace.min.js"]"></script>
-  
-    <!-- BEGIN CORE PLUGINS -->
-    <script src="@Assets["/assets/global/plugins/jquery.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/global/plugins/bootstrap-toastr/toastr.min.js"]"></script>
-    <script src="@Assets["/assets/global/plugins/bootstrap/js/bootstrap.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/global/plugins/js.cookie.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/global/plugins/jquery.blockui.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js"]" type="text/javascript"></script>
-    
-    <!-- END CORE PLUGINS -->
-    <!-- BEGIN THEME GLOBAL SCRIPTS -->
-    <script src="@Assets["/assets/global/scripts/app.min.js"]" type="text/javascript"></script>
-    <!-- END THEME GLOBAL SCRIPTS -->
-    <!-- BEGIN THEME LAYOUT SCRIPTS -->
-    <script src="@Assets["/assets/layouts/layout/scripts/layout.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/layouts/layout/scripts/demo.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/layouts/global/scripts/quick-sidebar.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/layouts/global/scripts/quick-nav.min.js"]" type="text/javascript"></script>
-    <script src="@Assets["/assets/Scripts/jquery.signalR-2.2.2.js"]"></script>
-    <script src="@Assets["/assets/Scripts/activities.js"]"></script>
+<!-- BEGIN CORE PLUGINS -->
+<script src="@Assets["/assets/global/plugins/jquery.min.js"]" type="text/javascript"></script>
+<script src="@Assets["/assets/global/plugins/bootstrap-toastr/toastr.min.js"]"></script>
+<script src="@Assets["/assets/global/plugins/bootstrap/js/bootstrap.min.js"]" type="text/javascript"></script>
+<script src="@Assets["/assets/global/plugins/js.cookie.min.js"]" type="text/javascript"></script>
+<script src="@Assets["/assets/global/plugins/select2/js/select2.min.js"]" type="text/javascript"></script>
+@* <script src="@Assets["/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js"]" type="text/javascript"></script> *@
+@* <script src="@Assets["/assets/global/plugins/jquery.blockui.min.js"]" type="text/javascript"></script> *@
+<script src="@Assets["/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js"]" type="text/javascript"></script>
+<script src="@Assets["/assets/global/plugins/pace/pace.min.js"]"></script>
+<!-- END CORE PLUGINS -->
+<!-- BEGIN THEME GLOBAL SCRIPTS -->
+<script src="@Assets["/assets/global/scripts/app.min.js"]" type="text/javascript"></script>
+<!-- END THEME GLOBAL SCRIPTS -->
+<!-- BEGIN THEME LAYOUT SCRIPTS -->
+<script src="@Assets["/assets/layouts/layout/scripts/layout.min.js"]" type="text/javascript"></script>
+<script src="@Assets["/assets/layouts/layout/scripts/demo.min.js"]" type="text/javascript"></script>
+<script src="@Assets["/assets/layouts/global/scripts/quick-sidebar.min.js"]" type="text/javascript"></script>
+<script src="@Assets["/assets/layouts/global/scripts/quick-nav.min.js"]" type="text/javascript"></script>
+@* <script src="@Assets["/assets/Scripts/jquery.signalR-2.2.2.js"]"></script> *@
+
+
+
+
     @* <script type="text/javascript"> *@
     @*     function FireToast(payload) { *@
     @*         toastr.options = { *@

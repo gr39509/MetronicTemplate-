@@ -1,0 +1,131 @@
+
+.modal-xl {
+    max-width: 1140px !important;
+}
+
+.modal-lg {
+    max-width: 1000px !important;
+}
+
+.modal-sm {
+    max-width: 300px !important;
+}
+
+/* Fullscreen modal fixes */
+.modal-fullscreen {
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100vh !important;
+    margin: 0 !important;
+}
+
+.modal-fullscreen .modal-content {
+    height: 100vh !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+.modal-fullscreen .modal-body {
+    overflow-y: auto !important;
+    flex: 1 1 auto !important;
+}
+
+/* Responsive fullscreen modals */
+@media (max-width: 575.98px) {
+    .modal-fullscreen-sm-down {
+        width: 100vw !important;
+        max-width: none !important;
+        height: 100vh !important;
+        margin: 0 !important;
+    }
+
+    .modal-fullscreen-sm-down .modal-content {
+        height: 100vh !important;
+        border: none !important;
+        border-radius: 0 !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .modal-fullscreen-md-down {
+        width: 100vw !important;
+        max-width: none !important;
+        height: 100vh !important;
+        margin: 0 !important;
+    }
+
+    .modal-fullscreen-md-down .modal-content {
+        height: 100vh !important;
+        border: none !important;
+        border-radius: 0 !important;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .modal-fullscreen-lg-down {
+        width: 100vw !important;
+        max-width: none !important;
+        height: 100vh !important;
+        margin: 0 !important;
+    }
+
+    .modal-fullscreen-lg-down .modal-content {
+        height: 100vh !important;
+        border: none !important;
+        border-radius: 0 !important;
+    }
+}
+
+@media (max-width: 1199.98px) {
+    .modal-fullscreen-xl-down {
+        width: 100vw !important;
+        max-width: none !important;
+        height: 100vh !important;
+        margin: 0 !important;
+    }
+
+    .modal-fullscreen-xl-down .modal-content {
+        height: 100vh !important;
+        border: none !important;
+        border-radius: 0 !important;
+    }
+}
+
+/* Custom font size utilities */
+.modal-title-large {
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+}
+
+.modal-title-small {
+    font-size: 1rem !important;
+}
+
+.modal-body-large {
+    font-size: 1.125rem !important;
+}
+
+.modal-body-small {
+    font-size: 0.875rem !important;
+}
+
+/* Custom color utilities */
+.text-primary-custom {
+    color: #007bff !important;
+}
+
+.text-success-custom {
+    color: #28a745 !important;
+}
+
+.text-danger-custom {
+    color: #dc3545 !important;
+}
+
+.text-warning-custom {
+    color: #ffc107 !important;
+}
+
+.text-info-custom {
+    color: #17a2b8 !important;
+}

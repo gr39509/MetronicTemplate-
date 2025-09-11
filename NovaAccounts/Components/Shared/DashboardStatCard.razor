@@ -1,6 +1,6 @@
 <div class="row margin-top-30">
     <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
-        <a class="dashboard-stat dashboard-stat-v2 @ColorClass" href="@Href" @onclick="OnClick" @onclick:preventDefault="@(!string.IsNullOrEmpty(Href))">
+        <a class="dashboard-stat dashboard-stat-v2 position-relative @ColorClass" href="@Href" @onclick="OnClick" @onclick:preventDefault="@(!string.IsNullOrEmpty(Href))">
             <div class="visual">
                 <i class="fa @IconClass"></i>
             </div>
@@ -26,7 +26,7 @@
     [Parameter] public decimal Value { get; set; } = 0;
     [Parameter] public string DisplayValue { get; set; } = "";
     [Parameter] public string Description { get; set; } = "Total income";
-    [Parameter] public string ColorClass { get; set; } = "blue";
+    [Parameter] public string ColorClass { get; set; } = "white";
     [Parameter] public string Href { get; set; } = "#";
     [Parameter] public string ElementId { get; set; } = "";
     [Parameter] public string CounterType { get; set; } = "counterup";

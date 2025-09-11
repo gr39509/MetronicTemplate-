@@ -14,7 +14,7 @@
                     <ul class="page-sidebar-menu  page-header-fixed " data-keep-expanded="false" data-auto-scroll="true" data-slide-speed="200" style="padding-top: 20px">
                         <!-- DOC: To remove the sidebar toggler from the sidebar you just need to completely remove the below "sidebar-toggler-wrapper" LI element -->
                         <!-- BEGIN SIDEBAR TOGGLER BUTTON -->
-                        <li class="sidebar-toggler-wrapper hide">
+                        <li class="sidebar-toggler-wrapper hide" style="display: none">
                             <div class="sidebar-toggler">
                                 <span></span>
                             </div>
@@ -40,15 +40,134 @@
                             </form>
                             <!-- END RESPONSIVE QUICK SEARCH FORM -->
                         </li>
-                      
-                        <li >
-                            <div class="nav-item px-3">
-                                <NavLink class="nav-link" href="table">
-                                    <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-                                </NavLink>
-                            </div>
+                        
+                        <li aria-haspopup="true" class="dropdown-submenu ">
+                            <a href="javascript:;" class="nav-link nav-toggle ">
+                                <i class="icon-social-dribbble"></i> General
+                                <span class="arrow"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_about.html" class="nav-link ">
+                                        <i class="icon-info"></i> About
+                                    </a>
+                                </li>
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_contact.html" class="nav-link ">
+                                        <i class="icon-call-end"></i> Contact
+                                    </a>
+                                </li>
+                                <li aria-haspopup="true" class="dropdown-submenu ">
+                                    <a href="javascript:;" class="nav-link nav-toggle">
+                                        <i class="icon-notebook"></i> Portfolio
+                                        <span class="arrow"></span>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        <li class="">
+                                            <a href="page_general_portfolio_1.html" class="nav-link "> Portfolio 1 </a>
+                                        </li>
+                                        <li class="">
+                                            <a href="page_general_portfolio_2.html" class="nav-link "> Portfolio 2 </a>
+                                        </li>
+                                        <li class="">
+                                            <a href="page_general_portfolio_3.html" class="nav-link "> Portfolio 3 </a>
+                                        </li>
+                                        <li class="">
+                                            <a href="page_general_portfolio_4.html" class="nav-link "> Portfolio 4 </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li aria-haspopup="true" class="dropdown-submenu ">
+                                    <a href="javascript:;" class="nav-link nav-toggle">
+                                        <i class="icon-magnifier"></i> Search
+                                        <span class="arrow"></span>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        <li class="">
+                                            <a href="page_general_search.html" class="nav-link "> Search 1 </a>
+                                        </li>
+                                        <li class="">
+                                            <a href="page_general_search_2.html" class="nav-link "> Search 2 </a>
+                                        </li>
+                                        <li class="">
+                                            <a href="page_general_search_3.html" class="nav-link "> Search 3 </a>
+                                        </li>
+                                        <li class="">
+                                            <a href="page_general_search_4.html" class="nav-link "> Search 4 </a>
+                                        </li>
+                                        <li class="">
+                                            <a href="page_general_search_5.html" class="nav-link "> Search 5 </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_pricing.html" class="nav-link ">
+                                        <i class="icon-tag"></i> Pricing
+                                    </a>
+                                </li>
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_pricing_2.html" class="nav-link ">
+                                        <i class="icon-tag"></i> Pricing 2
+                                    </a>
+                                </li>
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_faq.html" class="nav-link ">
+                                        <i class="icon-wrench"></i> FAQ
+                                    </a>
+                                </li>
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_blog.html" class="nav-link ">
+                                        <i class="icon-pencil"></i> Blog
+                                    </a>
+                                </li>
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_blog_post.html" class="nav-link ">
+                                        <i class="icon-note"></i> Blog Post
+                                    </a>
+                                </li>
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_invoice.html" class="nav-link ">
+                                        <i class="icon-envelope"></i> Invoice
+                                    </a>
+                                </li>
+                                <li aria-haspopup="true" class=" ">
+                                    <a href="page_general_invoice_2.html" class="nav-link ">
+                                        <i class="icon-envelope"></i> Invoice 2
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                         
+                        
+                        <li class="dropdown">
+                            <a href="javascript:;" class="dropdown-toggle" data-toggle="dropdown">
+                                More
+                                <i class="fa fa-angle-down"></i>
+                            </a>
+                            <ul class="dropdown-menu pull-right">
+                                <li>
+                                    <a href="javascript:;" data-target="#quick_sidebar_tab_3" data-toggle="tab">
+                                        <i class="icon-bell"></i> Alerts
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="javascript:;" data-target="#quick_sidebar_tab_3" data-toggle="tab">
+                                        <i class="icon-info"></i> Notifications
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="javascript:;" data-target="#quick_sidebar_tab_3" data-toggle="tab">
+                                        <i class="icon-speech"></i> Activities
+                                    </a>
+                                </li>
+                                <li class="divider"></li>
+                                <li>
+                                    <a href="javascript:;" data-target="#quick_sidebar_tab_3" data-toggle="tab">
+                                        <i class="icon-settings"></i> Settings
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
                     </ul>
                   
                  
