@@ -11,9 +11,16 @@ public class DataTableOptions
     public bool ShowLengthMenu { get; set; } = true;
     public string SearchPlaceholder { get; set; } = "Search...";
     public string TableId { get; set; } = $"datatable_{Guid.NewGuid():N}";
-    public string TableCssClass { get; set; } = "table table-striped";
+    public string TableCssClass
+    {
+        get { return $"table {(Striped? "table-striped" : "" )}";}
+        set => TableCssClass = value;
+    }
     public string HeaderCssClass { get; set; } = "leadBold bg-blue-chambray font-white";
     public string RowCssClass { get; set; } = "lead font-blue-ebonyclay";
     public bool Responsive { get; set; } = true;
+    public bool Striped { get; set; } = false;
+    
+    
     public Dictionary<string, object> AdditionalOptions { get; set; } = new();
 }

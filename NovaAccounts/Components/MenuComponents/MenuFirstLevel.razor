@@ -1,0 +1,35 @@
+@inherits MenuBase
+
+<li class="@GetNavItemClass()">
+    <a href="javascript:;" class="nav-link nav-toggle">
+        <i class="@Icon"></i>
+        <span class="title">@Text</span>
+        <span class="@GetSelectedClass()"></span>
+        <span class="@GetArrowClass()"></span>
+    </a>
+    <ul class="sub-menu">
+        @ChildContent
+    </ul>
+</li>
+
+@code {
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public string Icon { get; set; } = "";
+    [Parameter] public List<string> Controllers { get; set; } = new();
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string GetNavItemClass()
+    {
+        return IsControllerActive(Controllers) ? "nav-item active open" : "nav-item";
+    }
+
+    private string GetSelectedClass()
+    {
+        return IsControllerActive(Controllers) ? "selected" : "";
+    }
+
+    private string GetArrowClass()
+    {
+        return IsControllerActive(Controllers) ? "arrow open" : "arrow";
+    }
+}

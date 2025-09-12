@@ -1,4 +1,6 @@
-﻿            <!-- BEGIN SIDEBAR -->
+﻿@using NovaAccounts.Components.MenuComponents
+@using NovaAccounts.Components.MenuComponents.Links
+            <!-- BEGIN SIDEBAR -->
             <div class="page-sidebar-wrapper">
                 <!-- BEGIN SIDEBAR -->
                 <!-- DOC: Set data-auto-scroll="false" to disable the sidebar from auto scrolling/focusing -->
@@ -40,7 +42,15 @@
                             </form>
                             <!-- END RESPONSIVE QUICK SEARCH FORM -->
                         </li>
-                        
+                        <!-- Direct Blazor equivalents of your MVC helpers -->
+                        <MenuFirstLevelLink Text="INVOICES" Path="/" Icon="icon-calculator" />
+                        <MenuFirstLevelLink Text="RECEIPTS"  Path="receipts" Icon="icon-docs" />
+                        <MenuFirstLevelLink Text="DEPOSITS"  Path="Deposits" Icon="icon-briefcase" />
+                        <MenuFirstLevelLink Text="PAYMENTS"  Path="Payments" Icon="icon-wallet" />
+                        <MenuFirstLevel Text="CBS Clients" Icon="fa fa-users" Controllers="@(new List<string> { "cbsClients" })">
+                            <SubMenuLink Text="All Clients"  Path="/" />
+                            <SubMenuLink Text="Add Client" Path="cbsClients" />
+                        </MenuFirstLevel>
                         <li aria-haspopup="true" class="dropdown-submenu ">
                             <a href="javascript:;" class="nav-link nav-toggle ">
                                 <i class="icon-social-dribbble"></i> General

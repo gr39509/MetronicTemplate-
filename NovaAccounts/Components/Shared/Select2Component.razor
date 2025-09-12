@@ -1,4 +1,3 @@
-
 @using Microsoft.AspNetCore.Components
 @using Microsoft.JSInterop
 @using NovaAccounts.Components.ModalFields
@@ -10,7 +9,7 @@
     {
         <label for="@Id">@Label</label>
     }
-    <select class="form-control" id="@Id" @onchange="HandleChange">
+    <select class="form-control select2" id="@Id" @onchange="HandleChange">
         @if (ShowPlaceholder && !string.IsNullOrEmpty(Placeholder))
         {
             <option value="">@Placeholder</option>
@@ -29,80 +28,12 @@
 </div>
 
 <script>
-    window.blazorSelect2 = window.blazorSelect2 || {
-        components: {},
-        
-        initialize: function(elementId, options, dotNetRef) {
-            const element = document.getElementById(elementId);
-            if (!element) {
-                console.error('Element not found:', elementId);
-                return;
-            }
-
-            // Clean up any existing Select2 instance
-            if (window.blazorSelect2.components[elementId]) {
-                window.blazorSelect2.destroy(elementId);
-            }
-
-            // Wait for Select2 to be available
-            if (typeof $ === 'undefined' || typeof $.fn.select2 === 'undefined') {
-                console.error('jQuery or Select2 not loaded');
-                return;
-            }
-
-            try {
-                // Initialize Select2
-                $(element).select2(options);
-
-                // Store reference
-                window.blazorSelect2.components[elementId] = {
-                    element: element,
-                    dotNetRef: dotNetRef
-                };
-
-                // Handle change events
-                $(element).on('change.select2', function() {
-                    const value = $(this).val() || '';
-                    if (dotNetRef) {
-                        dotNetRef.invokeMethodAsync('NotifyValueChanged', value);
-                    }
-                });
-
-                console.log('Select2 initialized for:', elementId);
-            } catch (error) {
-                console.error('Error initializing Select2:', error);
-            }
-        },
-
-        setValue: function(elementId, value) {
-            const element = document.getElementById(elementId);
-            if (element && $(element).hasClass('select2-hidden-accessible')) {
-                $(element).val(value).trigger('change.select2');
-            }
-        },
-
-        clearSelection: function(elementId) {
-            const element = document.getElementById(elementId);
-            if (element && $(element).hasClass('select2-hidden-accessible')) {
-                $(element).val(null).trigger('change.select2');
-            }
-        },
-
-        destroy: function(elementId) {
-            const component = window.blazorSelect2.components[elementId];
-            if (component && component.element) {
-                try {
-                    $(component.element).off('change.select2');
-                    if ($(component.element).hasClass('select2-hidden-accessible')) {
-                        $(component.element).select2('destroy');
-                    }
-                } catch (error) {
-                    console.warn('Error destroying Select2:', error);
-                }
-                delete window.blazorSelect2.components[elementId];
-            }
-        }
-    };
+    $(function initSelect2 () {
+        //Initialize Select2 Elements
+        $('.select2').select2({
+            minimumResultsForSearch : 1,
+        })
+    })
 </script>
 
 @code {
@@ -218,14 +149,6 @@
         }
         dotNetRef?.Dispose();
     }
+    
+    
 }
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
-
-<!-- Select2 CSS -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
-
-<!-- Select2 Bootstrap Theme (optional but recommended) -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-5-theme/1.3.0/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-
-<!-- Select2 JS -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>

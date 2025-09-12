@@ -130,4 +130,26 @@
             console.error('Error initializing DataTable:', error);
         }
     };
+
+
+
 </script>
+
+<style>
+    .table-responsive .dt-search{
+        display: flex;
+        align-items: center;
+        justify-content: end;
+        gap: 16px;
+    }
+    .table-responsive .table>:not(caption)>*>*{
+        background-color: unset;
+        color: unset;
+    }
+    .table-responsive table.dataTable th.dt-type-numeric, table.dataTable th.dt-type-date, table.dataTable td.dt-type-numeric, table.dataTable td.dt-type-date {
+        text-align: left;
+    }
+    .table-responsive .dt-container > div.row:first-of-type{
+        margin-bottom: 16px;
+    }
+</style>

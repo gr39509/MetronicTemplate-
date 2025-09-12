@@ -1,0 +1,23 @@
+@inherits MenuBase
+
+<li class="@GetNavItemClass()">
+    <a href="@Path" class="nav-link">
+        <span class="title">@Text</span>
+        <span class="@GetSelectedClass()"></span>
+    </a>
+</li>
+
+@code {
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public string Path { get; set; } = "";
+
+    private string GetNavItemClass()
+    {
+        return IsCurrentPage(Path) ? "nav-item active open" : "nav-item";
+    }
+
+    private string GetSelectedClass()
+    {
+        return IsCurrentPage(Path) ? "selected" : "";
+    }
+}

@@ -7,22 +7,29 @@
 <div class="row mb-4">
     <!-- Example 1: Small Modal with Custom Colors -->
     <div class="col-md-6">
+        <Select2Component 
+            Label="Department"
+            @bind-SelectedValue="selectedDepartment">
+            <option value="hr">HR</option>
+            <option value="it">IT</option>
+            <option value="finance">Finance</option>
+        </Select2Component>
         <h4>1. Small Modal with Custom Title</h4>
         <ReusableModal Title="Quick Action"
-                      TriggerButtonText="Small Modal"
-                      TriggerButtonClass="btn btn-info"
-                      ShowTriggerButton="true"
-                      Size="ModalSize.Small"
-                      TitleFontSize="1.5rem"
-                      TitleColor="#007bff"
-                      BodyFontSize="0.9rem"
-                      BodyColor="#495057"
-                      ButtonFontSize="0.8rem">
+                       TriggerButtonText="Small Modal"
+                       TriggerButtonClass="btn btn-info"
+                       ShowTriggerButton="true"
+                       Size="ModalSize.Small"
+                       TitleFontSize="1.5rem"
+                       TitleColor="#007bff"
+                       BodyFontSize="0.9rem"
+                       BodyColor="#495057"
+                       ButtonFontSize="0.8rem">
             <BodyContent>
                 <p>This is a small modal with custom styling.</p>
                 <div class="form-group">
                     <label>Quick Input:</label>
-                    <input type="text" class="form-control" placeholder="Enter value" />
+                    <input type="text" class="form-control" placeholder="Enter value"/>
                 </div>
             </BodyContent>
         </ReusableModal>
@@ -98,14 +105,21 @@
                         
                         <div class="col-md-4">
                             <h5>Employment Details</h5>
-                            <div class="form-group">
-                                <label>Department</label>
-                                <select class="form-control select2">
-                                    <option>HR</option>
-                                    <option>IT</option>
-                                    <option>Finance</option>
-                                </select>
-                            </div>
+                            <Select2Component 
+                                Label="Department"
+                                @bind-SelectedValue="selectedDepartment">
+                                <option value="hr">HR</option>
+                                <option value="it">IT</option>
+                                <option value="finance">Finance</option>
+                            </Select2Component>
+                            @* <div class="form-group"> *@
+                            @*     <label>Department</label> *@
+                            @*     <select class="form-control select2" style="width: 100%;"> *@
+                            @*         <option>HR</option> *@
+                            @*         <option>IT</option> *@
+                            @*         <option>Finance</option> *@
+                            @*     </select> *@
+                            @* </div> *@
                             <div class="form-group">
                                 <label>Position</label>
                                 <input type="text" class="form-control" />
