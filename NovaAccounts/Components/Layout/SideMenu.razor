@@ -44,11 +44,11 @@
                         </li>
                         <!-- Direct Blazor equivalents of your MVC helpers -->
                         <MenuFirstLevelLink Text="INVOICES" Path="/" Icon="icon-calculator" />
-                        <MenuFirstLevelLink Text="RECEIPTS"  Path="receipts" Icon="icon-docs" />
+                        <MenuFirstLevelLink Text="RECEIPTS"  Path="/" Icon="icon-docs" />
                         <MenuFirstLevelLink Text="DEPOSITS"  Path="Deposits" Icon="icon-briefcase" />
                         <MenuFirstLevelLink Text="PAYMENTS"  Path="Payments" Icon="icon-wallet" />
                         <MenuFirstLevel Text="CBS Clients" Icon="fa fa-users" Controllers="@(new List<string> { "cbsClients" })">
-                            <SubMenuLink Text="All Clients"  Path="/" />
+                            <SubMenuLink Text="All Clients"  Path="/clients" />
                             <SubMenuLink Text="Add Client" Path="cbsClients" />
                         </MenuFirstLevel>
                         <li aria-haspopup="true" class="dropdown-submenu ">

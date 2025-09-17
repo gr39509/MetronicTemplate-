@@ -1,0 +1,222 @@
+@page "/simplelogin"
+@using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Headers
+@using System.Security.Claims
+@using NovaAccounts.Components.Layout
+@using NovaAccounts.Models.Account
+@using NovaAccounts.Services.AuthService
+@inject IHttpClientFactory HttpClientFactory
+@inject TokenProvider TokenProvider
+@inject AuthenticationService AuthService
+@inject NavigationManager Navigation
+@layout AccountLayout
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="login-card">
+                <h2 class="text-center login-title">Welcome Back</h2>
+                
+                <EditForm Model="loginModel" OnValidSubmit="SignIn" FormName="SimpleLoginForm" Enhance="false">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger mb-3" />
+                    
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            @errorMessage
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(debugMessage))
+                    {
+                        <div class="alert alert-info">
+                            @debugMessage
+                        </div>
+                    }
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <InputText @bind-Value="loginModel.Email" 
+                                  class="form-control" 
+                                  placeholder="Enter your email" 
+                                  type="email" />
+                        <ValidationMessage For="@(() => loginModel.Email)" class="text-danger small mt-1" />
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Password</label>
+                        <InputText @bind-Value="loginModel.Password" 
+                                  class="form-control" 
+                                  placeholder="Enter your password" 
+                                  type="password" />
+                        <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small mt-1" />
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-login" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Signing in...</span>
+                            }
+                            else
+                            {
+                                <span>Sign In</span>
+                            }
+                        </button>
+                    </div>
+                    
+                    <!-- Test buttons for different API formats -->
+                    <div class="d-grid mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="TestDifferentFormats" disabled="@isLoading">
+                            Test Different API Formats
+                        </button>
+                    </div>
+                </EditForm>
+                
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        Debug Info: Email = '@loginModel?.Email', Password = '@loginModel?.Password'
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        padding: 40px;
+        max-width: 400px;
+        width: 100%;
+    }
+    .btn-login {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        color: white;
+    }
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 12px 15px;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .login-title {
+        color: #333;
+        margin-bottom: 30px;
+    }
+</style>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginModel? loginModel { get; set; }
+
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private string debugMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        loginModel ??= new LoginModel();
+        debugMessage = "Component initialized";
+    }
+
+    private async Task SignIn()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        debugMessage = "Attempting login...";
+        StateHasChanged(); // Force UI update to show loading state
+        
+        try
+        {
+            var apiResponse = await AuthService.LoginAsync(loginModel);
+
+            if (apiResponse != null && apiResponse.Status == 200 &&
+                !string.IsNullOrEmpty(apiResponse.Payload?.AuthResponse?.AccessToken))
+            {
+                // Save tokens
+                TokenProvider.accesstoken = apiResponse.Payload.AuthResponse.AccessToken;
+                TokenProvider.refreshtoken = apiResponse.Payload.AuthResponse.RefreshToken;
+
+                // Build ClaimsPrincipal
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, loginModel.Email),
+                    new Claim(ClaimTypes.Email, loginModel.Email)
+                };
+
+                var identity = new ClaimsIdentity(claims, "apiauth");
+                var principal = new ClaimsPrincipal(identity);
+
+                // Notify auth state
+                AuthService.CurrentUser = principal;
+
+                debugMessage = "Login successful! Redirecting...";
+                
+                // Use InvokeAsync to navigate outside the current render cycle
+                await InvokeAsync(async () =>
+                {
+                    await Task.Delay(500);
+                    Navigation.NavigateTo("/", forceLoad: true);
+                });
+            }
+            else
+            {
+                errorMessage = apiResponse?.Status switch
+                {
+                    401 => "Invalid email or password.",
+                    400 => "Please check your input and try again.",
+                    _ => "Login failed. Please try again."
+                };
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = "Network error. Please check your connection and try again.";
+            debugMessage = $"HTTP Error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred. Please try again.";
+            debugMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // Force UI update after operation
+        }
+    }
+
+    private async Task TestDifferentFormats()
+    {
+        if (string.IsNullOrEmpty(loginModel.Email) || string.IsNullOrEmpty(loginModel.Password))
+        {
+            errorMessage = "Please enter email and password first";
+            return;
+        }
+
+        isLoading = true;
+        StateHasChanged();
+        
+        // Your test logic here
+        
+        isLoading = false;
+        StateHasChanged();
+    }
+}

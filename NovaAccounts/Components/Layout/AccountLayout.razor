@@ -1,0 +1,27 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+
+<HeadContent>
+    <!--begin::Fonts(mandatory for all pages)-->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
+    <!--end::Fonts-->
+    <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
+    <link href="@Assets["account/assets/plugins/global/plugins.bundle.css"]" rel="stylesheet" type="text/css" />
+    <link href="@Assets["account/assets/css/style.bundle.css"]" rel="stylesheet" type="text/css" />
+    
+    <script src="@Assets["account/assets/plugins/global/plugins.bundle.js"]"></script>
+    <script src="@Assets["account/assets/js/scripts.bundle.js"]"></script>
+    <!--end::Global Javascript Bundle-->
+    
+
+</HeadContent>
+
+@Body
+
+@code {
+    private bool IsLoginPage()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        return uri.AbsolutePath.Equals("/login", StringComparison.OrdinalIgnoreCase);
+    }
+}

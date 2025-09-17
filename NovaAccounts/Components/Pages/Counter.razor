@@ -1,20 +1,55 @@
 ﻿@page "/counter"
+@using NovaAccounts.Components.Dashboard.Modals
+@using NovaAccounts.Components.Dashboard.Statistics
+@using NovaAccounts.Components.Dashboard.Table
+@using NovaAccounts.Components.Layout
 @rendermode InteractiveServer
 
-<PageTitle>Counter</PageTitle>
+<PageTitle>Home</PageTitle>
 
-<h1>Counter</h1>
 
-<p role="status">Current count: @currentCount</p>
+<!-- BEGIN CONTAINER -->
+<div class="page-container">
+    <SideMenu></SideMenu>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+    <!-- BEGIN CONTENT -->
+    <div class="page-content-wrapper">
+        <!-- BEGIN CONTENT BODY -->
+        <div class="page-content">
+            <!-- BEGIN PAGE HEADER-->
+            <!-- BEGIN PAGE BAR -->
 
-@code {
-    private int currentCount = 0;
+            <!-- END PAGE BAR -->
+            <!-- BEGIN PAGE TITLE-->
+            <h1 class="page-title">
+                @*<marquee style="color:red;">***Alert!!! This is a Novalotto test platform***</marquee>*@
+                <small></small>
+            </h1>
+            <!-- END PAGE TITLE-->
+            <!-- END PAGE HEADER-->
+            
+       
+            
+            <StatisticCard></StatisticCard>
+            <DataTable></DataTable>
+            <DetailsTable></DetailsTable>
+            <ModalExample></ModalExample>
+            
+         
 
-    private void IncrementCount()
-    {
-        currentCount++;
-    }
 
-}
+
+        </div>
+        <!-- END CONTENT BODY -->
+    </div>
+    <!-- END CONTENT -->
+    <!-- BEGIN QUICK SIDEBAR -->
+    <a href="javascript:;" class="page-quick-sidebar-toggler">
+        <i class="icon-login"></i>
+    </a>
+    <div class="page-quick-sidebar-wrapper" data-close-on-body-click="false" id="activities">
+
+    </div>
+    <!-- END QUICK SIDEBAR -->
+</div>
+<!-- END CONTAINER -->

@@ -1,13 +1,14 @@
 @inherits MenuBase
 
 <li class="@GetNavItemClass()">
-    <a href="@Path" class="nav-link">
+    <a href="@Path" class="nav-link nav-toggle">
         <i class="@Icon"></i>
         <span class="title">@Text</span>
     </a>
 </li>
 
 @code {
+    [Inject] public required IJSRuntime JsRuntime { get; set; }
     [Parameter] public string Text { get; set; } = "";
     [Parameter] public string Path { get; set; } = "";
     [Parameter] public string Icon { get; set; } = "";
@@ -16,4 +17,45 @@
     {
         return IsCurrentPage(Path) ? "nav-item start active" : "nav-item start";
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JsRuntime.InvokeVoidAsync("initializeMenuToggle");
+         await base.OnAfterRenderAsync(firstRender);
+    }
+
 }
+
+<script>
+    window.initializeMenuToggle = function() {
+            // Handle menu toggle clicks
+            $('.nav-toggle').off('click.menutoggle').on('click.menutoggle', function(e) {
+                e.preventDefault();
+                
+                var $this = $(this);
+                var $parent = $this.parent();
+                var $submenu = $this.next('.sub-menu');
+                
+                // Toggle the menu
+                if ($parent.hasClass('open')) {
+                    $parent.removeClass('open');
+                    $submenu.slideUp();
+                    $this.find('.arrow').removeClass('open');
+                } else {
+                    // Close other open menus first
+                    $('.nav-item.open').removeClass('open');
+                    $('.sub-menu').slideUp();
+                    $('.arrow.open').removeClass('open');
+                    
+                    // Open this menu
+                    $parent.addClass('open');
+                    $submenu.slideDown();
+                    $this.find('.arrow').addClass('open');
+                }
+            });
+            
+            // Initialize existing open menus
+            $('.nav-item.active.open .sub-menu').show();
+    };
+    
+</script>

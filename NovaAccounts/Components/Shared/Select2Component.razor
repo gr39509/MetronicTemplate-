@@ -74,7 +74,7 @@
                     dropdownParent = DropdownParent
                 };
 
-                await JSRuntime.InvokeVoidAsync("blazorSelect2.initialize", Id, options, dotNetRef);
+               // await JSRuntime.InvokeVoidAsync("blazorSelect2.initialize", Id, options, dotNetRef);
                 isInitialized = true;
             }
             catch (Exception ex)
@@ -106,7 +106,7 @@
         {
             try
             {
-                await JSRuntime.InvokeVoidAsync("blazorSelect2.setValue", Id, value);
+               // await JSRuntime.InvokeVoidAsync("blazorSelect2.setValue", Id, value);
                 SelectedValue = value;
                 await SelectedValueChanged.InvokeAsync(value);
             }
@@ -140,7 +140,7 @@
         {
             try
             {
-                await JSRuntime.InvokeVoidAsync("blazorSelect2.destroy", Id);
+               // await JSRuntime.InvokeVoidAsync("blazorSelect2.destroy", Id);
             }
             catch (Exception ex)
             {
@@ -152,3 +152,17 @@
     
     
 }
+
+<style>
+    .select2.select2-container {
+        padding: 8px;
+        border: 1px solid black;
+        border-radius: 6px;
+    }
+    .select2-selection,.select2.select2-container{
+        display: flex;
+        align-items: center;
+        justify-content: start;
+    }
+    
+</style>

@@ -1,0 +1,414 @@
+@page "/clients"
+@using System.Text.Json
+@using NovaAccounts.Components.DataFields
+@using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Shared
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JSRuntime
+@layout MainLayout
+
+
+
+<!-- BEGIN CONTAINER -->
+<div class="page-container">
+    <SideMenu></SideMenu>
+
+    <!-- BEGIN CONTENT -->
+    <div class="page-content-wrapper">
+        <!-- BEGIN CONTENT BODY -->
+        <div class="page-content">
+            <!-- BEGIN PAGE HEADER-->
+            <!-- BEGIN PAGE BAR -->
+
+            <!-- END PAGE BAR -->
+            <!-- BEGIN PAGE TITLE-->
+            <h1 class="page-title">
+                @*<marquee style="color:red;">***Alert!!! This is a Novalotto test platform***</marquee>*@
+                <small></small>
+            </h1>
+            <!-- END PAGE TITLE-->
+            <!-- END PAGE HEADER-->
+            
+            
+
+            
+            <ReusableDataTable TItem="Client" 
+                               Data="@clients" 
+                               Columns="@clientColumns"
+                               Options="@clientOptions" 
+                               OnRowClick="@OnClientRowClick" />
+          
+
+
+
+        </div>
+        <!-- END CONTENT BODY -->
+    </div>
+    <!-- END CONTENT -->
+    <!-- BEGIN QUICK SIDEBAR -->
+    <a href="javascript:;" class="page-quick-sidebar-toggler">
+        <i class="icon-login"></i>
+    </a>
+    <div class="page-quick-sidebar-wrapper" data-close-on-body-click="false" id="activities">
+
+    </div>
+    <!-- END QUICK SIDEBAR -->
+</div>
+<!-- END CONTAINER -->
+
+@* *@
+@* <div class="container-fluid"> *@
+@*     <div class="row"> *@
+@*         <div class="col-12"> *@
+@*             <div class="page-header"> *@
+@*                 <h2 class="page-title">Client Management</h2> *@
+@*                 <p class="page-description">Manage and view all client information</p> *@
+@*             </div> *@
+@* *@
+@*             @if (isLoading) *@
+@*             { *@
+@*                 <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;"> *@
+@*                     <div class="spinner-border text-primary" role="status"> *@
+@*                         <span class="visually-hidden">Loading clients...</span> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             } *@
+@*             else if (!string.IsNullOrEmpty(errorMessage)) *@
+@*             { *@
+@*                 <div class="alert alert-danger"> *@
+@*                     <h5>Error Loading Clients</h5> *@
+@*                     <p>@errorMessage</p> *@
+@*                     <button type="button" class="btn btn-outline-danger btn-sm" @onclick="LoadClients"> *@
+@*                         <i class="fa fa-refresh"></i> Retry *@
+@*                     </button> *@
+@*                 </div> *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 <div class="card"> *@
+@*                     <div class="card-header d-flex justify-content-between align-items-center"> *@
+@*                         <h5 class="card-title mb-0">Clients (@clients.Count)</h5> *@
+@*                         <div> *@
+@*                             <button type="button" class="btn btn-primary btn-sm me-2" @onclick="LoadClients"> *@
+@*                                 <i class="fa fa-refresh"></i> Refresh *@
+@*                             </button> *@
+@*                             <button type="button" class="btn btn-success btn-sm"> *@
+@*                                 <i class="fa fa-plus"></i> Add Client *@
+@*                             </button> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                     <div class="card-body"> *@
+@*                         *@
+@*                     </div> *@
+@*                 </div> *@
+@*             } *@
+@*         </div> *@
+@*     </div> *@
+@* </div> *@
+
+@code {
+    private List<Client> clients = new();
+    private List<DataTableColumn> clientColumns = new();
+    private DataTableOptions clientOptions = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureClientTable();
+        await LoadClients();
+    }
+
+    private async Task LoadClients()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            var httpClient = HttpClientFactory.CreateClient("Auth");
+            var response = await httpClient.GetAsync("/api/Clients/GetClients");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API Response: {responseContent}");
+
+                var apiResponse = JsonSerializer.Deserialize<ClientApiResponse>(responseContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (apiResponse != null && apiResponse.Status == 200 && apiResponse.Payload != null)
+                {
+                    clients = apiResponse.Payload;
+                    Console.WriteLine($"Loaded {clients.Count} clients");
+                }
+                else
+                {
+                    errorMessage = "Invalid response format from API";
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Failed to load clients: {response.StatusCode}";
+                Console.WriteLine($"API Error: {response.StatusCode} - {errorContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading clients: {ex.Message}";
+            Console.WriteLine($"Exception loading clients: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfigureClientTable()
+    {
+        clientColumns = new List<DataTableColumn>
+        {
+            new() 
+            { 
+                Header = "CLIENT ID", 
+                PropertyName = nameof(Client.ClientID), 
+                Width = 100,
+                CssClass = "text-center fw-bold"
+            },
+            new() 
+            { 
+                Header = "CLIENT NAME", 
+                PropertyName = nameof(Client.ClientName),
+                CustomRenderer = (item) => $"<strong class='text-primary'>{((Client)item).ClientName}</strong>"
+            },
+            new() 
+            { 
+                Header = "ACCOUNT NAME", 
+                PropertyName = nameof(Client.AccountName),
+                CustomRenderer = (item) => 
+                {
+                    var accountName = ((Client)item).AccountName;
+                    return string.IsNullOrEmpty(accountName) 
+                        ? "<span class='text-muted fst-italic'>Not set</span>" 
+                        : accountName;
+                }
+            },
+            new() 
+            { 
+                Header = "PHONE NUMBER", 
+                PropertyName = nameof(Client.PhoneNumber),
+                CustomRenderer = (item) => 
+                {
+                    var phone = ((Client)item).PhoneNumber;
+                    return phone == "0" || string.IsNullOrEmpty(phone)
+                        ? "<span class='text-muted fst-italic'>Not provided</span>"
+                        : $"<a href='tel:{phone}' class='text-decoration-none'>{phone}</a>";
+                }
+            },
+            new() 
+            { 
+                Header = "EMAIL ADDRESS", 
+                PropertyName = nameof(Client.EmailAddress),
+                CustomRenderer = (item) => 
+                {
+                    var email = ((Client)item).EmailAddress;
+                    return string.IsNullOrEmpty(email)
+                        ? "<span class='text-muted fst-italic'>Not provided</span>"
+                        : $"<a href='mailto:{email}' class='text-decoration-none'>{email}</a>";
+                }
+            },
+            new() 
+            { 
+                Header = "BALANCE", 
+                PropertyName = nameof(Client.Balance), 
+                DataType = "currency",
+                CssClass = "text-end",
+                CustomRenderer = (item) => 
+                {
+                    var balance = ((Client)item).Balance;
+                    var cssClass = balance > 0 ? "text-success" : balance < 0 ? "text-danger" : "text-muted";
+                    return $"<span class='{cssClass} fw-bold'>{balance:C}</span>";
+                }
+            },
+            new() 
+            { 
+                Header = "ACTIONS", 
+                PropertyName = "", 
+                Sortable = false, 
+                Searchable = false,
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) => $@"
+                    <div class='btn-group btn-group-sm' role='group'>
+                        <button type='button' class='btn btn-outline-primary btn-sm' onclick='viewClient({((Client)item).Id})' title='View Details'>
+                            <i class='fa fa-eye'></i>
+                        </button>
+                        <button type='button' class='btn btn-outline-secondary btn-sm' onclick='editClient({((Client)item).Id})' title='Edit Client'>
+                            <i class='fa fa-edit'></i>
+                        </button>
+                        <button type='button' class='btn btn-outline-success btn-sm' onclick='transactionHistory({((Client)item).Id})' title='Transaction History'>
+                            <i class='fa fa-history'></i>
+                        </button>
+                    </div>"
+            }
+        };
+
+        clientOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            LengthMenu = new[] { 5, 10, 25, 50, 100 },
+            LengthMenuLabels = new[] { "5", "10", "25", "50", "100" },
+            SearchPlaceholder = "Search Clients",
+            TableId = "clientsTable",
+            TableCssClass = "table table-striped table-hover",
+            HeaderCssClass = "table-primary",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            Striped = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["select"] = new { style = "single" },
+                ["buttons"] = new[] 
+                { 
+                    new { extend = "copy", text = "Copy", className = "btn-sm" },
+                    new { extend = "csv", text = "CSV", className = "btn-sm" },
+                    new { extend = "excel", text = "Excel", className = "btn-sm" },
+                    new { extend = "pdf", text = "PDF", className = "btn-sm" },
+                    new { extend = "print", text = "Print", className = "btn-sm" },
+                    new { extend = "colvis", text = "Columns", className = "btn-sm" }
+                },
+                ["dom"] = @"<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 text-end'Bf>>" +
+                         @"<'row'<'col-sm-12'tr>>" +
+                         @"<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                ["order"] = new object[] { new object[] { 1, "asc" } }, // Sort by Client Name
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search Clients:",
+                    ["lengthMenu"] = "Show _MENU_ clients per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ clients",
+                    ["infoEmpty"] = "No clients found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total clients)",
+                    ["emptyTable"] = "No client data available",
+                    ["zeroRecords"] = "No matching clients found",
+                    ["paginate"] = new Dictionary<string, object>
+                    {
+                        ["first"] = "First",
+                        ["last"] = "Last", 
+                        ["next"] = "Next",
+                        ["previous"] = "Previous"
+                    }
+                }
+            }
+        };
+    }
+
+    private async Task OnClientRowClick(Client client)
+    {
+        Console.WriteLine($"Client row clicked: {client.ClientName}");
+        // You can navigate to client details page or show a modal
+        // Navigation.NavigateTo($"/clients/{client.Id}");
+        
+        // Or show client details in a modal/alert for now
+        await JSRuntime.InvokeVoidAsync("alert", $"Client Selected: {client.ClientName} (ID: {client.ClientID})");
+    }
+
+    // API Response Models
+    public class ClientApiResponse
+    {
+        public int Status { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Instance { get; set; } = string.Empty;
+        public List<Client> Payload { get; set; } = new();
+    }
+
+    public class Client
+    {
+        public int Id { get; set; }
+        public string ClientID { get; set; } = string.Empty;
+        public string ClientName { get; set; } = string.Empty;
+        public string? AccountName { get; set; }
+        public string PhoneNumber { get; set; } = string.Empty;
+        public decimal Balance { get; set; }
+        public string EmailAddress { get; set; } = string.Empty;
+    }
+}
+
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .page-title {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-description {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+
+    /* Custom DataTable styling */
+    #clientsTable tbody tr:hover {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+
+    .table-primary th {
+        background-color: #b6d7ff;
+        border-color: #9ec5fe;
+        color: #084298;
+        font-weight: 600;
+    }
+</style>
+
+<script>
+    // JavaScript functions for client actions
+    window.viewClient = function(clientId) {
+        console.log('View client:', clientId);
+        // Implement view client functionality
+        alert('View Client ID: ' + clientId);
+    };
+
+    window.editClient = function(clientId) {
+        console.log('Edit client:', clientId);
+        // Implement edit client functionality
+        alert('Edit Client ID: ' + clientId);
+    };
+
+    window.transactionHistory = function(clientId) {
+        console.log('Transaction history for client:', clientId);
+        // Implement transaction history functionality
+        alert('Transaction History for Client ID: ' + clientId);
+    };
+</script>

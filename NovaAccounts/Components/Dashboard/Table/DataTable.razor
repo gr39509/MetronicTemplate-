@@ -1,14 +1,13 @@
+@* DataTable.razor *@
 @using NovaAccounts.Components.DataFields
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.Components.UsageModes
+
 <h3>Transaction Management</h3>
-
-
 
 <ReusableDataTable TItem="Transaction" 
                    Data="@transactions" 
                    Columns="@transactionColumns"
-                   
                    Options="@transactionOptions" />
 
 <h3 class="mt-5">Employee Management</h3>
@@ -51,7 +50,14 @@
         {
             new() { Id = 1, FirstName = "John", LastName = "Doe", Email = "john.doe@company.com", Department = "IT", Salary = 75000, HireDate = DateTime.Now.AddYears(-2), IsActive = true },
             new() { Id = 2, FirstName = "Jane", LastName = "Smith", Email = "jane.smith@company.com", Department = "HR", Salary = 65000, HireDate = DateTime.Now.AddYears(-1), IsActive = true },
-            new() { Id = 3, FirstName = "Bob", LastName = "Johnson", Email = "bob.johnson@company.com", Department = "Finance", Salary = 80000, HireDate = DateTime.Now.AddYears(-3), IsActive = false }
+            new() { Id = 3, FirstName = "Bob", LastName = "Johnson", Email = "bob.johnson@company.com", Department = "Finance", Salary = 80000, HireDate = DateTime.Now.AddYears(-3), IsActive = false },
+            new() { Id = 4, FirstName = "Alice", LastName = "Brown", Email = "alice.brown@company.com", Department = "Marketing", Salary = 70000, HireDate = DateTime.Now.AddYears(-1), IsActive = true },
+            new() { Id = 5, FirstName = "Charlie", LastName = "Wilson", Email = "charlie.wilson@company.com", Department = "Sales", Salary = 60000, HireDate = DateTime.Now.AddMonths(-6), IsActive = true },
+            new() { Id = 6, FirstName = "Diana", LastName = "Davis", Email = "diana.davis@company.com", Department = "IT", Salary = 85000, HireDate = DateTime.Now.AddYears(-4), IsActive = true },
+            new() { Id = 7, FirstName = "Eve", LastName = "Miller", Email = "eve.miller@company.com", Department = "HR", Salary = 68000, HireDate = DateTime.Now.AddYears(-2), IsActive = false },
+            new() { Id = 8, FirstName = "Frank", LastName = "Garcia", Email = "frank.garcia@company.com", Department = "Finance", Salary = 90000, HireDate = DateTime.Now.AddYears(-5), IsActive = true },
+            new() { Id = 9, FirstName = "Grace", LastName = "Lee", Email = "grace.lee@company.com", Department = "Marketing", Salary = 72000, HireDate = DateTime.Now.AddYears(-3), IsActive = true },
+            new() { Id = 10, FirstName = "Henry", LastName = "Taylor", Email = "henry.taylor@company.com", Department = "Sales", Salary = 65000, HireDate = DateTime.Now.AddYears(-1), IsActive = false }
         };
     }
 
@@ -89,7 +95,18 @@
             TableId = "transactionTable",
             HeaderCssClass = "leadBold bg-blue-chambray font-white",
             RowCssClass = "lead font-blue-ebonyclay",
-            Striped = true
+            Striped = true,
+            // Add specific options for transaction table
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["select"] = true,
+                ["buttons"] = new[] { "copy", "csv", "excel", "pdf", "print", "colvis" },
+                ["dom"] = "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 text-end'Bf>>" +
+                         "<'row'<'col-sm-12'tr>>" +
+                         "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                ["order"] = new object[] { new object[] { 0, "desc" } }
+                
+            }
         };
     }
 
@@ -102,6 +119,7 @@
                 Header = "FULL NAME", 
                 PropertyName = nameof(Employee.FullName),
                 CustomRenderer = (item) => $"<strong>{((Employee)item).FullName}</strong>"
+                
             },
             new() { Header = "EMAIL", PropertyName = nameof(Employee.Email) },
             new() { Header = "DEPARTMENT", PropertyName = nameof(Employee.Department) },
@@ -130,142 +148,25 @@
             TableId = "employeeTable",
             HeaderCssClass = "leadBold bg-blue-chambray font-white",
             RowCssClass = "lead font-blue-ebonyclay",
-            Striped = true
+            Striped = true,
+            // Add specific options for employee table
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["select"] = true,
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search Employees:",
+                    ["lengthMenu"] = "Show _MENU_ employees per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ employees",
+                    ["infoEmpty"] = "No employees found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total employees)",
+                    ["emptyTable"] = "No employee data available",
+                    ["zeroRecords"] = "No matching employees found"
+                }
+            }
         };
     }
 }
-
-
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('#transactionTable').DataTable({
-            // Basic configuration
-            "pageLength": 10,
-            "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
-            "searching": true,
-            "ordering": true,
-            "select": true,
-            "info": true,
-            "paging": true,
-
-            // Language customization
-            "language": {
-                "search": "Search Transactions:",
-                "lengthMenu": "Show _MENU_ transactions per page",
-                "info": "Showing _START_ to _END_ of _TOTAL_ transactions",
-                "infoEmpty": "No transactions found",
-                "infoFiltered": "(filtered from _MAX_ total transactions)",
-                "paginate": {
-                    "first": "First",
-                    "last": "Last",
-                    "next": "Next",
-                    "previous": "Previous"
-                },
-                "emptyTable": "No transaction data available",
-                "zeroRecords": "No matching transactions found"
-            },
-
-            // Column configuration
-            "columnDefs": [
-                {
-                    "targets": 0, // TRANS DATE column
-                    "type": "date"
-                },
-                {
-                    "targets": 1, // AMOUNT column
-                    "type": "currency"
-                },
-                {
-                    "targets": 4, // ACTION column
-                    "orderable": false,
-                    "searchable": false
-                }
-            ],
-
-            // Default sorting
-            "order": [[0, "desc"]], // Sort by date, newest first
-
-            // Responsive configuration
-            "responsive": true,
-
-            // DOM layout
-            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                "<'row'<'col-sm-12't>>" +
-                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-
-            // Additional features
-            "autoWidth": false,
-            "processing": true
-        });
-    });
-
-</script>
-
-<script type="text/javascript">
-    $(document).ready(function() {
-        $('#employeeTable').DataTable({
-            // Basic configuration
-            "pageLength": 10,
-            "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
-            "searching": true,
-            "ordering": true,
-            "select": true,
-            "info": true,
-            "paging": true,
-
-            // Language customization
-            "language": {
-                "search": "Search Transactions:",
-                "lengthMenu": "Show _MENU_ transactions per page",
-                "info": "Showing _START_ to _END_ of _TOTAL_ transactions",
-                "infoEmpty": "No transactions found",
-                "infoFiltered": "(filtered from _MAX_ total transactions)",
-                "paginate": {
-                    "first": "First",
-                    "last": "Last",
-                    "next": "Next",
-                    "previous": "Previous"
-                },
-                "emptyTable": "No transaction data available",
-                "zeroRecords": "No matching transactions found"
-            },
-
-            // Column configuration
-            "columnDefs": [
-                {
-                    "targets": 0, // TRANS DATE column
-                    "type": "date"
-                },
-                {
-                    "targets": 1, // AMOUNT column
-                    "type": "currency"
-                },
-                {
-                    "targets": 4, // ACTION column
-                    "orderable": false,
-                    "searchable": false
-                }
-            ],
-
-            // Default sorting
-            "order": [[0, "desc"]], // Sort by date, newest first
-
-            // Responsive configuration
-            "responsive": true,
-
-            // DOM layout
-            "dom": "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
-                "<'row'<'col-sm-12't>>" +
-                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
-
-            // Additional features
-            "autoWidth": false,
-            "processing": true
-        });
-    });
-
-</script>
-
 
 
 @* *@

@@ -1,3 +1,4 @@
+@* ReusableDataTable.razor *@
 @using System.Reflection
 @using System.Text.Json
 @using NovaAccounts.Components.DataFields
@@ -115,25 +116,7 @@
         return value?.ToString() ?? string.Empty;
     }
 }
-<script>
-    window.initializeDataTable = function (tableId, configJson, additionalOptionsJson) {
-        try {
-            const config = JSON.parse(configJson);
-            const additionalOptions = JSON.parse(additionalOptionsJson);
 
-            // Merge additional options
-            const finalConfig = { ...config, ...additionalOptions };
-
-            // Initialize DataTable
-            $('#' + tableId).DataTable(finalConfig);
-        } catch (error) {
-            console.error('Error initializing DataTable:', error);
-        }
-    };
-
-
-
-</script>
 
 <style>
     .table-responsive .dt-search{
@@ -153,3 +136,20 @@
         margin-bottom: 16px;
     }
 </style>
+<script>
+    // Global function to initialize DataTables with dynamic configuration
+    function initializeDataTable(tableId, baseConfig, additionalOptions = {}) {
+        // Parse JSON strings if they are strings
+        const config = typeof baseConfig === 'string' ? JSON.parse(baseConfig) : baseConfig;
+        const additional = typeof additionalOptions === 'string' ? JSON.parse(additionalOptions) : additionalOptions;
+
+        // Merge configurations - additionalOptions will override baseConfig
+        const finalConfig = { ...config, ...additional };
+
+        // Initialize the DataTable
+        return $(`#${tableId}`).DataTable(finalConfig);
+    }
+
+   
+
+</script>
