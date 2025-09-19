@@ -89,14 +89,10 @@
     </div>
 </div>
 
+
 @code {
     private string ModalId = Guid.NewGuid().ToString("N")[..8]; // Generate unique modal ID
     private DotNetObjectReference<ReusableModal>? dotNetRef;
-    private IJSObjectReference? jsModule;
-
-    // Visibility (for programmatic control)
-    [Parameter] public bool IsVisible { get; set; } = false;
-    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
 
     // Trigger Button
     [Parameter] public bool ShowTriggerButton { get; set; } = true;
@@ -155,37 +151,16 @@
         if (firstRender)
         {
             dotNetRef = DotNetObjectReference.Create(this);
-            
-            // Initialize Bootstrap modal events
             await JSRuntime.InvokeVoidAsync("eval", $@"
-                $('#{ModalId}').on('show.bs.modal', function (e) {{
-                    DotNet.invokeMethodAsync('{dotNetRef.Value.GetType().Assembly.GetName().Name}', 'OnModalShow', '{ModalId}');
-                }});
-                $('#{ModalId}').on('hidden.bs.modal', function (e) {{
-                    DotNet.invokeMethodAsync('{dotNetRef.Value.GetType().Assembly.GetName().Name}', 'OnModalHide', '{ModalId}');
-                }});
+                var modalElement = document.getElementById('{ModalId}');
+                if (modalElement) {{
+                    modalElement.addEventListener('hidden.bs.modal', () => {{
+                        if (dotNetRef) {{
+                            dotNetRef.invokeMethodAsync('OnModalHide');
+                        }}
+                    }});
+                }}
             ");
-
-            // If programmatically set to visible, show the modal
-            if (IsVisible)
-            {
-                await ShowModal();
-            }
-        }
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (dotNetRef != null)
-        {
-            if (IsVisible)
-            {
-                await ShowModal();
-            }
-            else
-            {
-                await HideModal();
-            }
         }
     }
 
@@ -204,7 +179,7 @@
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').modal('show');");
+            await JSRuntime.InvokeVoidAsync("eval", $"var modal = new bootstrap.Modal(document.getElementById('{ModalId}')); modal.show();");
         }
         catch (Exception ex)
         {
@@ -216,7 +191,7 @@
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').modal('hide');");
+            await JSRuntime.InvokeVoidAsync("eval", $"var modal = bootstrap.Modal.getInstance(document.getElementById('{ModalId}')); if(modal) {{ modal.hide(); }}");
         }
         catch (Exception ex)
         {
@@ -225,31 +200,12 @@
     }
 
     [JSInvokable]
-    public async Task OnModalShow()
-    {
-        IsVisible = true;
-        await IsVisibleChanged.InvokeAsync(IsVisible);
-        
-        if (OnOpen.HasDelegate)
-        {
-            await OnOpen.InvokeAsync();
-        }
-        
-        StateHasChanged();
-    }
-
-    [JSInvokable]
     public async Task OnModalHide()
     {
-        IsVisible = false;
-        await IsVisibleChanged.InvokeAsync(IsVisible);
-        
         if (OnClose.HasDelegate)
         {
             await OnClose.InvokeAsync();
         }
-        
-        StateHasChanged();
     }
 
     private async Task HandleSave()
@@ -258,7 +214,6 @@
         {
             await OnSave.InvokeAsync();
         }
-        // Note: Don't auto-close here - let parent decide
     }
 
     private string GetModalSizeClass()
@@ -281,13 +236,11 @@
     {
         var styles = new List<string>();
         
-        // Add custom body style if provided
         if (!string.IsNullOrEmpty(BodyStyle))
         {
             styles.Add(BodyStyle);
         }
         
-        // Add font styling for body content
         styles.Add($"font-size: {BodyFontSize}");
         styles.Add($"color: {BodyColor}");
         styles.Add($"color:{TitleColor}");
@@ -301,19 +254,13 @@
     {
         if (dotNetRef != null)
         {
-            // Clean up Bootstrap modal events
             try
             {
-                await JSRuntime.InvokeVoidAsync("eval", $"$('#{ModalId}').off();");
+                await JSRuntime.InvokeVoidAsync("eval", $"var modal = bootstrap.Modal.getInstance(document.getElementById('{ModalId}')); if(modal) {{ modal.dispose(); }}");
             }
             catch { /* Ignore cleanup errors */ }
             
             dotNetRef.Dispose();
-        }
-
-        if (jsModule != null)
-        {
-            await jsModule.DisposeAsync();
         }
     }
 }

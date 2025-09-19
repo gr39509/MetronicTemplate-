@@ -1,0 +1,115 @@
+@page "/progress"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Models.ProgressIndicatorModel
+@using ProgressIndicator = NovaAccounts.Models.ProgressIndicatorModel.ProgressIndicator
+
+<div class="row">
+    <!-- Inventory Stats -->
+    <ProgressIndicator 
+        Value="1247"
+        Label="INVENTORY IN STOCK"
+        IconClass="icon-shopping-cart"
+        ProgressPercentage="76"
+        ProgressBarClass="progress-bar-success green-sharp"
+        ValueColorClass="font-green-sharp"
+        Id="totalInventory" />
+
+    <!-- Orders Stats -->
+    <ProgressIndicator 
+        Value="892"
+        Label="ORDERS TODAY"
+        IconClass="icon-bag"
+        ProgressPercentage="64"
+        ProgressBarClass="progress-bar-info blue"
+        ValueColorClass="font-blue-sharp"
+        Id="ordersToday" />
+
+    <!-- Revenue Stats -->
+    <ProgressIndicator 
+        Value="12450"
+        DisplayValue="$12,450"
+        Label="TOTAL REVENUE"
+        IconClass="icon-wallet"
+        ProgressPercentage="89"
+        ProgressBarClass="progress-bar-warning yellow-gold"
+        ValueColorClass="font-yellow-gold"
+        Id="totalRevenue" />
+
+    <!-- Customers Stats -->
+    <ProgressIndicator 
+        Value="156"
+        Label="NEW CUSTOMERS"
+        IconClass="icon-users"
+        ProgressPercentage="43"
+        ProgressBarClass="progress-bar-danger red-intense"
+        ValueColorClass="font-red-intense"
+        ProgressLabel="monthly target"
+        Id="newCustomers" />
+</div>
+
+<!-- Different column sizes example -->
+<div class="row">
+    <ProgressIndicator 
+        Value="99"
+        Label="CRITICAL ALERTS"
+        IconClass="icon-exclamation"
+        ProgressPercentage="25"
+        ProgressBarClass="progress-bar-danger red-intense"
+        ValueColorClass="font-red-intense"
+        ColClass="col-lg-6 col-md-6 col-sm-12 col-xs-12"
+        Id="criticalAlerts" />
+
+    <ProgressIndicator 
+        Value="100"
+        DisplayValue="99.9%"
+        Label="SYSTEM UPTIME"
+        IconClass="icon-check"
+        ProgressPercentage="100"
+        ProgressBarClass="progress-bar-success green-sharp"
+        ValueColorClass="font-green-sharp"
+        ColClass="col-lg-6 col-md-6 col-sm-12 col-xs-12"
+        Id="systemUptime" />
+</div>
+
+<div class="row">
+    @foreach (var stat in stats)
+    {
+        <ProgressIndicator 
+            Value="@stat.Value"
+            DisplayValue="@stat.DisplayValue"
+            Label="@stat.Label"
+            IconClass="@stat.IconClass"
+            ProgressPercentage="@stat.ProgressPercentage"
+            ProgressBarClass="@stat.ProgressBarClass"
+            ValueColorClass="@stat.ValueColorClass"
+            ProgressLabel="@stat.ProgressLabel"
+            ColClass="@stat.ColClass"
+            Id="@stat.Id" />
+    }
+</div>
+
+@code {
+    private List<ProgressIndicator> stats = new()
+    {
+        new ProgressIndicator
+        {
+            Value = "1247",
+            Label = "INVENTORY IN STOCK",
+            IconClass = "icon-shopping-cart",
+            ProgressPercentage = 76,
+            ProgressBarClass = "progress-bar-success green-sharp",
+            ValueColorClass = "font-green-sharp",
+            Id = "totalInventory"
+        },
+        new ProgressIndicator
+        {
+            Value = "892",
+            Label = "ORDERS TODAY",
+            IconClass = "icon-bag",
+            ProgressPercentage = 64,
+            ProgressBarClass = "progress-bar-info blue",
+            ValueColorClass = "font-blue-sharp",
+            Id = "ordersToday"
+        }
+    };
+}

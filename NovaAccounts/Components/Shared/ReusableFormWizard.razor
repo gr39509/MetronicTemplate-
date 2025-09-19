@@ -1,0 +1,978 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Rendering
+@using NovaAccounts.Models.FormStepper
+
+<div class="@Config.CssClass" id="@Config.Id">
+    <div class="portlet-body form">
+        <div class="form-wizard">
+            <div class="form-body">
+                <!-- Navigation Steps -->
+                <ul class="nav nav-pills nav-justified steps">
+                    @for (int i = 0; i < Steps.Count; i++)
+                    {
+                        var step = Steps[i];
+                        var isActive = CurrentStepIndex == i;
+                        var isCompleted = i < CurrentStepIndex; // Step is completed if it's before current step
+                        
+                        <li class="@(isActive ? "active" : "") @(isCompleted ? "completed" : "")">
+                            <a href="#@step.TabId" data-toggle="tab" class="step" @onclick="() => NavigateToStep(i)" @onclick:preventDefault="true">
+                                @if (Config.ShowStepNumbers)
+                                {
+                                    <span class="number @(isCompleted ? "completed-number" : "")">@step.StepNumber</span>
+                                }
+                                <span class="desc">
+                                    <i class="fa @step.Icon"></i> @step.Title
+                                </span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+
+                <!-- Progress Bar -->
+                @if (Config.ShowProgressBar)
+                {
+                    <div id="bar" class="progress progress-striped" role="progressbar">
+                        <div class="progress-bar text-bg-info" style="width: @(ProgressPercentage)%"></div>
+                    </div>
+                }
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Alert Messages -->
+                    @if (Config.ShowErrorMessage)
+                    {
+                        <div class="alert alert-danger @(ShowErrorAlert ? "" : "display-none")">
+                            <button class="close" @onclick="() => ShowErrorAlert = false"></button>
+                            @Config.ErrorMessage
+                        </div>
+                    }
+                    
+                    @if (Config.ShowSuccessMessage)
+                    {
+                        <div class="alert alert-success @(ShowSuccessAlert ? "" : "display-none")">
+                            <button class="close" @onclick="() => ShowSuccessAlert = false"></button>
+                            @Config.SuccessMessage
+                        </div>
+                    }
+
+                    <!-- Step Content -->
+                    @for (int i = 0; i < Steps.Count; i++)
+                    {
+                        var step = Steps[i];
+                        var isActive = CurrentStepIndex == i;
+                        
+                        <div class="tab-pane @(isActive ? "active" : "")" id="@step.TabId">
+                            <h3 class="block">@step.Description</h3>
+                            
+                            @if (step.Fields.Any())
+                            {
+                                <div class="row">
+                                    @foreach (var field in step.Fields)
+                                    {
+                                        <div class="@field.ColClass">
+                                            @RenderField(field)
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            
+                            <!-- Custom content slot -->
+                            @* @if (StepContent != null) *@
+                            @* { *@
+                            @*     @StepContent(step, i) *@
+                            @* } *@
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <div class="row">
+                    <div class="col-md-12 text-right">
+                        @if (CurrentStepIndex > 0)
+                        {
+                            <a href="javascript:;" class="btn dark btn-outline button-previous" @onclick="PreviousStep">
+                                <i class="@Config.BackButtonIcon"></i> @Config.BackButtonText
+                            </a>
+                        }
+                        
+                        @if (CurrentStepIndex < Steps.Count - 1)
+                        {
+                            <a href="javascript:;" class="btn btn-outline green button-next" @onclick="NextStep">
+                                @Config.NextButtonText
+                                <i class="@Config.NextButtonIcon"></i>
+                            </a>
+                        }
+                        else
+                        {
+                            <button type="submit" class="btn green button-submit" @onclick="FinishWizard">
+                                @Config.FinishButtonText
+                                <i class="@Config.FinishButtonIcon"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-group {
+        margin-bottom: 10px;
+    }
+    .display-none {
+        display: none;
+    }
+    
+    /* Completed step styling */
+    .steps li.completed .number {
+        background-color: darkblue !important;
+        color: white !important; 
+        border-color: darkblue !important;
+    }
+    
+    .steps li.completed a {
+        color: darkblue; /* Yellow color for completed step text */
+    }
+    
+    /* Active step styling (current step) */
+    /*.steps li.active .number {*/
+    /*    background-color: #3498db !important; !* Blue for active step *!*/
+    /*    color: white !important;*/
+    /*    border-color: #2980b9 !important;*/
+    /*}*/
+    
+
+    /*.steps li .number {*/
+    /*    background-color: #95a5a6; !* Gray for future steps *!*/
+    /*    color: white;*/
+    /*    border: 2px solid #95a5a6;*/
+    /*    border-radius: 50%;*/
+    /*    width: 35px;*/
+    /*    height: 35px;*/
+    /*    display: inline-block;*/
+    /*    text-align: center;*/
+    /*    line-height: 31px;*/
+    /*    font-weight: bold;*/
+    /*    margin-right: 10px;*/
+    /*    transition: all 0.3s ease;*/
+    /*}*/
+    
+    /* Hover effects */
+    .steps li.completed:hover .number {
+        background-color: #e67e22 !important; /* Darker yellow on hover */
+    }
+    
+    .steps li.active:hover .number {
+        background-color: #2980b9 !important; /* Darker blue on hover */
+    }
+</style>
+
+@code {
+    [Parameter] public List<WizardStep> Steps { get; set; } = new();
+    [Parameter] public WizardConfiguration Config { get; set; } = new();
+    [Parameter] public RenderFragment<(WizardStep step, int index)>? StepContent { get; set; }
+    [Parameter] public EventCallback<Dictionary<string, object>> OnFinish { get; set; }
+    [Parameter] public EventCallback<int> OnStepChanged { get; set; }
+    [Parameter] public Func<int, Task<bool>>? OnStepValidation { get; set; }
+
+    private int CurrentStepIndex { get; set; } = 0;
+    private bool ShowErrorAlert { get; set; } = false;
+    private bool ShowSuccessAlert { get; set; } = false;
+
+    private double ProgressPercentage => Steps.Count > 0 ? ((double)(CurrentStepIndex + 1) / Steps.Count) * 100 : 0;
+
+    protected override void OnInitialized()
+    {
+        if (Steps.Any())
+        {
+            Steps[0].IsActive = true;
+            for (int i = 0; i < Steps.Count; i++)
+            {
+                if (string.IsNullOrEmpty(Steps[i].TabId))
+                {
+                    Steps[i].TabId = $"tab{i + 1}";
+                }
+                if (Steps[i].StepNumber == 0)
+                {
+                    Steps[i].StepNumber = i + 1;
+                }
+            }
+        }
+    }
+
+    private RenderFragment RenderField(WizardField field) => builder =>
+    {
+        var sequence = 0;
+
+        builder.OpenElement(sequence++, "div");
+        builder.AddAttribute(sequence++, "class", "form-group");
+
+        // Label
+        if (!string.IsNullOrEmpty(field.Label) && field.Type != WizardFieldType.Checkbox)
+        {
+            builder.OpenElement(sequence++, "label");
+            builder.AddAttribute(sequence++, "class", $"control-label {field.LabelColClass}");
+            builder.AddAttribute(sequence++, "for", field.Id);
+            builder.AddContent(sequence++, field.Label);
+            if (field.IsRequired)
+            {
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "required");
+                builder.AddContent(sequence++, " *");
+                builder.CloseElement();
+            }
+            builder.CloseElement();
+        }
+
+        // Input wrapper
+        var inputWrapperClass = field.Type == WizardFieldType.Checkbox ? "col-md-offset-4 col-md-8" : field.InputColClass;
+        builder.OpenElement(sequence++, "div");
+        builder.AddAttribute(sequence++, "class", inputWrapperClass);
+
+        // Render input based on type
+        switch (field.Type)
+        {
+            case WizardFieldType.Text:
+            case WizardFieldType.Email:
+            case WizardFieldType.Password:
+            case WizardFieldType.Number:
+                RenderTextInput(builder, ref sequence, field);
+                break;
+            case WizardFieldType.Select:
+                RenderSelectInput(builder, ref sequence, field);
+                break;
+            case WizardFieldType.Textarea:
+                RenderTextareaInput(builder, ref sequence, field);
+                break;
+            case WizardFieldType.Checkbox:
+                RenderCheckboxInput(builder, ref sequence, field);
+                break;
+            case WizardFieldType.CheckboxGroup:
+                RenderCheckboxGroup(builder, ref sequence, field);
+                break;
+            case WizardFieldType.File:
+                RenderFileInput(builder, ref sequence, field);
+                break;
+            case WizardFieldType.Display:
+                RenderDisplayField(builder, ref sequence, field);
+                break;
+        }
+
+        // Validation message
+        if (!string.IsNullOrEmpty(field.ValidationMessage))
+        {
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "help-block text-danger");
+            builder.AddContent(sequence++, field.ValidationMessage);
+            builder.CloseElement();
+        }
+
+        builder.CloseElement(); // input wrapper
+        builder.CloseElement(); // form-group
+    };
+
+    private void RenderTextInput(RenderTreeBuilder builder, ref int sequence, WizardField field)
+    {
+        builder.OpenElement(sequence++, "input");
+        builder.AddAttribute(sequence++, "type", field.Type.ToString().ToLower());
+        builder.AddAttribute(sequence++, "class", "form-control");
+        builder.AddAttribute(sequence++, "id", field.Id);
+        builder.AddAttribute(sequence++, "name", field.Name);
+        builder.AddAttribute(sequence++, "value", field.Value?.ToString());
+        builder.AddAttribute(sequence++, "placeholder", field.Placeholder);
+        builder.AddAttribute(sequence++, "disabled", !field.IsEnabled);
+        if (field.IsRequired) builder.AddAttribute(sequence++, "required", true);
+        
+        foreach (var attr in field.Attributes)
+        {
+            builder.AddAttribute(sequence++, attr.Key, attr.Value);
+        }
+        
+        builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, 
+            e => field.Value = e.Value));
+        builder.CloseElement();
+    }
+
+    private void RenderSelectInput(RenderTreeBuilder builder, ref int sequence, WizardField field)
+    {
+        builder.OpenElement(sequence++, "select");
+        builder.AddAttribute(sequence++, "class", "form-control");
+        builder.AddAttribute(sequence++, "id", field.Id);
+        builder.AddAttribute(sequence++, "name", field.Name);
+        builder.AddAttribute(sequence++, "disabled", !field.IsEnabled);
+        if (field.IsRequired) builder.AddAttribute(sequence++, "required", true);
+        
+        builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this,
+            e => field.Value = e.Value));
+
+        foreach (var option in field.Options)
+        {
+            builder.OpenElement(sequence++, "option");
+            builder.AddAttribute(sequence++, "value", option.Value);
+            if (option.IsSelected || field.Value?.ToString() == option.Value)
+                builder.AddAttribute(sequence++, "selected", true);
+            builder.AddContent(sequence++, option.Text);
+            builder.CloseElement();
+        }
+        
+        builder.CloseElement();
+    }
+
+    private void RenderTextareaInput(RenderTreeBuilder builder, ref int sequence, WizardField field)
+    {
+        builder.OpenElement(sequence++, "textarea");
+        builder.AddAttribute(sequence++, "class", "form-control");
+        builder.AddAttribute(sequence++, "id", field.Id);
+        builder.AddAttribute(sequence++, "name", field.Name);
+        builder.AddAttribute(sequence++, "placeholder", field.Placeholder);
+        builder.AddAttribute(sequence++, "disabled", !field.IsEnabled);
+        if (field.IsRequired) builder.AddAttribute(sequence++, "required", true);
+        
+        builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this,
+            e => field.Value = e.Value));
+        
+        builder.AddContent(sequence++, field.Value?.ToString());
+        builder.CloseElement();
+    }
+
+    private void RenderCheckboxInput(RenderTreeBuilder builder, ref int sequence, WizardField field)
+    {
+        builder.OpenElement(sequence++, "input");
+        builder.AddAttribute(sequence++, "type", "checkbox");
+        builder.AddAttribute(sequence++, "class", "form-check-input");
+        builder.AddAttribute(sequence++, "id", field.Id);
+        builder.AddAttribute(sequence++, "name", field.Name);
+        builder.AddAttribute(sequence++, "value", "true");
+        builder.AddAttribute(sequence++, "disabled", !field.IsEnabled);
+        if (field.Value is bool boolValue && boolValue)
+            builder.AddAttribute(sequence++, "checked", true);
+        
+        builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this,
+            e => field.Value = bool.Parse(e.Value?.ToString() ?? "false")));
+        builder.CloseElement();
+
+        builder.OpenElement(sequence++, "label");
+        builder.AddAttribute(sequence++, "for", field.Id);
+        builder.AddAttribute(sequence++, "class", "form-check-label");
+        builder.AddContent(sequence++, field.Label);
+        builder.CloseElement();
+    }
+
+    private void RenderCheckboxGroup(RenderTreeBuilder builder, ref int sequence, WizardField field)
+    {
+        builder.OpenElement(sequence++, "ul");
+        builder.AddAttribute(sequence++, "class", "list-group row");
+
+        foreach (var option in field.CheckboxOptions)
+        {
+            builder.OpenElement(sequence++, "li");
+            builder.AddAttribute(sequence++, "class", $"{option.ColClass}");
+            builder.AddAttribute(sequence++, "style", "float:left;list-style:none;");
+
+            builder.OpenElement(sequence++, "label");
+            builder.AddAttribute(sequence++, "class", "radio-inline");
+
+            builder.OpenElement(sequence++, "input");
+            builder.AddAttribute(sequence++, "type", "checkbox");
+            builder.AddAttribute(sequence++, "id", option.Id);
+            builder.AddAttribute(sequence++, "name", option.Name);
+            builder.AddAttribute(sequence++, "disabled", !option.IsEnabled);
+            if (option.IsChecked)
+                builder.AddAttribute(sequence++, "checked", true);
+            
+            builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this,
+                e => option.IsChecked = bool.Parse(e.Value?.ToString() ?? "false")));
+            builder.CloseElement();
+
+            builder.OpenElement(sequence++, "label");
+            builder.AddContent(sequence++, option.Label);
+            builder.CloseElement();
+
+            builder.CloseElement(); // label.radio-inline
+            builder.CloseElement(); // li
+        }
+
+        builder.CloseElement(); // ul
+    }
+
+    private void RenderFileInput(RenderTreeBuilder builder, ref int sequence, WizardField field)
+    {
+        builder.OpenElement(sequence++, "input");
+        builder.AddAttribute(sequence++, "type", "file");
+        builder.AddAttribute(sequence++, "class", "form-control");
+        builder.AddAttribute(sequence++, "id", field.Id);
+        builder.AddAttribute(sequence++, "name", field.Name);
+        builder.AddAttribute(sequence++, "disabled", !field.IsEnabled);
+        builder.CloseElement();
+    }
+
+    private void RenderDisplayField(RenderTreeBuilder builder, ref int sequence, WizardField field)
+    {
+        builder.OpenElement(sequence++, "p");
+        builder.AddAttribute(sequence++, "class", "form-control-static");
+        builder.AddAttribute(sequence++, "data-display", field.Name);
+        builder.AddContent(sequence++, field.Value?.ToString());
+        builder.CloseElement();
+    }
+
+    private async Task NextStep()
+    {
+        if (OnStepValidation != null)
+        {
+            var isValid = await OnStepValidation(CurrentStepIndex);
+            if (!isValid)
+            {
+                ShowErrorAlert = true;
+                ShowSuccessAlert = false;
+                return;
+            }
+        }
+
+        if (CurrentStepIndex < Steps.Count - 1)
+        {
+            Steps[CurrentStepIndex].IsCompleted = true;
+            Steps[CurrentStepIndex].IsActive = false;
+            CurrentStepIndex++;
+            Steps[CurrentStepIndex].IsActive = true;
+            ShowErrorAlert = false;
+            await OnStepChanged.InvokeAsync(CurrentStepIndex);
+        }
+    }
+
+    private async Task PreviousStep()
+    {
+        if (CurrentStepIndex > 0)
+        {
+            Steps[CurrentStepIndex].IsActive = false;
+            CurrentStepIndex--;
+            Steps[CurrentStepIndex].IsActive = true;
+            ShowErrorAlert = false;
+            await OnStepChanged.InvokeAsync(CurrentStepIndex);
+        }
+    }
+
+    private async Task NavigateToStep(int stepIndex)
+    {
+        if (stepIndex >= 0 && stepIndex < Steps.Count)
+        {
+            Steps[CurrentStepIndex].IsActive = false;
+            CurrentStepIndex = stepIndex;
+            Steps[CurrentStepIndex].IsActive = true;
+            await OnStepChanged.InvokeAsync(CurrentStepIndex);
+        }
+    }
+
+    private async Task FinishWizard()
+    {
+        if (OnStepValidation != null)
+        {
+            var isValid = await OnStepValidation(CurrentStepIndex);
+            if (!isValid)
+            {
+                ShowErrorAlert = true;
+                ShowSuccessAlert = false;
+                return;
+            }
+        }
+
+        var formData = new Dictionary<string, object>();
+        foreach (var step in Steps)
+        {
+            foreach (var field in step.Fields)
+            {
+                formData[field.Name] = field.Value ?? "";
+            }
+        }
+
+        ShowSuccessAlert = true;
+        ShowErrorAlert = false;
+        await OnFinish.InvokeAsync(formData);
+    }
+}
+
+
+
+@* @using Microsoft.AspNetCore.Components *@
+@* @using Microsoft.AspNetCore.Components.Rendering *@
+@* @using NovaAccounts.Models.FormStepper *@
+@* *@
+@* <div class="@Config.CssClass" id="@Config.Id"> *@
+@*     <div class="portlet-body form"> *@
+@*         <div class="form-wizard"> *@
+@*             <div class="form-body"> *@
+@*                 <!-- Navigation Steps --> *@
+@*                 <ul class="nav nav-pills nav-justified steps"> *@
+@*                     @for (int i = 0; i < Steps.Count; i++) *@
+@*                     { *@
+@*                         var step = Steps[i]; *@
+@*                         var isActive = CurrentStepIndex == i; *@
+@*                         var isCompleted = step.IsCompleted; *@
+@*                          *@
+@*                         <li class="@(isActive ? "active" : "")"> *@
+@*                             <a href="#@step.TabId" data-toggle="tab" class="step" @onclick="() => NavigateToStep(i)" @onclick:preventDefault="true"> *@
+@*                                 @if (Config.ShowStepNumbers) *@
+@*                                 { *@
+@*                                     <span class="number">@step.StepNumber</span> *@
+@*                                 } *@
+@*                                 <span class="desc"> *@
+@*                                     <i class="fa @step.Icon"></i> @step.Title *@
+@*                                 </span> *@
+@*                             </a> *@
+@*                         </li> *@
+@*                     } *@
+@*                 </ul> *@
+@* *@
+@*                 <!-- Progress Bar --> *@
+@*                 @if (Config.ShowProgressBar) *@
+@*                 { *@
+@*                     <div id="bar" class="progress progress-striped" role="progressbar"> *@
+@*                         <div class="progress-bar text-bg-info" style="width: @(ProgressPercentage)%"></div> *@
+@*                     </div> *@
+@*                 } *@
+@* *@
+@*                 <!-- Tab Content --> *@
+@*                 <div class="tab-content"> *@
+@*                     <!-- Alert Messages --> *@
+@*                     @if (Config.ShowErrorMessage) *@
+@*                     { *@
+@*                         <div class="alert alert-danger @(ShowErrorAlert ? "" : "display-none")"> *@
+@*                             <button class="close" @onclick="() => ShowErrorAlert = false"></button> *@
+@*                             @Config.ErrorMessage *@
+@*                         </div> *@
+@*                     } *@
+@*                      *@
+@*                     @if (Config.ShowSuccessMessage) *@
+@*                     { *@
+@*                         <div class="alert alert-success @(ShowSuccessAlert ? "" : "display-none")"> *@
+@*                             <button class="close" @onclick="() => ShowSuccessAlert = false"></button> *@
+@*                             @Config.SuccessMessage *@
+@*                         </div> *@
+@*                     } *@
+@* *@
+@*                     <!-- Step Content --> *@
+@*                     @for (int i = 0; i < Steps.Count; i++) *@
+@*                     { *@
+@*                         var step = Steps[i]; *@
+@*                         var isActive = CurrentStepIndex == i; *@
+@*                          *@
+@*                         <div class="tab-pane @(isActive ? "active" : "")" id="@step.TabId"> *@
+@*                             <h3 class="block">@step.Description</h3> *@
+@*                              *@
+@*                             @if (step.Fields.Any()) *@
+@*                             { *@
+@*                                 <div class="row"> *@
+@*                                     @foreach (var field in step.Fields) *@
+@*                                     { *@
+@*                                         <div class="@field.ColClass"> *@
+@*                                             @RenderField(field) *@
+@*                                         </div> *@
+@*                                     } *@
+@*                                 </div> *@
+@*                             } *@
+@*                              *@
+@*                             <!-- Custom content slot --> *@
+@*                             $1$ @if (StepContent != null) #1# *@
+@*                             $1$ { #1# *@
+@*                             $1$     @StepContent(step, i) #1# *@
+@*                             $1$ } #1# *@
+@*                         </div> *@
+@*                     } *@
+@*                 </div> *@
+@*             </div> *@
+@* *@
+@*             <!-- Form Actions --> *@
+@*             <div class="form-actions"> *@
+@*                 <div class="row"> *@
+@*                     <div class="col-md-12 text-right"> *@
+@*                         @if (CurrentStepIndex > 0) *@
+@*                         { *@
+@*                             <a href="javascript:;" class="btn dark btn-outline button-previous" @onclick="PreviousStep"> *@
+@*                                 <i class="@Config.BackButtonIcon"></i> @Config.BackButtonText *@
+@*                             </a> *@
+@*                         } *@
+@*                          *@
+@*                         @if (CurrentStepIndex < Steps.Count - 1) *@
+@*                         { *@
+@*                             <a href="javascript:;" class="btn btn-outline green button-next" @onclick="NextStep"> *@
+@*                                 @Config.NextButtonText *@
+@*                                 <i class="@Config.NextButtonIcon"></i> *@
+@*                             </a> *@
+@*                         } *@
+@*                         else *@
+@*                         { *@
+@*                             <button type="submit" class="btn green button-submit" @onclick="FinishWizard"> *@
+@*                                 @Config.FinishButtonText *@
+@*                                 <i class="@Config.FinishButtonIcon"></i> *@
+@*                             </button> *@
+@*                         } *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@*         </div> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* <style> *@
+@*     .form-group { *@
+@*         margin-bottom: 10px; *@
+@*     } *@
+@*     .display-none { *@
+@*         display: none; *@
+@*     } *@
+@* *@
+@*     /* Completed step styling */ *@
+@*     .steps li.completed .number { *@
+@*         background-color: #f1c40f !important; /* Yellow background for completed steps */ *@
+@*         color: #2c3e50 !important; /* Dark text for better contrast */ *@
+@*         border-color: #f39c12 !important; *@
+@*     } *@
+@* *@
+@*     .steps li.completed a { *@
+@*         color: #f39c12; /* Yellow color for completed step text */ *@
+@*     } *@
+@* *@
+@*     /* Active step styling (current step) */ *@
+@*     /*.steps li.active .number {*/ *@
+@*     /*    background-color: #3498db !important;*/ *@
+@*     /*    color: white !important;*/ *@
+@*     /*    border-color: #2980b9 !important;*/ *@
+@*     /*}*/ *@
+@* *@
+@*     *@
+@* *@
+@*     /* Hover effects */ *@
+@*     .steps li.completed:hover .number { *@
+@*         background-color: #e67e22 !important; /* Darker yellow on hover */ *@
+@*     } *@
+@* *@
+@*     .steps li.active:hover .number { *@
+@*         background-color: #2980b9 !important; /* Darker blue on hover */ *@
+@*     } *@
+@*    *@
+@* </style> *@
+@* *@
+@* @code { *@
+@*     [Parameter] public List<WizardStep> Steps { get; set; } = new(); *@
+@*     [Parameter] public WizardConfiguration Config { get; set; } = new(); *@
+@*     [Parameter] public RenderFragment<(WizardStep step, int index)>? StepContent { get; set; } *@
+@*     [Parameter] public EventCallback<Dictionary<string, object>> OnFinish { get; set; } *@
+@*     [Parameter] public EventCallback<int> OnStepChanged { get; set; } *@
+@*     [Parameter] public Func<int, Task<bool>>? OnStepValidation { get; set; } *@
+@* *@
+@*     private int CurrentStepIndex { get; set; } = 0; *@
+@*     private bool ShowErrorAlert { get; set; } = false; *@
+@*     private bool ShowSuccessAlert { get; set; } = false; *@
+@* *@
+@*     private double ProgressPercentage => Steps.Count > 0 ? ((double)(CurrentStepIndex + 1) / Steps.Count) * 100 : 0; *@
+@* *@
+@*     protected override void OnInitialized() *@
+@*     { *@
+@*         if (Steps.Any()) *@
+@*         { *@
+@*             Steps[0].IsActive = true; *@
+@*             for (int i = 0; i < Steps.Count; i++) *@
+@*             { *@
+@*                 if (string.IsNullOrEmpty(Steps[i].TabId)) *@
+@*                 { *@
+@*                     Steps[i].TabId = $"tab{i + 1}"; *@
+@*                 } *@
+@*                 if (Steps[i].StepNumber == 0) *@
+@*                 { *@
+@*                     Steps[i].StepNumber = i + 1; *@
+@*                 } *@
+@*             } *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private RenderFragment RenderField(WizardField field) => builder => *@
+@*     { *@
+@*         var sequence = 0; *@
+@* *@
+@*         builder.OpenElement(sequence++, "div"); *@
+@*         builder.AddAttribute(sequence++, "class", "form-group"); *@
+@* *@
+@*         // Label *@
+@*         if (!string.IsNullOrEmpty(field.Label) && field.Type != WizardFieldType.Checkbox) *@
+@*         { *@
+@*             builder.OpenElement(sequence++, "label"); *@
+@*             builder.AddAttribute(sequence++, "class", $"control-label {field.LabelColClass}"); *@
+@*             builder.AddAttribute(sequence++, "for", field.Id); *@
+@*             builder.AddContent(sequence++, field.Label); *@
+@*             if (field.IsRequired) *@
+@*             { *@
+@*                 builder.OpenElement(sequence++, "span"); *@
+@*                 builder.AddAttribute(sequence++, "class", "required"); *@
+@*                 builder.AddContent(sequence++, " *"); *@
+@*                 builder.CloseElement(); *@
+@*             } *@
+@*             builder.CloseElement(); *@
+@*         } *@
+@* *@
+@*         // Input wrapper *@
+@*         var inputWrapperClass = field.Type == WizardFieldType.Checkbox ? "col-md-offset-4 col-md-8" : field.InputColClass; *@
+@*         builder.OpenElement(sequence++, "div"); *@
+@*         builder.AddAttribute(sequence++, "class", inputWrapperClass); *@
+@* *@
+@*         // Render input based on type *@
+@*         switch (field.Type) *@
+@*         { *@
+@*             case WizardFieldType.Text: *@
+@*             case WizardFieldType.Email: *@
+@*             case WizardFieldType.Password: *@
+@*             case WizardFieldType.Number: *@
+@*                 RenderTextInput(builder, ref sequence, field); *@
+@*                 break; *@
+@*             case WizardFieldType.Select: *@
+@*                 RenderSelectInput(builder, ref sequence, field); *@
+@*                 break; *@
+@*             case WizardFieldType.Textarea: *@
+@*                 RenderTextareaInput(builder, ref sequence, field); *@
+@*                 break; *@
+@*             case WizardFieldType.Checkbox: *@
+@*                 RenderCheckboxInput(builder, ref sequence, field); *@
+@*                 break; *@
+@*             case WizardFieldType.CheckboxGroup: *@
+@*                 RenderCheckboxGroup(builder, ref sequence, field); *@
+@*                 break; *@
+@*             case WizardFieldType.File: *@
+@*                 RenderFileInput(builder, ref sequence, field); *@
+@*                 break; *@
+@*             case WizardFieldType.Display: *@
+@*                 RenderDisplayField(builder, ref sequence, field); *@
+@*                 break; *@
+@*         } *@
+@* *@
+@*         // Validation message *@
+@*         if (!string.IsNullOrEmpty(field.ValidationMessage)) *@
+@*         { *@
+@*             builder.OpenElement(sequence++, "span"); *@
+@*             builder.AddAttribute(sequence++, "class", "help-block text-danger"); *@
+@*             builder.AddContent(sequence++, field.ValidationMessage); *@
+@*             builder.CloseElement(); *@
+@*         } *@
+@* *@
+@*         builder.CloseElement(); // input wrapper *@
+@*         builder.CloseElement(); // form-group *@
+@*     }; *@
+@* *@
+@*     private void RenderTextInput(RenderTreeBuilder builder, ref int sequence, WizardField field) *@
+@*     { *@
+@*         builder.OpenElement(sequence++, "input"); *@
+@*         builder.AddAttribute(sequence++, "type", field.Type.ToString().ToLower()); *@
+@*         builder.AddAttribute(sequence++, "class", "form-control"); *@
+@*         builder.AddAttribute(sequence++, "id", field.Id); *@
+@*         builder.AddAttribute(sequence++, "name", field.Name); *@
+@*         builder.AddAttribute(sequence++, "value", field.Value?.ToString()); *@
+@*         builder.AddAttribute(sequence++, "placeholder", field.Placeholder); *@
+@*         builder.AddAttribute(sequence++, "disabled", !field.IsEnabled); *@
+@*         if (field.IsRequired) builder.AddAttribute(sequence++, "required", true); *@
+@*          *@
+@*         foreach (var attr in field.Attributes) *@
+@*         { *@
+@*             builder.AddAttribute(sequence++, attr.Key, attr.Value); *@
+@*         } *@
+@*          *@
+@*         builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this,  *@
+@*             e => field.Value = e.Value)); *@
+@*         builder.CloseElement(); *@
+@*     } *@
+@* *@
+@*     private void RenderSelectInput(RenderTreeBuilder builder, ref int sequence, WizardField field) *@
+@*     { *@
+@*         builder.OpenElement(sequence++, "select"); *@
+@*         builder.AddAttribute(sequence++, "class", "form-control"); *@
+@*         builder.AddAttribute(sequence++, "id", field.Id); *@
+@*         builder.AddAttribute(sequence++, "name", field.Name); *@
+@*         builder.AddAttribute(sequence++, "disabled", !field.IsEnabled); *@
+@*         if (field.IsRequired) builder.AddAttribute(sequence++, "required", true); *@
+@*          *@
+@*         builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, *@
+@*             e => field.Value = e.Value)); *@
+@* *@
+@*         foreach (var option in field.Options) *@
+@*         { *@
+@*             builder.OpenElement(sequence++, "option"); *@
+@*             builder.AddAttribute(sequence++, "value", option.Value); *@
+@*             if (option.IsSelected || field.Value?.ToString() == option.Value) *@
+@*                 builder.AddAttribute(sequence++, "selected", true); *@
+@*             builder.AddContent(sequence++, option.Text); *@
+@*             builder.CloseElement(); *@
+@*         } *@
+@*          *@
+@*         builder.CloseElement(); *@
+@*     } *@
+@* *@
+@*     private void RenderTextareaInput(RenderTreeBuilder builder, ref int sequence, WizardField field) *@
+@*     { *@
+@*         builder.OpenElement(sequence++, "textarea"); *@
+@*         builder.AddAttribute(sequence++, "class", "form-control"); *@
+@*         builder.AddAttribute(sequence++, "id", field.Id); *@
+@*         builder.AddAttribute(sequence++, "name", field.Name); *@
+@*         builder.AddAttribute(sequence++, "placeholder", field.Placeholder); *@
+@*         builder.AddAttribute(sequence++, "disabled", !field.IsEnabled); *@
+@*         if (field.IsRequired) builder.AddAttribute(sequence++, "required", true); *@
+@*          *@
+@*         builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, *@
+@*             e => field.Value = e.Value)); *@
+@*          *@
+@*         builder.AddContent(sequence++, field.Value?.ToString()); *@
+@*         builder.CloseElement(); *@
+@*     } *@
+@* *@
+@*     private void RenderCheckboxInput(RenderTreeBuilder builder, ref int sequence, WizardField field) *@
+@*     { *@
+@*         builder.OpenElement(sequence++, "input"); *@
+@*         builder.AddAttribute(sequence++, "type", "checkbox"); *@
+@*         builder.AddAttribute(sequence++, "class", "form-check-input"); *@
+@*         builder.AddAttribute(sequence++, "id", field.Id); *@
+@*         builder.AddAttribute(sequence++, "name", field.Name); *@
+@*         builder.AddAttribute(sequence++, "value", "true"); *@
+@*         builder.AddAttribute(sequence++, "disabled", !field.IsEnabled); *@
+@*         if (field.Value is bool boolValue && boolValue) *@
+@*             builder.AddAttribute(sequence++, "checked", true); *@
+@*          *@
+@*         builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, *@
+@*             e => field.Value = bool.Parse(e.Value?.ToString() ?? "false"))); *@
+@*         builder.CloseElement(); *@
+@* *@
+@*         builder.OpenElement(sequence++, "label"); *@
+@*         builder.AddAttribute(sequence++, "for", field.Id); *@
+@*         builder.AddAttribute(sequence++, "class", "form-check-label"); *@
+@*         builder.AddContent(sequence++, field.Label); *@
+@*         builder.CloseElement(); *@
+@*     } *@
+@* *@
+@*     private void RenderCheckboxGroup(RenderTreeBuilder builder, ref int sequence, WizardField field) *@
+@*     { *@
+@*         builder.OpenElement(sequence++, "ul"); *@
+@*         builder.AddAttribute(sequence++, "class", "list-group row"); *@
+@* *@
+@*         foreach (var option in field.CheckboxOptions) *@
+@*         { *@
+@*             builder.OpenElement(sequence++, "li"); *@
+@*             builder.AddAttribute(sequence++, "class", $"{option.ColClass}"); *@
+@*             builder.AddAttribute(sequence++, "style", "float:left;list-style:none;"); *@
+@* *@
+@*             builder.OpenElement(sequence++, "label"); *@
+@*             builder.AddAttribute(sequence++, "class", "radio-inline"); *@
+@* *@
+@*             builder.OpenElement(sequence++, "input"); *@
+@*             builder.AddAttribute(sequence++, "type", "checkbox"); *@
+@*             builder.AddAttribute(sequence++, "id", option.Id); *@
+@*             builder.AddAttribute(sequence++, "name", option.Name); *@
+@*             builder.AddAttribute(sequence++, "disabled", !option.IsEnabled); *@
+@*             if (option.IsChecked) *@
+@*                 builder.AddAttribute(sequence++, "checked", true); *@
+@*              *@
+@*             builder.AddAttribute(sequence++, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(this, *@
+@*                 e => option.IsChecked = bool.Parse(e.Value?.ToString() ?? "false"))); *@
+@*             builder.CloseElement(); *@
+@* *@
+@*             builder.OpenElement(sequence++, "label"); *@
+@*             builder.AddContent(sequence++, option.Label); *@
+@*             builder.CloseElement(); *@
+@* *@
+@*             builder.CloseElement(); // label.radio-inline *@
+@*             builder.CloseElement(); // li *@
+@*         } *@
+@* *@
+@*         builder.CloseElement(); // ul *@
+@*     } *@
+@* *@
+@*     private void RenderFileInput(RenderTreeBuilder builder, ref int sequence, WizardField field) *@
+@*     { *@
+@*         builder.OpenElement(sequence++, "input"); *@
+@*         builder.AddAttribute(sequence++, "type", "file"); *@
+@*         builder.AddAttribute(sequence++, "class", "form-control"); *@
+@*         builder.AddAttribute(sequence++, "id", field.Id); *@
+@*         builder.AddAttribute(sequence++, "name", field.Name); *@
+@*         builder.AddAttribute(sequence++, "disabled", !field.IsEnabled); *@
+@*         builder.CloseElement(); *@
+@*     } *@
+@* *@
+@*     private void RenderDisplayField(RenderTreeBuilder builder, ref int sequence, WizardField field) *@
+@*     { *@
+@*         builder.OpenElement(sequence++, "p"); *@
+@*         builder.AddAttribute(sequence++, "class", "form-control-static"); *@
+@*         builder.AddAttribute(sequence++, "data-display", field.Name); *@
+@*         builder.AddContent(sequence++, field.Value?.ToString()); *@
+@*         builder.CloseElement(); *@
+@*     } *@
+@* *@
+@*     private async Task NextStep() *@
+@*     { *@
+@*         if (OnStepValidation != null) *@
+@*         { *@
+@*             var isValid = await OnStepValidation(CurrentStepIndex); *@
+@*             if (!isValid) *@
+@*             { *@
+@*                 ShowErrorAlert = true; *@
+@*                 ShowSuccessAlert = false; *@
+@*                 return; *@
+@*             } *@
+@*         } *@
+@* *@
+@*         if (CurrentStepIndex < Steps.Count - 1) *@
+@*         { *@
+@*             Steps[CurrentStepIndex].IsCompleted = true; *@
+@*             Steps[CurrentStepIndex].IsActive = false; *@
+@*             CurrentStepIndex++; *@
+@*             Steps[CurrentStepIndex].IsActive = true; *@
+@*             ShowErrorAlert = false; *@
+@*             await OnStepChanged.InvokeAsync(CurrentStepIndex); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task PreviousStep() *@
+@*     { *@
+@*         if (CurrentStepIndex > 0) *@
+@*         { *@
+@*             Steps[CurrentStepIndex].IsActive = false; *@
+@*             CurrentStepIndex--; *@
+@*             Steps[CurrentStepIndex].IsActive = true; *@
+@*             ShowErrorAlert = false; *@
+@*             await OnStepChanged.InvokeAsync(CurrentStepIndex); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task NavigateToStep(int stepIndex) *@
+@*     { *@
+@*         if (stepIndex >= 0 && stepIndex < Steps.Count) *@
+@*         { *@
+@*             Steps[CurrentStepIndex].IsActive = false; *@
+@*             CurrentStepIndex = stepIndex; *@
+@*             Steps[CurrentStepIndex].IsActive = true; *@
+@*             await OnStepChanged.InvokeAsync(CurrentStepIndex); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task FinishWizard() *@
+@*     { *@
+@*         if (OnStepValidation != null) *@
+@*         { *@
+@*             var isValid = await OnStepValidation(CurrentStepIndex); *@
+@*             if (!isValid) *@
+@*             { *@
+@*                 ShowErrorAlert = true; *@
+@*                 ShowSuccessAlert = false; *@
+@*                 return; *@
+@*             } *@
+@*         } *@
+@* *@
+@*         var formData = new Dictionary<string, object>(); *@
+@*         foreach (var step in Steps) *@
+@*         { *@
+@*             foreach (var field in step.Fields) *@
+@*             { *@
+@*                 formData[field.Name] = field.Value ?? ""; *@
+@*             } *@
+@*         } *@
+@* *@
+@*         ShowSuccessAlert = true; *@
+@*         ShowErrorAlert = false; *@
+@*         await OnFinish.InvokeAsync(formData); *@
+@*     } *@
+@* } *@

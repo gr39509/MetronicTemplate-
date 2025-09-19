@@ -1,0 +1,385 @@
+@page "/product-wizard-example"
+@using System.ComponentModel.DataAnnotations
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Models.FormStepper
+
+<h2>Product Setup Wizard Example</h2>
+
+<ReusableFormWizard Steps="@wizardSteps" 
+           Config="@wizardConfig" 
+           OnFinish="@HandleWizardFinish"
+           OnStepChanged="@HandleStepChanged"
+           OnStepValidation="@ValidateStep" />
+
+@if (submittedData.Any())
+{
+    <div class="mt-4">
+        <h3>Submitted Data:</h3>
+        <ul>
+            @foreach (var item in submittedData)
+            {
+                <li><strong>@item.Key:</strong> @item.Value</li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    
+    
+      private List<WizardStep> wizardSteps = new();
+    private WizardConfiguration wizardConfig = new();
+    private Dictionary<string, object> submittedData = new();
+
+    protected override void OnInitialized()
+    {
+        SetupWizardConfig();
+        SetupWizardSteps();
+    }
+
+    private void SetupWizardConfig()
+    {
+        wizardConfig = new WizardConfiguration
+        {
+            Id = "productWizard",
+            Title = "Product Setup Wizard",
+            ShowProgressBar = true,
+            ShowStepNumbers = true,
+            BackButtonText = "Back",
+            NextButtonText = "Continue",
+            FinishButtonText = "Save Product",
+            SuccessMessage = "Product has been created successfully!",
+            ErrorMessage = "Please fill in all required fields."
+        };
+    }
+
+    private void SetupWizardSteps()
+    {
+        wizardSteps = new List<WizardStep>
+        {
+            new WizardStep
+            {
+                Title = "Product Setup",
+                Description = "Provide the product's details",
+                Icon = "fa-box",
+                Fields = new List<WizardField>
+                {
+                    new WizardField
+                    {
+                        Id = "productId",
+                        Name = "ProductID",
+                        Label = "PRODUCT NUMBER",
+                        Type = WizardFieldType.Text,
+                        IsRequired = true,
+                        ColClass = "col-md-6"
+                    },
+                    new WizardField
+                    {
+                        Id = "productName",
+                        Name = "ProductName",
+                        Label = "PRODUCT NAME",
+                        Type = WizardFieldType.Text,
+                        IsRequired = true,
+                        ColClass = "col-md-6"
+                    },
+                    new WizardField
+                    {
+                        Id = "productType",
+                        Name = "ProductType",
+                        Label = "PRODUCT TYPE",
+                        Type = WizardFieldType.Select,
+                        IsRequired = true,
+                        ColClass = "col-md-6",
+                        Options = new List<WizardSelectOption>
+                        {
+                            new WizardSelectOption { Value = "", Text = "---SELECT TYPE---" },
+                            new WizardSelectOption { Value = "electronics", Text = "Electronics" },
+                            new WizardSelectOption { Value = "clothing", Text = "Clothing" },
+                            new WizardSelectOption { Value = "books", Text = "Books" },
+                            new WizardSelectOption { Value = "food", Text = "Food & Beverages" }
+                        }
+                    },
+                    new WizardField
+                    {
+                        Id = "taxes",
+                        Name = "Taxes",
+                        Label = "TAXES",
+                        Type = WizardFieldType.CheckboxGroup,
+                        ColClass = "col-md-6",
+                        CheckboxOptions = new List<WizardCheckboxOption>
+                        {
+                            new WizardCheckboxOption { Id = "tax1", Name = "tax1", Label = "VAT (5%)", ColClass = "col-xs-6" },
+                            new WizardCheckboxOption { Id = "tax2", Name = "tax2", Label = "Service Tax (10%)", ColClass = "col-xs-6" },
+                            new WizardCheckboxOption { Id = "tax3", Name = "tax3", Label = "Luxury Tax (15%)", ColClass = "col-xs-6" },
+                            new WizardCheckboxOption { Id = "tax4", Name = "tax4", Label = "Import Duty (20%)", ColClass = "col-xs-6" }
+                        }
+                    },
+                    new WizardField
+                    {
+                        Id = "salesSameAsIncome",
+                        Name = "SalesSameAsIncome",
+                        Label = "SALES SAME AS INCOME",
+                        Type = WizardFieldType.Checkbox,
+                        ColClass = "col-md-6"
+                    }
+                }
+            },
+            new WizardStep
+            {
+                Title = "Inventory Setup",
+                Description = "Provide inventory and pricing details",
+                Icon = "fa-warehouse",
+                Fields = new List<WizardField>
+                {
+                    new WizardField
+                    {
+                        Id = "category",
+                        Name = "Category",
+                        Label = "CATEGORY",
+                        Type = WizardFieldType.Select,
+                        ColClass = "col-md-4",
+                        Options = new List<WizardSelectOption>
+                        {
+                            new WizardSelectOption { Value = "", Text = "---SELECT CATEGORY---" },
+                            new WizardSelectOption { Value = "cat1", Text = "Category 1" },
+                            new WizardSelectOption { Value = "cat2", Text = "Category 2" }
+                        }
+                    },
+                    new WizardField
+                    {
+                        Id = "sku",
+                        Name = "SKU",
+                        Label = "SKU",
+                        Type = WizardFieldType.Text,
+                        ColClass = "col-md-4"
+                    },
+                    new WizardField
+                    {
+                        Id = "manufacturer",
+                        Name = "Manufacturer",
+                        Label = "MANUFACTURER",
+                        Type = WizardFieldType.Text,
+                        ColClass = "col-md-4"
+                    },
+                    new WizardField
+                    {
+                        Id = "unitCost",
+                        Name = "UnitCost",
+                        Label = "UNIT COST",
+                        Type = WizardFieldType.Number,
+                        ColClass = "col-md-4",
+                        Attributes = new Dictionary<string, object> { { "step", "0.01" }, { "min", "0" } }
+                    },
+                    new WizardField
+                    {
+                        Id = "unitPrice",
+                        Name = "UnitPrice",
+                        Label = "UNIT PRICE",
+                        Type = WizardFieldType.Number,
+                        ColClass = "col-md-4",
+                        Attributes = new Dictionary<string, object> { { "step", "0.01" }, { "min", "0" } }
+                    },
+                    new WizardField
+                    {
+                        Id = "reorderLevel",
+                        Name = "ReorderLevel",
+                        Label = "REORDER LEVEL",
+                        Type = WizardFieldType.Number,
+                        ColClass = "col-md-4",
+                        Attributes = new Dictionary<string, object> { { "min", "0" } }
+                    },
+                    new WizardField
+                    {
+                        Id = "comments",
+                        Name = "Comments",
+                        Label = "COMMENTS",
+                        Type = WizardFieldType.Textarea,
+                        ColClass = "col-md-12"
+                    }
+                }
+            },
+            new WizardStep
+            {
+                Title = "Review",
+                Description = "Review and confirm all entries",
+                Icon = "fa-check-circle",
+                Fields = new List<WizardField>
+                {
+                    new WizardField
+                    {
+                        Name = "ProductID",
+                        Label = "Product Number:",
+                        Type = WizardFieldType.Display,
+                        ColClass = "col-md-12"
+                    },
+                    new WizardField
+                    {
+                        Name = "ProductName",
+                        Label = "Product Name:",
+                        Type = WizardFieldType.Display,
+                        ColClass = "col-md-12"
+                    },
+                    new WizardField
+                    {
+                        Name = "ProductType",
+                        Label = "Product Type:",
+                        Type = WizardFieldType.Display,
+                        ColClass = "col-md-12"
+                    },
+                    new WizardField
+                    {
+                        Name = "UnitCost",
+                        Label = "Unit Cost:",
+                        Type = WizardFieldType.Display,
+                        ColClass = "col-md-12"
+                    },
+                    new WizardField
+                    {
+                        Name = "UnitPrice",
+                        Label = "Unit Price:",
+                        Type = WizardFieldType.Display,
+                        ColClass = "col-md-12"
+                    }
+                }
+            }
+        };
+    }
+
+   private async Task<bool> ValidateStep(int stepIndex)
+{
+    var currentStep = wizardSteps[stepIndex];
+    var isValid = true;
+
+    foreach (var field in currentStep.Fields.Where(f => f.IsRequired))
+    {
+        if (field.Value == null || string.IsNullOrWhiteSpace(field.Value.ToString()))
+        {
+            field.ValidationMessage = $"{field.Label} is required.";
+            isValid = false;
+        }
+        else
+        {
+            field.ValidationMessage = string.Empty;
+        }
+    }
+
+    // Additional validation logic can be added here based on stepIndex
+    if (stepIndex == 1) // Inventory Setup step
+    {
+        var unitCostField = currentStep.Fields.FirstOrDefault(f => f.Name == "UnitCost");
+        var unitPriceField = currentStep.Fields.FirstOrDefault(f => f.Name == "UnitPrice");
+        
+        if (unitCostField != null && unitPriceField != null && 
+            unitCostField.Value != null && unitPriceField.Value != null)
+        {
+            if (decimal.TryParse(unitCostField.Value.ToString(), out decimal unitCost) &&
+                decimal.TryParse(unitPriceField.Value.ToString(), out decimal unitPrice))
+            {
+                if (unitPrice < unitCost)
+                {
+                    unitPriceField.ValidationMessage = "Unit price cannot be less than unit cost.";
+                    isValid = false;
+                }
+            }
+        }
+    }
+
+    return isValid;
+}
+
+private void HandleWizardFinish(Dictionary<string, object> formData)
+{
+    submittedData = formData;
+    // You could add additional processing here, like saving to a database
+    StateHasChanged();
+}
+
+private void HandleStepChanged(int stepIndex)
+{
+    // Update display fields in the review step
+    if (stepIndex == 2) // Review step
+    {
+        foreach (var field in wizardSteps[2].Fields)
+        {
+            var sourceField = wizardSteps
+                .SelectMany(s => s.Fields)
+                .FirstOrDefault(f => f.Name == field.Name);
+            
+            if (sourceField != null)
+            {
+                field.Value = sourceField.Value?.ToString() ?? string.Empty;
+            }
+        }
+    }
+}
+}
+
+<style>
+    .number{
+        margin-left: 20px;
+    }
+    .form-check-input {
+        margin-right: 8px;
+    }
+
+    .form-check-label {
+        margin-bottom: 0;
+    }
+    
+    .nav-pills{
+        display: flex;
+        justify-content: space-between;
+    }
+
+    /* Fix taxes checkbox group spacing */
+    .list-group.row {
+        margin-top: 10px;
+    }
+
+    .list-group.row li {
+        margin-bottom: 12px;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    /* Button positioning */
+    .form-actions {
+        margin-top: 30px;
+        padding: 20px 0;
+        margin-left: 80px;
+        border-top: 1px solid #eee;
+    }
+
+    .form-actions .row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    .button-previous {
+        margin-right: 15px !important;
+    }
+
+    .button-next, .button-submit {
+        margin-left: 10px !important;
+    }
+
+    /* Additional spacing for form elements */
+    .form-group {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Specific fix for SalesSameAsIncome checkbox */
+    input[type="checkbox"] + label {
+        margin-left: 8px;
+        font-weight: normal;
+    }
+    
+    
+    
+</style>

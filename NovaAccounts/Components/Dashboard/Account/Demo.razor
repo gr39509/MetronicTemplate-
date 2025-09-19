@@ -134,74 +134,79 @@
     {
         loginModel ??= new LoginModel();
         debugMessage = "Component initialized";
+       
     }
-
     private async Task SignIn()
+{
+    isLoading = true;
+    errorMessage = string.Empty;
+    debugMessage = "Attempting login...";
+    StateHasChanged();
+
+    try
     {
-        isLoading = true;
-        errorMessage = string.Empty;
-        debugMessage = "Attempting login...";
-        StateHasChanged(); // Force UI update to show loading state
-        
-        try
-        {
-            var apiResponse = await AuthService.LoginAsync(loginModel);
+        var apiResponse = await AuthService.LoginAsync(loginModel);
 
-            if (apiResponse != null && apiResponse.Status == 200 &&
-                !string.IsNullOrEmpty(apiResponse.Payload?.AuthResponse?.AccessToken))
+        if (apiResponse != null && apiResponse.Status == 200 &&
+            !string.IsNullOrEmpty(apiResponse.Payload?.AuthResponse?.AccessToken))
+        {
+            // Save tokens
+            TokenProvider.accesstoken = apiResponse.Payload.AuthResponse.AccessToken;
+            TokenProvider.refreshtoken = apiResponse.Payload.AuthResponse.RefreshToken;
+
+            // Build ClaimsPrincipal
+            var claims = new List<Claim>
             {
-                // Save tokens
-                TokenProvider.accesstoken = apiResponse.Payload.AuthResponse.AccessToken;
-                TokenProvider.refreshtoken = apiResponse.Payload.AuthResponse.RefreshToken;
+                new Claim(ClaimTypes.Name, loginModel.Email),
+                new Claim(ClaimTypes.Email, loginModel.Email)
+            };
 
-                // Build ClaimsPrincipal
-                var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, loginModel.Email),
-                    new Claim(ClaimTypes.Email, loginModel.Email)
-                };
+            var identity = new ClaimsIdentity(claims, "Auth");
+            var principal = new ClaimsPrincipal(identity);
 
-                var identity = new ClaimsIdentity(claims, "apiauth");
-                var principal = new ClaimsPrincipal(identity);
+            // Notify auth state
+            AuthService.CurrentUser = principal;
 
-                // Notify auth state
-                AuthService.CurrentUser = principal;
+            debugMessage = "Login successful! Redirecting...";
 
-                debugMessage = "Login successful! Redirecting...";
-                
-                // Use InvokeAsync to navigate outside the current render cycle
-                await InvokeAsync(async () =>
-                {
-                    await Task.Delay(500);
-                    Navigation.NavigateTo("/", forceLoad: true);
-                });
-            }
-            else
+            StateHasChanged();
+
+            await Task.Delay(500);
+
+            Navigation.NavigateTo("/clients");
+            return; // Prevent further code execution after navigation
+        }
+        else
+        {
+            errorMessage = apiResponse?.Status switch
             {
-                errorMessage = apiResponse?.Status switch
-                {
-                    401 => "Invalid email or password.",
-                    400 => "Please check your input and try again.",
-                    _ => "Login failed. Please try again."
-                };
-            }
-        }
-        catch (HttpRequestException ex)
-        {
-            errorMessage = "Network error. Please check your connection and try again.";
-            debugMessage = $"HTTP Error: {ex.Message}";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "An unexpected error occurred. Please try again.";
-            debugMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged(); // Force UI update after operation
+                401 => "Invalid email or password.",
+                400 => "Please check your input and try again.",
+                _ => "Login failed. Please try again."
+            };
         }
     }
+    catch (HttpRequestException ex)
+    {
+        errorMessage = "Network error. Please check your connection and try again.";
+        debugMessage = $"HTTP Error: {ex.Message}";
+    }
+    catch (NavigationException ex)
+    {
+        // do nothing
+        throw;
+    }
+    catch (Exception ex)
+    {
+        errorMessage = "An unexpected error occurred. Please try again.";
+        debugMessage = $"Error: {ex.Message}";
+    }
+    finally
+    {
+        isLoading = false;
+        StateHasChanged(); // Force UI update after operation
+    }
+}
 
     private async Task TestDifferentFormats()
     {
