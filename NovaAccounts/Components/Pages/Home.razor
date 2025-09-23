@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using NovaAccounts.Components.Dashboard.Account
+@using NovaAccounts.Components.Dashboard.Charts
 @using NovaAccounts.Components.Dashboard.Modals
 @using NovaAccounts.Components.Dashboard.Progress
 @using NovaAccounts.Components.Dashboard.Statistics
@@ -10,74 +11,183 @@
 <PageTitle>Home</PageTitle>
 
 
-<!-- BEGIN CONTAINER -->
-<div class="page-container">
-    <SideMenu></SideMenu>
 
-    <!-- BEGIN CONTENT -->
-    <div class="page-content-wrapper">
-        <!-- BEGIN CONTENT BODY -->
-        <div class="page-content">
-            <!-- BEGIN PAGE HEADER-->
-            <!-- BEGIN PAGE BAR -->
 
-            <!-- END PAGE BAR -->
-            <!-- BEGIN PAGE TITLE-->
-            <h1 class="page-title">
-                @*<marquee style="color:red;">***Alert!!! This is a Novalotto test platform***</marquee>*@
-                <small></small>
-            </h1>
-            <!-- END PAGE TITLE-->
-            <!-- END PAGE HEADER-->
-            
-            <!-- BEGIN DASHBOARD STATS 3-->
-            <div class="row">
-                <div class="col-md-7">
-                    <div id="site_activities_loading">
-                        <img src="../assets/global/img/loading.gif" alt="loading" />
-                    </div>
-                    <div id="line-example" class="rld"></div>
-                </div>
-                <div class="col-md-5">
-                    <div id="site_activities_loading">
-                        <img src="../assets/global/img/loading.gif" alt="loading" />
-                    </div>
-                    <div id="donut-example" class="rld"></div>
-                </div>
+<Chart></Chart>
+
+<div class="row">
+    <div class="page-toolbar">
+        <div class="col-md-4">
+            <div class="form-group form-md-line-input">
+                <div id="dashboard-report-range" class="tooltips btn btn-fit-height green" data-placement="top" data-original-title="Logs date range"><i class="icon-calendar"></i>&nbsp;<span class="thin uppercase hidden-xs"></span>&nbsp;<i class="fa fa-angle-down"></i></div>
             </div>
-            <div class="row margin-top-20">
-                <div class="col-md-12">
-                    <div id="site_activities_loading">
-                        <img src="../assets/global/img/loading.gif" alt="loading" />
-                    </div>
-                </div>
-            </div>
-            <!-- END DASHBOARD STATS 3-->
-            <ProgressBar></ProgressBar>
-            
-
-            
-            <StatisticCard></StatisticCard>
-            <DataTable></DataTable>
-            <DetailsTable></DetailsTable>
-            <ModalExample></ModalExample>
-            <Form></Form>
-
-
-
         </div>
-        <!-- END CONTENT BODY -->
     </div>
-    <!-- END CONTENT -->
-    <!-- BEGIN QUICK SIDEBAR -->
-    <a href="javascript:;" class="page-quick-sidebar-toggler">
-        <i class="icon-login"></i>
-    </a>
-    <div class="page-quick-sidebar-wrapper" data-close-on-body-click="false" id="activities">
-
-    </div>
-    <!-- END QUICK SIDEBAR -->
 </div>
-<!-- END CONTAINER -->
 
+<div class="form-group">
+    <label>Department</label>
+    <select class="form-control select2" style="width: 100%;">
 
+        <option>Select department</option>
+
+    </select>
+ 
+</div>
+<!-- /.form-group -->
+
+<div class="row">
+    <div class="col-md-7">
+        <div id="site_activities_loading">
+            <img src="../assets/global/img/loading.gif" alt="loading" />
+        </div>
+        <div id="line-example" class="rld"></div>
+    </div>
+    <div class="col-md-5">
+        <div id="site_activities_loading">
+            <img src="../assets/global/img/loading.gif" alt="loading" />
+        </div>
+        <div id="donut-example" class="rld"></div>
+    </div>
+</div>
+  
+<ProgressBar></ProgressBar>
+            
+
+            
+<StatisticCard></StatisticCard>
+<DataTable></DataTable>
+<DetailsTable></DetailsTable>
+<ModalExample></ModalExample>
+<Form></Form>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+         
+            if (success != "") {
+                swal(
+                    'Well done!',
+                    '<span class="font-green-meadow">' + success + '</span>',
+                    'success'
+                );
+            }
+            if (err != "") {
+                swal(
+                    'Oooops!!!!',
+                    '<span class="font-red-flamingo">' + err + '</span>',
+                    'error'
+                );
+            }
+            Display(moment().startOf('month').format('DD-MM-YYYY'), moment().format('DD-MM-YYYY'));
+        });
+        $(function () {
+            if (!jQuery().daterangepicker) {
+                return;
+            }
+
+            $('#dashboard-report-range').daterangepicker({
+                "ranges": {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                },
+                "locale": {
+                    "format": "MM/DD/YYYY",
+                    "separator": " - ",
+                    "applyLabel": "Apply",
+                    "cancelLabel": "Cancel",
+                    "fromLabel": "From",
+                    "toLabel": "To",
+                    "customRangeLabel": "Custom",
+                    "daysOfWeek": [
+                        "Su",
+                        "Mo",
+                        "Tu",
+                        "We",
+                        "Th",
+                        "Fr",
+                        "Sa"
+                    ],
+                    "monthNames": [
+                        "January",
+                        "February",
+                        "March",
+                        "April",
+                        "May",
+                        "June",
+                        "July",
+                        "August",
+                        "September",
+                        "October",
+                        "November",
+                        "December"
+                    ],
+                    "firstDay": 1
+                },
+                //"startDate": "11/08/2015",
+                //"endDate": "11/14/2015",
+                opens: (App.isRTL() ? 'right' : 'left'),
+            }, function (start, end, label) {
+                if ($('#dashboard-report-range').attr('data-display-range') != '0') {
+                    $('#dashboard-report-range span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+                }
+            });
+            if ($('#dashboard-report-range').attr('data-display-range') != '0') {
+                $('#dashboard-report-range span').html(moment().startOf('month').format('MMMM D, YYYY') + ' - ' + moment().format('MMMM D, YYYY'));
+            }
+            $('#dashboard-report-range').show();
+        });
+        $('#dashboard-report-range').on('apply.daterangepicker', function (ev, picker) {
+            Display(picker.startDate.format('DD-MM-YYYY'), picker.endDate.format('DD-MM-YYYY'), true);
+        });
+        function Display(sDate, eDate) {
+            $('#items').empty();
+            $('#items').load('/mpac/_Disbursement?sDate=' + encodeURI(sDate) +'&eDate=' + encodeURI(eDate));
+        };
+        function AddNew() {
+            swal({
+                title: '<span class="lead"><span class="font-red-flamingo">Receipt Number</span></span>',
+                input: 'text',
+                showCancelButton: true,
+                confirmButtonText: 'Verify',
+                confirmButtonColor: '#1BA39C',
+                cancelButtonColor: '#22313F',
+                showLoaderOnConfirm: true,
+                preConfirm: function (ReceiptNumber) {
+                    return new Promise(function (resolve, reject) {
+                        setTimeout(function () {
+                            if (ReceiptNumber == '') {
+                                reject('Invalid receipt number. Please try again.')
+                            }
+                            else {
+                                var jqxhr = $.get("/mpac/_CheckReceipt?ReceiptNumber=" + encodeURI(ReceiptNumber), function (data) {
+                                    if (data.includes('success')) {
+                                        swal(
+                                            'Verified!',
+                                            data,
+                                            'success'
+                                        ).then(function () {
+                                            location.href = '/mpac/_AddNewDisbursement?ReceiptNumber=' + encodeURI(ReceiptNumber);
+                                            resolve()
+                                        })
+                                    }
+                                    else {
+                                        swal({
+                                            title: 'Error!',
+                                            type: 'error',
+                                            text: data
+                                        }
+                                        )
+                                    }
+                                })
+                            }
+                        }, 2000)
+                    })
+                },
+                allowOutsideClick: false
+            })
+        };
+    </script>

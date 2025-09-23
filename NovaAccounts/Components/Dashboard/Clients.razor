@@ -7,104 +7,26 @@
 @inject IJSRuntime JSRuntime
 @layout MainLayout
 
-
-
-<!-- BEGIN CONTAINER -->
-<div class="page-container">
-    <SideMenu></SideMenu>
-
-    <!-- BEGIN CONTENT -->
-    <div class="page-content-wrapper">
-        <!-- BEGIN CONTENT BODY -->
-        <div class="page-content">
-            <!-- BEGIN PAGE HEADER-->
-            <!-- BEGIN PAGE BAR -->
-
-            <!-- END PAGE BAR -->
-            <!-- BEGIN PAGE TITLE-->
-            <h1 class="page-title">
-                @*<marquee style="color:red;">***Alert!!! This is a Novalotto test platform***</marquee>*@
-                <small></small>
-            </h1>
-            <!-- END PAGE TITLE-->
-            <!-- END PAGE HEADER-->
-            
-            
-
-            
-            <ReusableDataTable TItem="Client" 
-                               Data="@clients" 
-                               Columns="@clientColumns"
-                               Options="@clientOptions" 
-                               OnRowClick="@OnClientRowClick" />
-          
-
-
-
-        </div>
-        <!-- END CONTENT BODY -->
-    </div>
-    <!-- END CONTENT -->
-    <!-- BEGIN QUICK SIDEBAR -->
-    <a href="javascript:;" class="page-quick-sidebar-toggler">
-        <i class="icon-login"></i>
+<nav class="quick-nav">
+    <a class="quick-nav-trigger" href="#0">
+        <span aria-hidden="true"></span>
     </a>
-    <div class="page-quick-sidebar-wrapper" data-close-on-body-click="false" id="activities">
+    <ul id="myNav">
+        <li onclick="AddNew();">
+            <a href="#" class="active">
+                <span>Add New Client</span>
+                <i class="icon-user"></i>
+            </a>
+        </li>
+    </ul>
+    <span aria-hidden="true" class="quick-nav-bg"></span>
+</nav>
 
-    </div>
-    <!-- END QUICK SIDEBAR -->
-</div>
-<!-- END CONTAINER -->
-
-@* *@
-@* <div class="container-fluid"> *@
-@*     <div class="row"> *@
-@*         <div class="col-12"> *@
-@*             <div class="page-header"> *@
-@*                 <h2 class="page-title">Client Management</h2> *@
-@*                 <p class="page-description">Manage and view all client information</p> *@
-@*             </div> *@
-@* *@
-@*             @if (isLoading) *@
-@*             { *@
-@*                 <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;"> *@
-@*                     <div class="spinner-border text-primary" role="status"> *@
-@*                         <span class="visually-hidden">Loading clients...</span> *@
-@*                     </div> *@
-@*                 </div> *@
-@*             } *@
-@*             else if (!string.IsNullOrEmpty(errorMessage)) *@
-@*             { *@
-@*                 <div class="alert alert-danger"> *@
-@*                     <h5>Error Loading Clients</h5> *@
-@*                     <p>@errorMessage</p> *@
-@*                     <button type="button" class="btn btn-outline-danger btn-sm" @onclick="LoadClients"> *@
-@*                         <i class="fa fa-refresh"></i> Retry *@
-@*                     </button> *@
-@*                 </div> *@
-@*             } *@
-@*             else *@
-@*             { *@
-@*                 <div class="card"> *@
-@*                     <div class="card-header d-flex justify-content-between align-items-center"> *@
-@*                         <h5 class="card-title mb-0">Clients (@clients.Count)</h5> *@
-@*                         <div> *@
-@*                             <button type="button" class="btn btn-primary btn-sm me-2" @onclick="LoadClients"> *@
-@*                                 <i class="fa fa-refresh"></i> Refresh *@
-@*                             </button> *@
-@*                             <button type="button" class="btn btn-success btn-sm"> *@
-@*                                 <i class="fa fa-plus"></i> Add Client *@
-@*                             </button> *@
-@*                         </div> *@
-@*                     </div> *@
-@*                     <div class="card-body"> *@
-@*                         *@
-@*                     </div> *@
-@*                 </div> *@
-@*             } *@
-@*         </div> *@
-@*     </div> *@
-@* </div> *@
+<ReusableDataTable TItem="Client" 
+                   Data="clients" 
+                   Columns="@clientColumns"
+                   Options="@clientOptions" 
+                   OnRowClick="@OnClientRowClick" />
 
 @code {
     private List<Client> clients = new();
