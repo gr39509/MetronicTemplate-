@@ -1,11 +1,11 @@
 ﻿@using NovaAccounts.Components.MenuComponents
 @using NovaAccounts.Components.MenuComponents.Links
             <!-- BEGIN SIDEBAR -->
-            <div class="page-sidebar-wrapper">
+            <div class="page-sidebar-wrapper navbar-collapse">
                 <!-- BEGIN SIDEBAR -->
                 <!-- DOC: Set data-auto-scroll="false" to disable the sidebar from auto scrolling/focusing -->
                 <!-- DOC: Change data-auto-speed="200" to adjust the sub menu slide up/down speed -->
-                <div class="page-sidebar navbar-collapse collapse">
+                <div class="page-sidebar">
                     <!-- BEGIN SIDEBAR MENU -->
                     <!-- DOC: Apply "page-sidebar-menu-light" class right after "page-sidebar-menu" to enable light sidebar menu style(without borders) -->
                     <!-- DOC: Apply "page-sidebar-menu-hover-submenu" class right after "page-sidebar-menu" to enable hoverable(hover vs accordion) sub menu mode -->
@@ -43,21 +43,17 @@
                             <!-- END RESPONSIVE QUICK SEARCH FORM -->
                         </li>
                         <!-- Direct Blazor equivalents of your MVC helpers -->
-                        <SubMenuLink Text="Add Client" Path="/" />
-                        <MenuFirstLevelLink Text="INVOICES" Path="/clients" Icon="icon-calculator" />
+                        @* <SubMenuLink Text="Add Client" Icon="icon-briefcase" Path="/" /> *@
+                        @* <MenuFirstLevelLink Text="INVOICES" Path="/invoices" Icon="icon-calculator" /> *@
                         <MenuFirstLevelLink Text="RECEIPTS"  Path="/" Icon="icon-docs" />
-                        <MenuFirstLevelLink Text="DEPOSITS"  Path="Deposits" Icon="icon-briefcase" />
-                        <MenuFirstLevelLink Text="PAYMENTS"  Path="Payments" Icon="icon-wallet" />
-                        <MenuFirstLevel Text="CBS Clients" Icon="fa fa-users" Controllers="@(new List<string> { "cbsClients" })">
+                        <MenuFirstLevelLink Text="RECEIPTS"  Path="/clients" Icon="icon-docs" />
+                        <MenuFirstLevelLink Text="DEPOSITS"  Path="/fggf" Icon="icon-briefcase" />
+                        <MenuFirstLevelLink Text="PAYMENTS"  Path="/fhfg" Icon="icon-wallet" />
+                        <MenuFirstLevel Text="CBS Clients" Icon="fa fa-users" >
                             <SubMenuLink Text="All Clients"  Path="/clients" />
                             <SubMenuLink Text="Add Client" Path="cbsClients" />
                         </MenuFirstLevel>
-                      
-                      
-                        
-                        
-                     
-                    </ul>
+                      </ul>
                   
                  
                     <!-- END SIDEBAR MENU -->
@@ -101,3 +97,38 @@
 @*         </div> *@
 @*     </nav> *@
 @* </div> *@
+
+
+<style>
+
+    li.nav-item.open:has(li.active) > a {
+        position: relative;
+        background: #36c6d3;
+        border-top-color: transparent;
+        color: #fff;
+    }
+    li.nav-item.open:has(li.active) > a::after{
+        content: "";
+        display: block;
+        float: right;
+        position: absolute;
+        right: 0;
+        top: 8px;
+        background: 0 0;
+        width: 0;
+        height: 0;
+        border-top: 12px solid transparent;
+        border-bottom: 12px solid transparent;
+        border-right: 12px solid #fff;
+    }
+    
+
+    li.nav-item.start.active, li.nav-item.start.active > a{
+        background: #36c6d3;
+        border-top-color: transparent;
+        color: #fff;
+    }
+    li.nav-item.open:has(li.active) .arrow::before, li.nav-item.open:has(li.active) .sidebar-nav-icon{
+        color: #fff !important;
+    }
+</style>

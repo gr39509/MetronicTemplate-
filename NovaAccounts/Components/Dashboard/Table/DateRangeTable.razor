@@ -1,0 +1,282 @@
+@using NovaAccounts.Components.DataFields
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Components.UsageModes
+<h3>DateRangeTable</h3>
+
+
+<DateRangePicker StartDate="@selectedStartDate" 
+                 EndDate="@selectedEndDate"
+                 OnDateRangeChanged="@HandleDateRangeChanged"
+                 CssClass="tooltips"
+                 DisplayRange="true"
+                 DateFormat="MMM d, yyyy" />
+
+
+<h3>Transaction Management</h3>
+<div class="alert alert-info">
+    <i class="fa fa-info-circle"></i> 
+    Showing transactions from <strong>@selectedStartDate.ToString("MMM d, yyyy")</strong> 
+    to <strong>@selectedEndDate.ToString("MMM d, yyyy")</strong>
+    (@filteredTransactions.Count of @allTransactions.Count total)
+</div>
+
+<ReusableDataTable TItem="Transaction" 
+                   Data="@filteredTransactions" 
+                   Columns="@transactionColumns"
+                   Options="@transactionOptions" />
+
+<h3 class="mt-5">Employee Management</h3>
+<div class="alert alert-info">
+    <i class="fa fa-info-circle"></i> 
+    Showing employees hired from <strong>@selectedStartDate.ToString("MMM d, yyyy")</strong> 
+    to <strong>@selectedEndDate.ToString("MMM d, yyyy")</strong>
+    (@filteredEmployees.Count of @allEmployees.Count total)
+</div>
+
+<ReusableDataTable TItem="Employee" 
+                   Data="@filteredEmployees" 
+                   Columns="@employeeColumns" 
+                   Options="@employeeOptions" />
+
+@code {
+    // Date range selection
+    private DateTime selectedStartDate = DateTime.Today.AddDays(-30);
+    private DateTime selectedEndDate = DateTime.Today;
+
+    // Original data (unfiltered)
+    private List<Transaction> allTransactions = new();
+    private List<Employee> allEmployees = new();
+
+    // Filtered data (what gets displayed)
+    private List<Transaction> filteredTransactions = new();
+    private List<Employee> filteredEmployees = new();
+
+    // Table configuration
+    private List<DataTableColumn> transactionColumns = new();
+    private List<DataTableColumn> employeeColumns = new();
+    private DataTableOptions transactionOptions = new();
+    private DataTableOptions employeeOptions = new();
+
+    protected override void OnInitialized()
+    {
+        LoadAllData();
+        ConfigureTransactionTable();
+        ConfigureEmployeeTable();
+        ApplyDateFilter(); // Initial filter
+    }
+
+    private void LoadAllData()
+    {
+        LoadTransactionData();
+        LoadEmployeeData();
+    }
+
+    private void LoadTransactionData()
+    {
+        // Extended transaction data with more variety in dates
+        allTransactions = new List<Transaction>
+        {
+            new() { TransDate = DateTime.Now.AddDays(-1), Amount = 1250.00m, Status = "Completed", Reference = "TXN001234" },
+            new() { TransDate = DateTime.Now.AddDays(-2), Amount = 750.50m, Status = "Pending", Reference = "TXN001235" },
+            new() { TransDate = DateTime.Now.AddDays(-3), Amount = 2100.00m, Status = "Completed", Reference = "TXN001236" },
+            new() { TransDate = DateTime.Now.AddDays(-4), Amount = 455.75m, Status = "Failed", Reference = "TXN001237" },
+            new() { TransDate = DateTime.Now.AddDays(-10), Amount = 3200.00m, Status = "Completed", Reference = "TXN001238" },
+            new() { TransDate = DateTime.Now.AddDays(-15), Amount = 890.25m, Status = "Pending", Reference = "TXN001239" },
+            new() { TransDate = DateTime.Now.AddDays(-20), Amount = 1750.00m, Status = "Completed", Reference = "TXN001240" },
+            new() { TransDate = DateTime.Now.AddDays(-25), Amount = 625.50m, Status = "Failed", Reference = "TXN001241" },
+            new() { TransDate = DateTime.Now.AddDays(-35), Amount = 4500.00m, Status = "Completed", Reference = "TXN001242" },
+            new() { TransDate = DateTime.Now.AddDays(-40), Amount = 1125.75m, Status = "Completed", Reference = "TXN001243" },
+            new() { TransDate = DateTime.Now.AddDays(-50), Amount = 2800.00m, Status = "Pending", Reference = "TXN001244" },
+            new() { TransDate = DateTime.Now.AddDays(-60), Amount = 950.25m, Status = "Failed", Reference = "TXN001245" }
+        };
+    }
+
+    private void LoadEmployeeData()
+    {
+        allEmployees = new List<Employee>
+        {
+            new() { Id = 1, FirstName = "John", LastName = "Doe", Email = "john.doe@company.com", Department = "IT", Salary = 75000, HireDate = DateTime.Now.AddDays(-10), IsActive = true },
+            new() { Id = 2, FirstName = "Jane", LastName = "Smith", Email = "jane.smith@company.com", Department = "HR", Salary = 65000, HireDate = DateTime.Now.AddDays(-20), IsActive = true },
+            new() { Id = 3, FirstName = "Bob", LastName = "Johnson", Email = "bob.johnson@company.com", Department = "Finance", Salary = 80000, HireDate = DateTime.Now.AddDays(-45), IsActive = false },
+            new() { Id = 4, FirstName = "Alice", LastName = "Brown", Email = "alice.brown@company.com", Department = "Marketing", Salary = 70000, HireDate = DateTime.Now.AddDays(-25), IsActive = true },
+            new() { Id = 5, FirstName = "Charlie", LastName = "Wilson", Email = "charlie.wilson@company.com", Department = "Sales", Salary = 60000, HireDate = DateTime.Now.AddDays(-15), IsActive = true },
+            new() { Id = 6, FirstName = "Diana", LastName = "Davis", Email = "diana.davis@company.com", Department = "IT", Salary = 85000, HireDate = DateTime.Now.AddDays(-70), IsActive = true },
+            new() { Id = 7, FirstName = "Eve", LastName = "Miller", Email = "eve.miller@company.com", Department = "HR", Salary = 68000, HireDate = DateTime.Now.AddDays(-80), IsActive = false },
+            new() { Id = 8, FirstName = "Frank", LastName = "Garcia", Email = "frank.garcia@company.com", Department = "Finance", Salary = 90000, HireDate = DateTime.Now.AddDays(-100), IsActive = true },
+            new() { Id = 9, FirstName = "Grace", LastName = "Lee", Email = "grace.lee@company.com", Department = "Marketing", Salary = 72000, HireDate = DateTime.Now.AddDays(-5), IsActive = true },
+            new() { Id = 10, FirstName = "Henry", LastName = "Taylor", Email = "henry.taylor@company.com", Department = "Sales", Salary = 65000, HireDate = DateTime.Now.AddDays(-35), IsActive = false }
+        };
+    }
+
+    private void HandleDateRangeChanged((DateTime Start, DateTime End) dateRange)
+    {
+        selectedStartDate = dateRange.Start;
+        selectedEndDate = dateRange.End;
+        ApplyDateFilter();
+        StateHasChanged();
+    }
+
+    private void ApplyDateFilter()
+    {
+        // Filter transactions by TransDate
+        filteredTransactions = allTransactions
+            .Where(t => t.TransDate.Date >= selectedStartDate.Date && 
+                       t.TransDate.Date <= selectedEndDate.Date)
+            .OrderByDescending(t => t.TransDate)
+            .ToList();
+
+        // Filter employees by HireDate
+        filteredEmployees = allEmployees
+            .Where(e => e.HireDate.Date >= selectedStartDate.Date && 
+                       e.HireDate.Date <= selectedEndDate.Date)
+            .OrderByDescending(e => e.HireDate)
+            .ToList();
+
+        // Update table options with new record counts for info display
+        UpdateTableOptions();
+    }
+
+    private void UpdateTableOptions()
+    {
+        // Update transaction table language settings
+        if (transactionOptions.AdditionalOptions?.ContainsKey("language") == true)
+        {
+            var language = (Dictionary<string, object>)transactionOptions.AdditionalOptions["language"];
+            language["info"] = $"Showing _START_ to _END_ of _TOTAL_ filtered transactions (from {allTransactions.Count} total)";
+            language["infoFiltered"] = "";
+        }
+        else
+        {
+            transactionOptions.AdditionalOptions ??= new Dictionary<string, object>();
+            transactionOptions.AdditionalOptions["language"] = new Dictionary<string, object>
+            {
+                ["info"] = $"Showing _START_ to _END_ of _TOTAL_ filtered transactions (from {allTransactions.Count} total)",
+                ["emptyTable"] = "No transactions found in selected date range",
+                ["zeroRecords"] = "No transactions match the selected date range"
+            };
+        }
+
+        // Update employee table language settings  
+        if (employeeOptions.AdditionalOptions?.ContainsKey("language") == true)
+        {
+            var language = (Dictionary<string, object>)employeeOptions.AdditionalOptions["language"];
+            language["info"] = $"Showing _START_ to _END_ of _TOTAL_ filtered employees (from {allEmployees.Count} total)";
+            language["infoFiltered"] = "";
+        }
+    }
+
+    private void ConfigureTransactionTable()
+    {
+        transactionColumns = new List<DataTableColumn>
+        {
+            new() { Header = "TRANS DATE", PropertyName = nameof(Transaction.TransDate), DataType = "date"},
+            new() { 
+                Header = "AMOUNT", 
+                PropertyName = nameof(Transaction.Amount), 
+                DataType = "currency",
+                CustomRenderer = (item) => ((Transaction)item).Amount.ToString("C")
+            },
+            new() { 
+                Header = "STATUS", 
+                PropertyName = nameof(Transaction.Status), 
+                Sortable = false,
+                CustomRenderer = (item) => ((Transaction)item).StatusBadge
+            },
+            new() { Header = "REFERENCE", PropertyName = nameof(Transaction.Reference) },
+            new() { 
+                Header = "ACTION", 
+                PropertyName = "", 
+                Sortable = false, 
+                Searchable = false,
+                CustomRenderer = (item) => "<button class='btn btn-sm btn-outline-primary' onclick='viewTransaction(\"" + ((Transaction)item).Reference + "\")'>View</button>"
+            }
+        };
+
+        transactionOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            SearchPlaceholder = "Search Transactions",
+            TableId = "transactionsTable",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "lead font-blue-ebonyclay",
+            Striped = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["select"] = true,
+                ["buttons"] = new[] { "copy", "csv", "excel", "pdf", "print", "colvis" },
+                ["dom"] = "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 text-end'Bf>>" +
+                         "<'row'<'col-sm-12'tr>>" +
+                         "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                ["order"] = new object[] { new object[] { 0, "desc" } },
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["emptyTable"] = "No transactions found in selected date range",
+                    ["zeroRecords"] = "No transactions match the current filter and date range"
+                }
+            }
+        };
+    }
+
+    private void ConfigureEmployeeTable()
+    {
+        employeeColumns = new List<DataTableColumn>
+        {
+            new() { Header = "ID", PropertyName = nameof(Employee.Id), DataType = "number", Width = 80 },
+            new() { 
+                Header = "FULL NAME", 
+                PropertyName = nameof(Employee.FullName),
+                CustomRenderer = (item) => $"<strong>{((Employee)item).FullName}</strong>"
+            },
+            new() { Header = "EMAIL", PropertyName = nameof(Employee.Email) },
+            new() { Header = "DEPARTMENT", PropertyName = nameof(Employee.Department) },
+            new() { 
+                Header = "SALARY", 
+                PropertyName = nameof(Employee.Salary), 
+                DataType = "currency",
+                CustomRenderer = (item) => ((Employee)item).Salary.ToString("C")
+            },
+            new() { Header = "HIRE DATE", PropertyName = nameof(Employee.HireDate), DataType = "date" },
+            new() { 
+                Header = "STATUS", 
+                PropertyName = nameof(Employee.IsActive),
+                CustomRenderer = (item) => ((Employee)item).IsActive 
+                    ? "<span class='badge badge-success'>Active</span>" 
+                    : "<span class='badge badge-secondary'>Inactive</span>"
+            }
+        };
+
+        employeeOptions = new DataTableOptions
+        {
+            PageLength = 5,
+            LengthMenu = new[] { 5, 10, 20 },
+            LengthMenuLabels = new[] { "5", "10", "20" },
+            SearchPlaceholder = "Search Employees",
+            TableId = "employeesTable",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "lead font-blue-ebonyclay",
+            Striped = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["select"] = true,
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search Employees:",
+                    ["lengthMenu"] = "Show _MENU_ employees per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ employees",
+                    ["infoEmpty"] = "No employees found in selected date range",
+                    ["infoFiltered"] = "(filtered from _MAX_ total employees)",
+                    ["emptyTable"] = "No employee data available in selected date range",
+                    ["zeroRecords"] = "No employees hired in the selected date range"
+                }
+            }
+        };
+    }
+}
+
+
+<script>
+    function viewTransaction(reference) {
+        alert('View transaction: ' + reference);
+        // Implement your view transaction logic here
+    }
+</script>

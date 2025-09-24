@@ -1,0 +1,150 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="row">
+    <div class="page-toolbar">
+        <div class="col-md-4" style="width: 300px;">
+            <div class="form-group form-md-line-input">
+                <div class="dropdown">
+                    <button class="@CssClass btn btn-fit-height green dropdown-toggle" 
+                            type="button" 
+                            @onclick="ToggleDropdown"
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="@IsDropdownOpen">
+                        <i class="icon-calendar"></i>&nbsp;
+                        <span class="thin uppercase hidden-xs">@DisplayText</span>&nbsp;
+                        <i class="fa fa-angle-down"></i>
+                    </button>
+                    
+                    @if (IsDropdownOpen)
+                    {
+                        <div class="dropdown-menu show p-3" style="min-width: 300px;">
+                            <h6 class="dropdown-header bg-primary text-white">Quick Ranges</h6>
+                            @foreach (var range in PredefinedRanges)
+                            {
+                                <button class="dropdown-item" @onclick="() => SelectPredefinedRange(range.Key)">
+                                    @range.Key
+                                </button>
+                            }
+                            
+                            <div class="dropdown-divider"></div>
+                            <h6 class="dropdown-header">Custom Range</h6>
+                            
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label">From</label>
+                                    <input type="date" class="form-control form-control-sm" 
+                                           @bind="TempStartDate" 
+                                           @bind:format="yyyy-MM-dd" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">To</label>
+                                    <input type="date" class="form-control form-control-sm" 
+                                           @bind="TempEndDate" 
+                                           @bind:format="yyyy-MM-dd" />
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button class="btn btn-primary btn-sm" @onclick="ApplyCustomRange">Apply</button>
+                                <button class="btn btn-secondary btn-sm" @onclick="CancelSelection">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div> 
+</div>
+
+
+
+@code {
+    [Parameter] public DateTime StartDate { get; set; } = DateTime.Today.AddDays(-29);
+    [Parameter] public DateTime EndDate { get; set; } = DateTime.Today;
+    [Parameter] public EventCallback<(DateTime Start, DateTime End)> OnDateRangeChanged { get; set; }
+    [Parameter] public string CssClass { get; set; } = "tooltips";
+    [Parameter] public bool DisplayRange { get; set; } = true;
+    [Parameter] public string DateFormat { get; set; } = "MMMM d, yyyy";
+
+    private bool IsDropdownOpen = false;
+    private DateTime TempStartDate;
+    private DateTime TempEndDate;
+
+    private Dictionary<string, (DateTime Start, DateTime End)> PredefinedRanges = new();
+
+    protected override void OnInitialized()
+    {
+        TempStartDate = StartDate;
+        TempEndDate = EndDate;
+        
+        InitializePredefinedRanges();
+    }
+
+    private void InitializePredefinedRanges()
+    {
+        var today = DateTime.Today;
+        
+        PredefinedRanges = new Dictionary<string, (DateTime Start, DateTime End)>
+        {
+            { "Today", (today, today) },
+            { "Yesterday", (today.AddDays(-1), today.AddDays(-1)) },
+            { "Last 7 Days", (today.AddDays(-6), today) },
+            { "Last 30 Days", (today.AddDays(-29), today) },
+            { "This Month", (new DateTime(today.Year, today.Month, 1), today) },
+            { "Last Month", (new DateTime(today.Year, today.Month, 1).AddMonths(-1), 
+                           new DateTime(today.Year, today.Month, 1).AddDays(-1)) }
+        };
+    }
+
+    private string DisplayText
+    {
+        get
+        {
+            if (!DisplayRange) return "";
+            return $"{StartDate.ToString(DateFormat)} - {EndDate.ToString(DateFormat)}";
+        }
+    }
+
+    private void ToggleDropdown()
+    {
+        IsDropdownOpen = !IsDropdownOpen;
+        if (IsDropdownOpen)
+        {
+            TempStartDate = StartDate;
+            TempEndDate = EndDate;
+        }
+    }
+
+    private async Task SelectPredefinedRange(string rangeName)
+    {
+        if (PredefinedRanges.TryGetValue(rangeName, out var range))
+        {
+            StartDate = range.Start;
+            EndDate = range.End;
+            IsDropdownOpen = false;
+            
+            await OnDateRangeChanged.InvokeAsync((StartDate, EndDate));
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplyCustomRange()
+    {
+        if (TempStartDate <= TempEndDate)
+        {
+            StartDate = TempStartDate;
+            EndDate = TempEndDate;
+            IsDropdownOpen = false;
+            
+            await OnDateRangeChanged.InvokeAsync((StartDate, EndDate));
+            StateHasChanged();
+        }
+    }
+
+    private void CancelSelection()
+    {
+        TempStartDate = StartDate;
+        TempEndDate = EndDate;
+        IsDropdownOpen = false;
+    }
+}
