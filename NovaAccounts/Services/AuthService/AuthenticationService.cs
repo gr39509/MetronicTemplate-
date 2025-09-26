@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
-using NovaAccounts.Components.Dashboard.Account;
+using NovaAccounts.Components.ComponentUsages.Account;
+using NovaAccounts.Components.ComponentUsages.Account;
 using NovaAccounts.Models.Account;
 
 

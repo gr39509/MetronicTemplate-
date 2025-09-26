@@ -1,0 +1,37 @@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Models.QuickNav
+<ReusableQuickNav NavItems="@navigationItems" 
+         NavId="inventoryNav" 
+         ActiveUrl="@currentUrl" />
+
+@code {
+    private string currentUrl = "/Inventories/AddNewInventoryItem";
+    
+    private List<NavItem> navigationItems = new()
+    {
+        new NavItem
+        {
+            Text = "Add New Item",
+            Url = "/Inventories/AddNewInventoryItem",
+            IconClass = "icon-calculator"
+        },
+        new NavItem
+        {
+            Text = "View Inventory",
+            Url = "/Inventories/ViewInventory",
+            IconClass = "icon-list"
+        },
+        new NavItem
+        {
+            Text = "Settings",
+            Url = "/Settings",
+            IconClass = "icon-settings"
+        }
+    };
+
+    protected override void OnInitialized()
+    {
+        // You can also get the current URL from NavigationManager
+        // currentUrl = NavigationManager.Uri;
+    }
+}
