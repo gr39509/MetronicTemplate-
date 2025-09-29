@@ -13,6 +13,7 @@
     <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
     <link href="@Assets["/assets/global/plugins/simple-line-icons/simple-line-icons.min.css"]" rel="stylesheet" type="text/css" />
     <link href="@Assets["/assets/global/plugins/bootstrap/css/bootstrap.min.css"]" rel="stylesheet" type="text/css" />
+    <link href="@Assets["/assets/global/plugins/bootstrap/css/bootstrap.rtl.min.css"]" rel="stylesheet" type="text/css" />
     <link href="@Assets["/assets/global/plugins/bootstrap-switch/css/bootstrap4/bootstrap-switch.min.css"]" rel="stylesheet" type="text/css" />
     <link href="@Assets["/assets/global/plugins/bootstrap-toastr/toastr.min.css"]" rel="stylesheet" />
                <!-- END GLOBAL MANDATORY STYLES -->
@@ -20,8 +21,16 @@
  
     <!-- END PAGE LEVEL PLUGINS -->
     <!-- BEGIN THEME GLOBAL STYLES -->
+    @* <link href="@Assets["/assets/global/css/components.min.css"]" rel="stylesheet" type="text/css" /> *@
     <link href="@Assets["/assets/global/css/components-rounded.min.css"]" rel="stylesheet" id="style_components" type="text/css" />
+    @* <link href="@Assets["/assets/global/css/components-md.min.css"]" rel="stylesheet" type="text/css" /> *@
     <link href="@Assets["/assets/global/css/plugins.min.css"]" rel="stylesheet" type="text/css" />
+    @* <link href="@Assets["/assets/global/css/plugins-md.min.css"]" rel="stylesheet" type="text/css" /> *@
+    @* <link href="@Assets["/assets/global/css/floatingButtons.css"]" rel="stylesheet" type="text/css" /> *@
+    @* <link href="@Assets["/assets/global/css/pretyCircle.css"]" rel="stylesheet" type="text/css" /> *@
+    
+
+    
     <!-- END THEME GLOBAL STYLES -->
     <!-- BEGIN THEME LAYOUT STYLES -->
     <link href="@Assets["/assets/layouts/layout/css/layout.min.css"]" rel="stylesheet" type="text/css" />
@@ -50,11 +59,11 @@
     <link href="@Assets["/assets/global/plugins/datatables/datatables.min.css"]" rel="stylesheet" type="text/css" />
     
     <!-- Select2 CSS -->
-    <link href="@Assets["/assets/global/plugins/select2/css/select2.min.css"]" rel="stylesheet"/>
+    <link href="@Assets["/assets/global/plugins/select2/css/select2.css"]" rel="stylesheet"/>
     <link href="@Assets["/app.css"]" rel="stylesheet"/>
     <link href="@Assets["/assets/global/plugins/bootstrap-daterangepicker/daterangepicker.min.css"]" rel="stylesheet" type="text/css" />
     <link href="@Assets["/assets/global/plugins/morris/morris.css"]" rel="stylesheet" type="text/css" />
-    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
     
     
@@ -65,6 +74,8 @@
 
 <body class="page-header-fixed page-header-top-fixed page-sidebar-closed-hide-logo page-content-white">
 <Routes @rendermode="InteractiveServer"/>
+
+
 </body>
 
 

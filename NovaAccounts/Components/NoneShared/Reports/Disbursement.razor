@@ -1,0 +1,135 @@
+@page "/reports"
+@* @using Telerik.Reporting; *@
+@* @using Telerik.ReportViewer.Mvc; *@
+
+<link rel="stylesheet" href="@Assets["/ReportViewer/styles/kendo.common.min.css"]" />
+<link rel="stylesheet" href="@Assets["/ReportViewer/styles/kendo.blueopal.min.css"]" />
+<link rel="stylesheet" href="@Assets["/ReportViewer/styles/telerikReportViewer.css"]" />
+<link rel="stylesheet" href="@Assets["/ReportViewer/styles/kendo.common-bootstrap.min.css"]" />
+<link rel="stylesheet" href="/ReportViewer/styles/kendo.bootstrap.min.css" />
+<style>
+    #ReportViewer1 {
+        position: relative;
+        width: auto;
+        height: 900px;
+        -webkit-overflow-scrolling: touch;
+        overflow: hidden;
+    }
+
+    #DrawDate {
+        position: relative;
+        z-index: 10000;
+    }
+</style>
+<div class="row">
+    <div class="col-md-7">
+    </div>
+    <div class="col-md-4">
+        <div class="form-group form-md-line-input form-md-floating-label has-success">
+            <div id="dashboard-report-range" class="pull-right tooltips btn btn-fit-height green" data-placement="top" data-original-title="Change dashboard date range">
+                <i class="icon-calendar">
+                </i>&nbsp;
+                <span class="thin uppercase hidden-xs">
+                </span>&nbsp;<i class="fa fa-angle-down">
+                </i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-1 pull-right">
+        <div class="form-group form-md-line-input">
+            <input type="button" value="load" class="btn dark" onclick="ShowReport();" />
+        </div>
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col-md-12">
+      
+    </div>
+</div>
+
+   <script type="text/javascript">
+        $(document).ready(function () {
+            $('.trv-content-wrapper').attr('scrolling', 'no');
+            $('.trv-content-wrapper').attr('seamless', 'seamless');
+            if (!jQuery().daterangepicker) {
+                return;
+            }
+            $('#dashboard-report-range').daterangepicker({
+                "ranges": {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1,'days'), moment().subtract(1,'days')],
+                    'Last 7 Days': [moment().subtract(6,'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29,'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1,'month').startOf('month'), moment().subtract(1,'month').endOf('month')]
+                },
+                "locale": {
+                    "format": "MM/DD/YYYY",
+                    "separator": " - ",
+                    "applyLabel": "Apply",
+                    "cancelLabel": "Cancel",
+                    "fromLabel": "From",
+                    "toLabel": "To",
+                    "customRangeLabel": "Custom",
+                    "daysOfWeek": [
+                        "Su",
+                        "Mo",
+                        "Tu",
+                        "We",
+                        "Th",
+                        "Fr",
+                        "Sa"
+                    ],
+                    "monthNames": [
+                        "January",
+                        "February",
+                        "March",
+                        "April",
+                        "May",
+                        "June",
+                        "July",
+                        "August",
+                        "September",
+                        "October",
+                        "November",
+                        "December"
+                    ],
+                    "firstDay": 1
+                },
+                //"startDate": "11/08/2015",
+                //"endDate": "11/14/2015",
+                opens: (App.isRTL() ? 'right' : 'left'),
+            }, function(start, end, label) {
+                if ($('#dashboard-report-range').attr('data-display-range') != '0') {
+                    $('#dashboard-report-range span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+                }
+            });
+             if ($('#dashboard-report-range').attr('data-display-range') != '0') {
+                $('#dashboard-report-range span').html(moment().subtract(29,'days').format('MMMM D, YYYY') + ' - ' + moment().format('MMMM D, YYYY'));
+            }
+            $('#dashboard-report-range').show();
+
+            var sDate = moment().format('DD-MM-YYYY');
+            var eDate = moment().format('DD-MM-YYYY');
+        });
+        function ShowReport() {
+            var picker = $('#dashboard-report-range').data('daterangepicker');
+            retailerID = '';
+            sDate = picker.startDate.format('DD MMM YYYY');
+            eDate=picker.endDate.format('DD MMM YYYY')
+            var viewer = $("#ReportViewer1").data("telerik_ReportViewer");
+            viewer.reportSource({
+                report: viewer.reportSource().report,
+                parameters: {
+                    UserName:'usr',
+                    Date: sDate,
+                    Date1: eDate
+                }
+            });
+            //setting the HTML5 Viewer's reportSource, causes a refresh automatically
+            //if you need to force a refresh for other case, use:
+            //viewer.refreshReport();
+        }
+    </script>
+@* telerikReportViewer.kendo-14.1.20.618.min.js *@

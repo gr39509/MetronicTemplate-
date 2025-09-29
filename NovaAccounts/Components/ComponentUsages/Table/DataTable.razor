@@ -1,6 +1,7 @@
 @* DataTable.razor *@
 @using NovaAccounts.Components.ComponentUsages.QuickNav
 @using NovaAccounts.Components.DataFields
+@using NovaAccounts.Components.ModalFields
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.Components.UsageModes
 
@@ -8,6 +9,7 @@
 <h3>Transaction Management</h3>
 
 <Nav></Nav>
+
 
 <ReusableDataTable TItem="Transaction" 
                    Data="@transactions" 
@@ -171,6 +173,7 @@
         };
     }
 }
+
 
 @* <script> *@
 @*     var QuickNav = function () { *@

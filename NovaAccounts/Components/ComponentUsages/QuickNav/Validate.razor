@@ -1,0 +1,18 @@
+@using NovaAccounts.Components.Shared
+@* <Validation  *@
+@*     ButtonText="Verify Customer" *@
+@*     IconClass="icon-user" *@
+@*     ValidationUrl="/api/customers/verify" *@
+@*     RedirectUrl="/customers/details" *@
+@*     DialogTitle="Customer ID" *@
+@*     InputPlaceholder="Enter customer ID" *@
+@*     ParameterName="CustomerId" /> *@
+    
+<Validation 
+    ButtonText="Process Invoice"
+    IconClass="icon-wallet"
+    ValidationUrl="/invoices/validate"
+    RedirectUrl="/invoices/process"
+    DialogTitle="Invoice Number"
+    ParameterName="InvoiceNumber" />
+    
