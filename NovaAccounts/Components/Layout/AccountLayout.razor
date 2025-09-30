@@ -79,11 +79,3 @@
 </HeadContent>
 
 @Body
-
-@code {
-    private bool IsLoginPage()
-    {
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        return uri.AbsolutePath.Equals("/login", StringComparison.OrdinalIgnoreCase);
-    }
-}

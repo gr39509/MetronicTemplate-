@@ -7,20 +7,7 @@
 @inject IJSRuntime JSRuntime
 @layout MainLayout
 
-<nav class="quick-nav">
-    <a class="quick-nav-trigger" href="#0">
-        <span aria-hidden="true"></span>
-    </a>
-    <ul id="myNav">
-        <li onclick="AddNew();">
-            <a href="#" class="active">
-                <span>Add New Client</span>
-                <i class="icon-user"></i>
-            </a>
-        </li>
-    </ul>
-    <span aria-hidden="true" class="quick-nav-bg"></span>
-</nav>
+
 
 <ReusableDataTable TItem="Client" 
                    Data="clients" 
