@@ -1,6 +1,6 @@
 @page "/updated-modal-examples"
-@using NovaAccounts.Components.ModalFields
 @using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ModalFields
 
 <h2>Updated Modal Examples with Font & Color Customization</h2>
 
@@ -105,13 +105,15 @@
                         
                         <div class="col-md-4">
                             <h5>Employment Details</h5>
-                            <Select2Component 
-                                Label="Department"
-                                @bind-SelectedValue="selectedDepartment">
-                                <option value="hr">HR</option>
-                                <option value="it">IT</option>
-                                <option value="finance">Finance</option>
-                            </Select2Component>
+                            <BootstrapSelect 
+                                Label="USER"
+                                LabelClass=""
+                                Name="user_id"
+                                Placeholder="--SELECT USER--"
+                                Options="@userOptions"
+                                LiveSearch="true"
+                                Required="true"
+                                OnValueChanged="@HandleUserChanged" />
                             @* <div class="form-group"> *@
                             @*     <label>Department</label> *@
                             @*     <select class="form-control select2" style="width: 100%;"> *@
@@ -304,7 +306,108 @@
 </div>
 
 @code {
-    // Add any necessary component logic here
+    // Form fields
+    private string? selectedUser;
+    private string cashierId = string.Empty;
+    private decimal transactionLimit = 0;
+    private string? selectedControlAccount;
+    private string? selectedMobileMoney;
+    private bool isEnabled = true;
+    private List<string>? selectedCashierTypes;
+    private string? selectedShift = "morning";
+
+    // Options for selects
+    private List<BootstrapSelect.SelectOption> userOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "1", Text = "John Doe (john.doe@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "2", Text = "Jane Smith (jane.smith@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "3", Text = "Mike Johnson (mike.johnson@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "4", Text = "Sarah Wilson (sarah.wilson@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "5", Text = "David Brown (david.brown@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "6", Text = "Lisa Anderson (lisa.anderson@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "7", Text = "Robert Taylor (robert.taylor@company.com)" }
+    };
+
+    private List<BootstrapSelect.SelectOption> controlAccountOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "1001", Text = "Cash in Hand", Subtext = "1001" },
+        new BootstrapSelect.SelectOption { Value = "1002", Text = "Petty Cash", Subtext = "1002" },
+        new BootstrapSelect.SelectOption { Value = "1003", Text = "Main Cash Account", Subtext = "1003" },
+        new BootstrapSelect.SelectOption { Value = "1004", Text = "Vault Account", Subtext = "1004" },
+        new BootstrapSelect.SelectOption { Value = "1005", Text = "Branch Cash Account", Subtext = "1005" },
+        new BootstrapSelect.SelectOption { Value = "1006", Text = "Teller Cash Account", Subtext = "1006" }
+    };
+
+    private List<BootstrapSelect.SelectOption> mobileMoneyOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "2001", Text = "MTN Mobile Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2002", Text = "Vodafone Cash", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2003", Text = "AirtelTigo Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2004", Text = "General Mobile Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2005", Text = "Bank Mobile Money", Icon = "glyphicon-phone" }
+    };
+
+    private List<BootstrapSelect.SelectOption> cashierTypeOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "cash", Text = "Cash Transactions" },
+        new BootstrapSelect.SelectOption { Value = "mobile", Text = "Mobile Money" },
+        new BootstrapSelect.SelectOption { Value = "transfer", Text = "Bank Transfers" },
+        new BootstrapSelect.SelectOption { Value = "deposit", Text = "Deposits" },
+        new BootstrapSelect.SelectOption { Value = "withdrawal", Text = "Withdrawals" }
+    };
+
+    private List<BootstrapSelect.SelectOption> shiftOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "morning", Text = "Morning Shift (8:00 AM - 4:00 PM)" },
+        new BootstrapSelect.SelectOption { Value = "evening", Text = "Evening Shift (4:00 PM - 12:00 AM)" },
+        new BootstrapSelect.SelectOption { Value = "night", Text = "Night Shift (12:00 AM - 8:00 AM)" },
+        new BootstrapSelect.SelectOption { Value = "full", Text = "Full Day (8:00 AM - 8:00 PM)" }
+    };
+
+    // Event handlers
+    private void HandleUserChanged(string? value)
+    {
+        selectedUser = value;
+    }
+
+    private void HandleControlAccountChanged(string? value)
+    {
+        selectedControlAccount = value;
+    }
+
+    private void HandleMobileMoneyChanged(string? value)
+    {
+        selectedMobileMoney = value;
+    }
+
+    private void HandleCashierTypesChanged(List<string>? values)
+    {
+        selectedCashierTypes = values;
+    }
+
+    private void HandleShiftChanged(string? value)
+    {
+        selectedShift = value;
+    }
+
+    private void CancelForm()
+    {
+        // Reset form
+        selectedUser = null;
+        cashierId = string.Empty;
+        transactionLimit = 0;
+        selectedControlAccount = null;
+        selectedMobileMoney = null;
+        isEnabled = true;
+        selectedCashierTypes = null;
+        selectedShift = "morning";
+    }
+
+    private void SubmitForm()
+    {
+        // Handle form submission
+        Console.WriteLine("Form submitted!");
+    }
 }
 
 

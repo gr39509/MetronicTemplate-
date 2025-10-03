@@ -1,0 +1,222 @@
+@page "/selectors"
+@using NovaAccounts.Components.Shared
+
+
+<div class="container mt-4">
+    <h2 class="mb-4">Cashier Setup - Bootstrap Select Examples</h2>
+
+    <div class="col-md-8">
+        <div class="form-horizontal">
+
+            @* Example 1: Basic Select with Search *@
+            <BootstrapSelect
+                Label="USER"
+                Name="user_id"
+                
+                Placeholder="--SELECT USER--"
+                Options="@userOptions"
+                LiveSearch="true"
+                Required="true"
+                OnValueChanged="@HandleUserChanged" />
+
+            @* Example 2: Cashier Identification (Regular Input) *@
+            <div class="form-group row mb-3">
+                <label class="col-md-4 col-form-label text-md-right">CASHIER IDENTIFICATION</label>
+                <div class="col-md-8">
+                    <input type="text" class="form-control" @bind="cashierId" placeholder="Enter cashier ID" required />
+                </div>
+            </div>
+
+            @* Example 3: Transaction Limit (Regular Input) *@
+            <div class="form-group row mb-3">
+                <label class="col-md-4 col-form-label text-md-right">TRANSACTION LIMIT</label>
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" @bind="transactionLimit" placeholder="0.00" step="0.01" min="0" required />
+                    </div>
+                </div>
+            </div>
+
+            @* Example 4: Select with Subtexts *@
+            <BootstrapSelect
+                Label="CASHIER CONTROL ACCOUNT"
+                Name="control_account"
+                Placeholder="--SELECT CONTROL ACCOUNT--"
+                Options="@controlAccountOptions"
+                LiveSearch="true"
+                OnValueChanged="@HandleControlAccountChanged" />
+
+            @* Example 5: Select with Icons *@
+            <BootstrapSelect 
+                Label="CASHIER MOBILE MONEY ACCOUNT"
+                Name="mobile_money_account"
+                Placeholder="--SELECT MOBILE MONEY ACCOUNT--"
+                Options="@mobileMoneyOptions"
+                LiveSearch="true"
+                OnValueChanged="@HandleMobileMoneyChanged" />
+
+            @* Example 6: Status Toggle (Regular Input) *@
+            <div class="form-group row mb-3">
+                <label class="col-md-4 col-form-label text-md-right">CASHIER STATUS</label>
+                <div class="col-md-8">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" @bind="isEnabled" />
+                        <label class="form-check-label">@(isEnabled ? "Enabled" : "Disabled")</label>
+                    </div>
+                </div>
+            </div>
+
+            @* Example 7: Multiple Select *@
+            <BootstrapSelect
+                Label="CASHIER TYPE"
+                Name="cashier_type"
+                Placeholder="--SELECT CASHIER TYPE--"
+                Options="@cashierTypeOptions"
+                Multiple="true"
+                SelectedTextFormat="count > 2"
+                OnMultipleValueChanged="@HandleCashierTypesChanged" />
+
+            @* Example 8: Simple Select without Search *@
+            <BootstrapSelect
+                Label="WORKING HOURS"
+                Name="shift"
+                Placeholder="--SELECT SHIFT--"
+                Options="@shiftOptions"
+                LiveSearch="false"
+                Value="morning"
+                OnValueChanged="@HandleShiftChanged" />
+
+            @* Action Buttons *@
+            <div class="form-group row">
+                <div class="col-md-4"></div>
+                <div class="col-md-8">
+                    <button type="button" class="btn btn-outline-secondary me-2" @onclick="CancelForm">
+                        <i class="icon-action-undo"></i> CANCEL
+                    </button>
+                    <button type="submit" class="btn btn-success" @onclick="SubmitForm">
+                        <i class="icon-cloud-upload"></i> ADD CASHIER
+                    </button>
+                </div>
+            </div>
+
+            @* Display Selected Values *@
+            <div class="mt-4 p-3 bg-light">
+                <h5>Selected Values:</h5>
+                <p><strong>User:</strong> @selectedUser</p>
+                <p><strong>Cashier ID:</strong> @cashierId</p>
+                <p><strong>Transaction Limit:</strong> $@transactionLimit</p>
+                <p><strong>Control Account:</strong> @selectedControlAccount</p>
+                <p><strong>Mobile Money:</strong> @selectedMobileMoney</p>
+                <p><strong>Status:</strong> @(isEnabled ? "Enabled" : "Disabled")</p>
+                <p><strong>Cashier Types:</strong> @string.Join(", ", selectedCashierTypes ?? new List<string>())</p>
+                <p><strong>Shift:</strong> @selectedShift</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Form fields
+    private string? selectedUser;
+    private string cashierId = string.Empty;
+    private decimal transactionLimit = 0;
+    private string? selectedControlAccount;
+    private string? selectedMobileMoney;
+    private bool isEnabled = true;
+    private List<string>? selectedCashierTypes;
+    private string? selectedShift = "morning";
+
+    // Options for selects
+    private List<BootstrapSelect.SelectOption> userOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "1", Text = "John Doe (john.doe@company.com)", Icon = "fa fa-heart"},
+        new BootstrapSelect.SelectOption { Value = "2", Text = "Jane Smith (jane.smith@company.com)", Icon = "fa fa-heart"},
+        new BootstrapSelect.SelectOption { Value = "3", Text = "Mike Johnson (mike.johnson@company.com)", Icon = "fa fa-heart" },
+        new BootstrapSelect.SelectOption { Value = "4", Text = "Sarah Wilson (sarah.wilson@company.com)", Icon = "fa fa-heart" },
+        new BootstrapSelect.SelectOption { Value = "5", Text = "David Brown (david.brown@company.com)", Icon = "fa fa-heart" },
+        new BootstrapSelect.SelectOption { Value = "6", Text = "Lisa Anderson (lisa.anderson@company.com)", Icon = "fa fa-heart" },
+        new BootstrapSelect.SelectOption { Value = "7", Text = "Robert Taylor (robert.taylor@company.com)", Icon = "fa fa-heart" }
+    };
+
+    private List<BootstrapSelect.SelectOption> controlAccountOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "1001", Text = "Cash in Hand", Subtext = "1001" },
+        new BootstrapSelect.SelectOption { Value = "1002", Text = "Petty Cash", Subtext = "1002" },
+        new BootstrapSelect.SelectOption { Value = "1003", Text = "Main Cash Account", Subtext = "1003" },
+        new BootstrapSelect.SelectOption { Value = "1004", Text = "Vault Account", Subtext = "1004" },
+        new BootstrapSelect.SelectOption { Value = "1005", Text = "Branch Cash Account", Subtext = "1005" },
+        new BootstrapSelect.SelectOption { Value = "1006", Text = "Teller Cash Account", Subtext = "1006" }
+    };
+
+    private List<BootstrapSelect.SelectOption> mobileMoneyOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "2001", Text = "MTN Mobile Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2002", Text = "Vodafone Cash", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2003", Text = "AirtelTigo Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2004", Text = "General Mobile Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2005", Text = "Bank Mobile Money", Icon = "glyphicon-phone" }
+    };
+
+    private List<BootstrapSelect.SelectOption> cashierTypeOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "cash", Text = "Cash Transactions" },
+        new BootstrapSelect.SelectOption { Value = "mobile", Text = "Mobile Money" },
+        new BootstrapSelect.SelectOption { Value = "transfer", Text = "Bank Transfers" },
+        new BootstrapSelect.SelectOption { Value = "deposit", Text = "Deposits" },
+        new BootstrapSelect.SelectOption { Value = "withdrawal", Text = "Withdrawals" }
+    };
+
+    private List<BootstrapSelect.SelectOption> shiftOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "morning", Text = "Morning Shift (8:00 AM - 4:00 PM)" },
+        new BootstrapSelect.SelectOption { Value = "evening", Text = "Evening Shift (4:00 PM - 12:00 AM)" },
+        new BootstrapSelect.SelectOption { Value = "night", Text = "Night Shift (12:00 AM - 8:00 AM)" },
+        new BootstrapSelect.SelectOption { Value = "full", Text = "Full Day (8:00 AM - 8:00 PM)" }
+    };
+
+    // Event handlers
+    private void HandleUserChanged(string? value)
+    {
+        selectedUser = value;
+    }
+
+    private void HandleControlAccountChanged(string? value)
+    {
+        selectedControlAccount = value;
+    }
+
+    private void HandleMobileMoneyChanged(string? value)
+    {
+        selectedMobileMoney = value;
+    }
+
+    private void HandleCashierTypesChanged(List<string>? values)
+    {
+        selectedCashierTypes = values;
+    }
+
+    private void HandleShiftChanged(string? value)
+    {
+        selectedShift = value;
+    }
+
+    private void CancelForm()
+    {
+        // Reset form
+        selectedUser = null;
+        cashierId = string.Empty;
+        transactionLimit = 0;
+        selectedControlAccount = null;
+        selectedMobileMoney = null;
+        isEnabled = true;
+        selectedCashierTypes = null;
+        selectedShift = "morning";
+    }
+
+    private void SubmitForm()
+    {
+        // Handle form submission
+        Console.WriteLine("Form submitted!");
+    }
+}

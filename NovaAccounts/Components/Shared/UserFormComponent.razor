@@ -1,0 +1,268 @@
+@* UserFormComponent.razor *@
+@using Microsoft.AspNetCore.Components.Forms
+@using NovaAccounts.SharedModels.UserProfile
+
+<EditForm Model="@FormData" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    
+    @* Role Card *@
+    @if (ShowRoleCard && Roles?.Any() == true)
+    {
+        <div class="card border-dark mb-3">
+            <div class="card-header bg-dark text-white">
+                @RoleCardTitle
+            </div>
+            <div class="card-body">
+                <div class="form-horizontal">
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                @foreach (var role in Roles)
+                                {
+                                    <div class="form-check form-check-inline">
+                                        <InputCheckbox class="form-check-input" 
+                                                     id="@role.Id" 
+                                                     @bind-Value="role.IsSelected"
+                                                     disabled="@role.IsDisabled" />
+                                        <label class="form-check-label" for="@role.Id">@role.Label</label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* Main Data Card *@
+    <div class="card border-@MainCardBorderColor mb-3">
+        <div class="card-header bg-@MainCardBorderColor text-white">
+            @MainCardTitle
+        </div>
+        <div class="card-body">
+            <div class="form-horizontal">
+                <div class="row">
+                    @* Image Section *@
+                    @if (ShowImageUpload)
+                    {
+                        <div class="col-md-3">
+                            <img src="@ImageSource" alt="@ImageAlt" class="img-thumbnail" width="200" height="200">
+                            <InputFile OnChange="@HandleFileSelected" class="form-control mt-2" accept="image/*" disabled="@ImageUploadDisabled" />
+                        </div>
+                    }
+                    
+                    @* Form Fields Section *@
+                    <div class="@(ShowImageUpload ? "col-md-9" : "col-md-12")">
+                        @foreach (var field in Fields.OrderBy(f => f.Order))
+                        {
+                            @if (field.IsVisible)
+                            {
+                                <div class="row mb-3">
+                                    <label class="col-md-3 col-form-label">@field.Label</label>
+                                    <div class="col-md-9">
+                                        @switch (field.FieldType)
+                                        {
+                                            case FormFieldType.Text:
+                                                <InputText class="form-control" 
+                                                         @bind-Value="field.Value"
+                                                         placeholder="@field.Placeholder"
+                                                         disabled="@field.IsDisabled"
+                                                         required="@field.IsRequired" />
+                                                break;
+                                            
+                                            case FormFieldType.Password:
+                                                <InputText type="password" 
+                                                         class="form-control" 
+                                                         @bind-Value="field.Value"
+                                                         placeholder="@field.Placeholder"
+                                                         disabled="@field.IsDisabled"
+                                                         required="@field.IsRequired" />
+                                                break;
+                                            
+                                            case FormFieldType.Email:
+                                                <InputText type="email" 
+                                                         class="form-control" 
+                                                         @bind-Value="field.Value"
+                                                         placeholder="@field.Placeholder"
+                                                         disabled="@field.IsDisabled"
+                                                         required="@field.IsRequired" />
+                                                break;
+                                            
+                                            case FormFieldType.Checkbox:
+                                                <div class="form-check">
+                                                    <InputCheckbox class="form-check-input" 
+                                                                 id="@field.Name"
+                                                                 @bind-Value="field.BoolValue"
+                                                                 disabled="@field.IsDisabled" />
+                                                    <label class="form-check-label" for="@field.Name">
+                                                        @field.Placeholder
+                                                    </label>
+                                                </div>
+                                                break;
+                                                
+                                            case FormFieldType.Select:
+                                                <InputSelect class="form-control" 
+                                                           @bind-Value="field.Value"
+                                                           disabled="@field.IsDisabled"
+                                                           required="@field.IsRequired">
+                                                    <option value="">@field.Placeholder</option>
+                                                    @foreach (var option in field.Options ?? new List<SelectOption>())
+                                                    {
+                                                        <option value="@option.Value">@option.Text</option>
+                                                    }
+                                                </InputSelect>
+                                                break;
+                                                
+                                            case FormFieldType.Radio:
+                                                <InputRadioGroup Name="@field.Name" @bind-Value="field.Value">
+                                                    @foreach (var option in field.Options ?? new List<SelectOption>())
+                                                    {
+                                                        <div class="form-check form-check-inline">
+                                                            <InputRadio class="form-check-input" 
+                                                                      Value="@option.Value"
+                                                                      disabled="@field.IsDisabled" />
+                                                            <label class="form-check-label">@option.Text</label>
+                                                        </div>
+                                                    }
+                                                </InputRadioGroup>
+                                                break;
+                                                
+                                            case FormFieldType.DatePicker:
+                                                <div class="row g-2">
+                                                    <div class="col-4">
+                                                        <InputSelect class="form-control" 
+                                                                   @bind-Value="field.Day"
+                                                                   disabled="@field.IsDisabled"
+                                                                   required="@field.IsRequired">
+                                                            <option value="">-- Day --</option>
+                                                            @for (int i = 1; i <= 31; i++)
+                                                            {
+                                                                <option value="@i">@i</option>
+                                                            }
+                                                        </InputSelect>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <InputSelect class="form-control" 
+                                                                   @bind-Value="field.Month"
+                                                                   disabled="@field.IsDisabled"
+                                                                   required="@field.IsRequired">
+                                                            <option value="">-- Month --</option>
+                                                            @for (int i = 1; i <= 12; i++)
+                                                            {
+                                                                <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                                                            }
+                                                        </InputSelect>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <InputSelect class="form-control" 
+                                                                   @bind-Value="field.Year"
+                                                                   disabled="@field.IsDisabled"
+                                                                   required="@field.IsRequired">
+                                                            <option value="">-- Year --</option>
+                                                            @for (int i = DateTime.Now.Year; i >= 1900; i--)
+                                                            {
+                                                                <option value="@i">@i</option>
+                                                            }
+                                                        </InputSelect>
+                                                    </div>
+                                                </div>
+                                                break;
+                                                
+                                            case FormFieldType.Date:
+                                                <InputDate class="form-control" 
+                                                         @bind-Value="field.DateValue"
+                                                         disabled="@field.IsDisabled"
+                                                         required="@field.IsRequired" />
+                                                break;
+                                                
+                                            case FormFieldType.Number:
+                                                <InputNumber class="form-control" 
+                                                           @bind-Value="field.NumericValue"
+                                                           disabled="@field.IsDisabled"
+                                                           required="@field.IsRequired" />
+                                                break;
+                                                
+                                            case FormFieldType.TextArea:
+                                                <InputTextArea class="form-control" 
+                                                             @bind-Value="field.Value"
+                                                             rows="@field.Rows"
+                                                             disabled="@field.IsDisabled"
+                                                             required="@field.IsRequired" />
+                                                break;
+                                        }
+                                        <ValidationMessage For="@(() => field.Value)" />
+                                    </div>
+                                </div>
+                            }
+                        }
+                        
+                        @* Action Buttons *@
+                        <div class="row mb-3">
+                            <label class="col-md-3 col-form-label"></label>
+                            <div class="col-md-9">
+                                @foreach (var button in ActionButtons.OrderBy(b => b.Order))
+                                {
+                                    @if (button.IsVisible)
+                                    {
+                                        @if (button.ButtonType == ButtonType.Submit)
+                                        {
+                                            <button type="submit" class="btn btn-@button.ColorClass me-2" disabled="@button.IsDisabled">
+                                                @button.Label
+                                            </button>
+                                        }
+                                        else if (button.ButtonType == ButtonType.Link)
+                                        {
+                                            <a class="btn btn-@button.ColorClass me-2" href="@button.Url">
+                                                @button.Label
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-@button.ColorClass me-2" 
+                                                    @onclick="@(() => button.OnClick?.Invoke())"
+                                                    disabled="@button.IsDisabled">
+                                                @button.Label
+                                            </button>
+                                        }
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public object FormData { get; set; } = new();
+    [Parameter] public List<RoleItem> Roles { get; set; } = new();
+    [Parameter] public List<FormField> Fields { get; set; } = new();
+    [Parameter] public List<ActionButton> ActionButtons { get; set; } = new();
+    
+    [Parameter] public bool ShowRoleCard { get; set; } = true;
+    [Parameter] public string RoleCardTitle { get; set; } = "Role";
+    
+    [Parameter] public string MainCardTitle { get; set; } = "Biometry";
+    [Parameter] public string MainCardBorderColor { get; set; } = "success";
+    
+    [Parameter] public bool ShowImageUpload { get; set; } = true;
+    [Parameter] public string ImageSource { get; set; } = "";
+    [Parameter] public string ImageAlt { get; set; } = "User Image";
+    [Parameter] public bool ImageUploadDisabled { get; set; } = false;
+    
+    [Parameter] public EventCallback<EditContext> OnValidSubmit { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnFileChange { get; set; }
+
+    private async Task HandleValidSubmit(EditContext context)
+    {
+        await OnValidSubmit.InvokeAsync(context);
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        await OnFileChange.InvokeAsync(e);
+    }
+}
