@@ -1,0 +1,403 @@
+@page "/clients/cbs"
+@using Microsoft.AspNetCore.Authorization
+@using NovaAccounts.Services.ClientsServices
+@using NovaAccounts.Services.Models
+@using NovaAccounts.Components
+@using NovaAccounts.Components.Dashboard.QuickNav
+@using NovaAccounts.SharedModels.DataFields
+@using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Services.Models.ClientModels
+@using NovaAccounts.SharedModels.ApiService
+@inject ClientService ClientService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@layout MainLayout
+
+<PageTitle>CBS Clients</PageTitle>
+
+<Nav></Nav>
+
+<CBSClentDetailsModal @ref="clientDetailsModalModal" />
+<CBSClientEditModal @ref="clientEditModal" />
+
+
+
+<h1 class="page-title">
+    CBS Clients Management
+    <small>View CBS client information</small>
+</h1>
+
+<!-- Loading State -->
+@if (isLoading)
+{
+    <div class="portlet light bordered">
+        <div class="portlet-body text-center" style="padding: 50px 0;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-3">Loading CBS clients...</p>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+            <span>&times;</span>
+        </button>
+        <strong>Error!</strong> @errorMessage
+        <button class="btn btn-sm btn-warning" @onclick="LoadCbsClients" style="margin-left: 10px;">
+            <i class="fa fa-refresh"></i> Retry
+        </button>
+    </div>
+}
+else
+{
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-user font-dark"></i>
+                <span class="caption-subject bold uppercase">CBS Clients</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadCbsClients" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <ReusableDataTable TItem="CBSClientViewModel"
+                               Data="@cbsClients"
+                               Columns="@cbsColumns"
+                               Options="@cbsOptions"
+                               OnRowClick="@OnCbsClientRowClick" />
+        </div>
+    </div>
+}
+
+@code {
+    private List<CBSClientViewModel> cbsClients = new();
+    private List<DataTableColumn> cbsColumns = new();
+    private DataTableOptions cbsOptions = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private CBSClentDetailsModal clientDetailsModalModal = null!;
+    private CBSClientEditModal clientEditModal = null!;
+    
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("🔍 OnAfterRenderAsync - First render");
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+            
+            // Check if modal component is initialized
+            if (clientDetailsModalModal == null)
+            {
+                Console.WriteLine("❌ Modal component is NULL after first render");
+            }
+            else
+            {
+                Console.WriteLine("✅ Modal component reference is set");
+            }
+        }
+    }
+
+
+    [JSInvokable]
+    public async Task EditClient(string clientNumber)
+    {
+        Console.WriteLine($"📝 EditClient called with clientNumber: {clientNumber}");
+
+        if (clientEditModal == null)
+        {
+            Console.WriteLine("❌ clientEditModal is null");
+            return;
+        }
+
+        await clientEditModal.OpenModal(clientNumber);
+    }
+
+
+
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureCbsClientTable();
+        await LoadCbsClients();
+    }
+    
+    [JSInvokable]
+    public async Task ViewClient(string clientNumber)
+    {
+        Console.WriteLine($"🔍 ViewClient called with clientNumber: {clientNumber}");
+        
+        try
+        {
+            if (clientDetailsModalModal == null)
+            {
+                Console.WriteLine("❌ clientDetailsModalModal is null - modal component not found");
+                return;
+            }
+
+            Console.WriteLine("✅ Modal reference found, calling OpenModal...");
+            await clientDetailsModalModal.OpenModal(clientNumber);
+            Console.WriteLine("✅ OpenModal completed");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error in ViewClient: {ex.Message}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private async Task LoadCbsClients()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            
+            var result = await ApiClient.GetCBSClientsAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                cbsClients = result.Payload.ToList();
+                Console.WriteLine($"✅ Loaded {cbsClients.Count} clients");
+            }
+            else
+            {
+                errorMessage = "No clients data received from server.";
+                cbsClients = new List<CBSClientViewModel>();
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load clients.";
+            Console.WriteLine($"❌ API Error loading clients: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load clients. Please check your connection.";
+            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+
+
+    private void ConfigureCbsClientTable()
+    {
+        cbsColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "CLIENT NO",
+                PropertyName = nameof(CBSClientViewModel.ClientNum),
+                CssClass = "text-center"
+            },
+            new()
+            {
+                Header = "FULL NAME",
+                PropertyName = nameof(CBSClientViewModel.FullName),
+                CustomRenderer = (item) =>
+                    $"<strong class='text-primary'>{((CBSClientViewModel)item).FullName}</strong>"
+            },
+            new()
+            {
+                Header = "GENDER",
+                PropertyName = nameof(CBSClientViewModel.Gender)
+            },
+            new()
+            {
+                Header = "MOBILE",
+                PropertyName = nameof(CBSClientViewModel.Mobile1),
+                CustomRenderer = (item) =>
+                {
+                    var phone = ((CBSClientViewModel)item).Mobile1;
+                    return string.IsNullOrEmpty(phone)
+                        ? "<span class='text-muted'>Not provided</span>"
+                        : $"<a href='tel:{phone}'>{phone}</a>";
+                }
+            },
+            new()
+            {
+                Header = "EMAIL",
+                PropertyName = nameof(CBSClientViewModel.Email),
+                CustomRenderer = (item) =>
+                {
+                    var email = ((CBSClientViewModel)item).Email;
+                    return string.IsNullOrEmpty(email)
+                        ? "<span class='text-muted'>Not provided</span>"
+                        : $"<a href='mailto:{email}'>{email}</a>";
+                }
+            },
+            new()
+            {
+                Header = "BRANCH",
+                PropertyName = nameof(CBSClientViewModel.BranchName),
+                CustomRenderer = (item) =>
+                {
+                    var branch = ((CBSClientViewModel)item).BranchName;
+                    return string.IsNullOrEmpty(branch)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : branch;
+                }
+            },
+            new()
+            {
+                Header = "RELATIONSHIP OFFICER",
+                PropertyName = nameof(CBSClientViewModel.RelationshipOfficer),
+                CustomRenderer = (item) =>
+                    $"<span>{((CBSClientViewModel)item).RelationshipOfficer ?? "N/A"}</span>"
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 150,
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var client = (CBSClientViewModel)item;
+                    return $@"
+        <div class='btn-group btn-group-sm' role='group'>
+            <button type='button' class='btn btn-primary btn-xs' onclick='viewClient(""{client.ClientNum}"")' title='View Details'>
+                <i class='fa fa-eye'></i>
+            </button>
+            <button type='button' class='btn btn-info btn-xs' onclick='editClient(""{client.ClientNum}"")' title='Edit Client'>
+                <i class='fa fa-edit'></i>
+            </button>
+            <button type='button' class='btn btn-success btn-xs' onclick='transactionHistory({client.Id})' title='Transactions'>
+                <i class='fa fa-history'></i>
+            </button>
+        </div>";
+                }
+
+            }
+        };
+
+        cbsOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            LengthMenu = new[] { 10, 25, 50 },
+            LengthMenuLabels = new[] { "10", "25", "50" },
+            SearchPlaceholder = "Search CBS Clients",
+            TableId = "cbsClientsTable",
+            TableCssClass = "table table-striped table-bordered table-hover",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "asc" } }
+            }
+        };
+    }
+    
+   
+
+    private async Task OnCbsClientRowClick(CBSClientViewModel client)
+    {
+        Console.WriteLine($"CBS Client clicked: {client.FullName}");
+        await JSRuntime.InvokeVoidAsync("viewCbsClient", client.Id);
+    }
+}
+
+<style>
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+</style>
+
+<script>
+
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.viewClient = function(clientNumber) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ViewClient', clientNumber)
+                .catch(err => {
+                    console.error('Error calling ViewClient:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.editClient = function (clientNumber) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditClient', clientNumber)
+                .catch(err => {
+                    console.error('Error calling EditClient:', err);
+                });
+        } else {
+            console.error('DotNet reference not available for editClient');
+        }
+    };
+    
+    // window.viewCbsClient = function (clientId) {
+    //     console.log('View CBS Client:', clientId);
+    //     window.location.href = '/clients/cbs/view/' + clientId;
+    // };
+
+    window.viewTransactions = function (clientId) {
+        console.log('View CBS Client Transactions:', clientId);
+        window.location.href = '/clients/cbs/transactions/' + clientId;
+    };
+</script>

@@ -1,0 +1,33 @@
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager NavigationManager
+
+@code {
+    protected string GetCurrentController()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var segments = uri.LocalPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length > 0 ? segments[0] : "";
+    }
+
+    protected string GetCurrentAction()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var segments = uri.LocalPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length > 1 ? segments[1] : "";
+    }
+
+    protected bool IsControllerActive(List<string> controllers)
+    {
+        var currentController = GetCurrentController();
+        return controllers.Any(c => c.Equals(currentController, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    protected bool IsCurrentPage(string controller, string action)
+    {
+        var currentController = GetCurrentController();
+        var currentAction = GetCurrentAction();
+        
+        return currentController.Equals(controller, StringComparison.InvariantCultureIgnoreCase) &&
+               currentAction.Equals(action, StringComparison.InvariantCultureIgnoreCase);
+    }
+}

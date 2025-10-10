@@ -1,0 +1,156 @@
+@* ClientDetailsModal *@
+
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Services.Models
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+@inject IConfiguration Configuration
+
+<ReusableModal @ref="clientDetailsModal"
+               Title="Client Details"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="false"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading client details...</p>
+            </div>
+        }
+        else if (clientDetails != null)
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Client ID:</label>
+                        <span class="detail-value">@clientDetails.ClientID</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Client Name:</label>
+                        <span class="detail-value">@clientDetails.ClientName</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Account Name:</label>
+                        <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.AccountName) ? "Not set" : clientDetails.AccountName)</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Phone Number:</label>
+                        <span class="detail-value">@(clientDetails.PhoneNumber == "0" || string.IsNullOrEmpty(clientDetails.PhoneNumber) ? "Not provided" : clientDetails.PhoneNumber)</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Email Address:</label>
+                        <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.EmailAddress) ? "Not provided" : clientDetails.EmailAddress)</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Balance:</label>
+                        <span class="detail-value @GetBalanceClass(clientDetails.Balance)">
+                            GH₵ @clientDetails.Balance.ToString("N2")
+                        </span>
+                    </div>
+                  
+                   
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(clientDetails.AccountName))
+            {
+                <div class="detail-group mt-3">
+                    <label class="detail-label">Notes:</label>
+                    <p class="detail-value">@clientDetails.AccountName</p>
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal clientDetailsModal = null!;
+    private ClientViewModel? clientDetails;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    
+
+    public async Task OpenModal(int clientId)
+    {
+        errorMessage = string.Empty;
+        clientDetails = null;
+        
+        if (clientDetailsModal != null)
+        {
+            await clientDetailsModal.OpenModal();
+            await LoadClientDetails(clientId);
+        }
+    }
+
+    private async Task LoadClientDetails(int clientId)
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            // Call the API with proper parameters
+            var result = await ApiClient.GetClientAsync(
+                clientId: clientId,                    
+                bP_Tenant: null,                  
+                accept_Language: null      
+            );
+
+            if (result?.Payload != null)
+            {
+                clientDetails = result.Payload;
+            }
+            else
+            {
+                errorMessage = "Failed to load client details.";
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+            Console.WriteLine($"❌ API Error loading client details: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading client details: {ex.Message}";
+            Console.WriteLine($"❌ Error loading client details: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetBalanceClass(double balance)
+    {
+        return balance > 0 ? "text-success" : balance < 0 ? "text-danger" : "text-muted";
+    }
+}

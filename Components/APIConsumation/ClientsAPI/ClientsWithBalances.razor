@@ -1,0 +1,142 @@
+@page "/clients/with-balances"
+@using NovaAccounts.Services.ClientsServices
+@using NovaAccounts.Services.Models
+@using NovaAccounts.Components
+@using NovaAccounts.SharedModels.DataFields
+@using NovaAccounts.Components.Layout
+@using Microsoft.AspNetCore.Authorization
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Services.Models.ClientModels
+@inject ClientService ClientService
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+@layout MainLayout
+@rendermode InteractiveServer
+
+<PageTitle>Clients with Balances</PageTitle>
+
+<h1 class="page-title">
+    Clients with Balances
+    <small>View clients and their current balances</small>
+</h1>
+
+@if (isLoading)
+{
+    <div class="text-center p-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3">Loading clients with balances...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <strong>Error:</strong> @errorMessage
+    </div>
+}
+else
+{
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-wallet font-dark"></i>
+                <span class="caption-subject bold uppercase">Clients with Balances</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-default" @onclick="LoadClients" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <ReusableDataTable TItem="ClientBalanceModel"
+                               Data="@clients"
+                               Columns="@columns"
+                               Options="@options"
+                               OnRowClick="@OnClientClick" />
+        </div>
+    </div>
+}
+
+@code {
+    private List<ClientBalanceModel> clients = new();
+    private List<DataTableColumn> columns = new();
+    private DataTableOptions options = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureTable();
+        await LoadClients();
+    }
+
+    private async Task LoadClients()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            clients = await ClientService.GetClientsAlongWithBalancesAsync();
+            Console.WriteLine($"Loaded {clients.Count} clients with balances");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.WriteLine($"Error loading clients with balances: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfigureTable()
+    {
+        columns = new List<DataTableColumn>
+        {
+            new() { Header = "CLIENT ID", PropertyName = nameof(ClientBalanceModel.ClientID), CssClass = "text-center" },
+            new() { Header = "CLIENT NAME", PropertyName = nameof(ClientBalanceModel.ClientName),
+                CustomRenderer = (item) =>
+                {
+                    var client = (ClientBalanceModel)item;
+                    return $"<strong class='text-primary'>{client.ClientName}</strong>";
+                }
+            },
+            new() { Header = "ACCOUNT NAME", PropertyName = nameof(ClientBalanceModel.AccountName),
+                CustomRenderer = (item) =>
+                {
+                    var client = (ClientBalanceModel)item;
+                    return string.IsNullOrWhiteSpace(client.AccountName) ? "<span class='text-muted'>—</span>" : client.AccountName;
+                }
+            },
+            new() { Header = "PHONE", PropertyName = nameof(ClientBalanceModel.PhoneNumber) },
+            new() { Header = "EMAIL", PropertyName = nameof(ClientBalanceModel.EmailAddress) },
+            new() { Header = "BALANCE (GH¢)", PropertyName = nameof(ClientBalanceModel.Balance),
+                CustomRenderer = (item) =>
+                {
+                    var client = (ClientBalanceModel)item;
+                    return $"<span class='fw-bold text-success'>{client.Balance:N2}</span>";
+                }
+            }
+        };
+
+        options = new DataTableOptions
+        {
+            PageLength = 10,
+            TableId = "clientsWithBalancesTable",
+            TableCssClass = "table table-striped table-bordered table-hover",
+            SearchPlaceholder = "Search Clients",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true
+        };
+    }
+
+    private async Task OnClientClick(ClientBalanceModel client)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", $"Client: {client.ClientName}\nBalance: {client.Balance:N2}");
+    }
+}

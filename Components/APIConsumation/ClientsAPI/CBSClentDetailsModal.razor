@@ -1,0 +1,203 @@
+@* CBSClientDetailsModal *@
+
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Services.Models
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="clientDetailsModal"
+               Title="CBS Client Details"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="false"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading client details...</p>
+            </div>
+        }
+        else if (clientDetails != null)
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Client Number:</label>
+                        <span class="detail-value">@clientDetails.ClientNum</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Full Name:</label>
+                        <span class="detail-value">@clientDetails.FullName</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Gender:</label>
+                        <span class="detail-value">@clientDetails.Gender</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Mobile:</label>
+                        <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.Mobile1) ? "Not provided" : clientDetails.Mobile1)</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Email:</label>
+                        <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.Email) ? "Not provided" : clientDetails.Email)</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Branch:</label>
+                        <span class="detail-value">@clientDetails.BranchName</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Relationship Officer:</label>
+                        <span class="detail-value">@(clientDetails.RelationshipOfficer ?? "N/A")</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Business Name:</label>
+                        <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.BusinessName) ? "N/A" : clientDetails.BusinessName)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mb-3">
+                @if (!string.IsNullOrEmpty(clientDetails.Picture))
+                {
+                    // Display base64 image
+                    <img src="@GetImageSource(clientDetails.Picture)"
+                         alt="Client Photo"
+                         class="img-thumbnail"
+                         style="width:150px; height:150px; object-fit:cover; border-radius:10px;" />
+                }
+                else
+                {
+                    <img src="images/default-avatar.png"
+                         alt="No Photo"
+                         class="img-thumbnail"
+                         style="width:150px; height:150px; object-fit:cover; opacity:0.6;" />
+                    <div><small class="text-muted">No photo available</small></div>
+                }
+            </div>
+
+
+
+            @if (!string.IsNullOrEmpty(clientDetails.BusinessName))
+            {
+                <div class="detail-group mt-3">
+                    <label class="detail-label">Business Information:</label>
+                    <p class="detail-value">@clientDetails.BusinessName</p>
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal clientDetailsModal = null!;
+    private CBSClientViewModel? clientDetails;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    public async Task OpenModal(string clientNumber)
+    {
+        Console.WriteLine($"🔍 CBSClientDetailsModal.OpenModal called with: {clientNumber}");
+        
+        errorMessage = string.Empty;
+        clientDetails = null;
+        
+        if (clientDetailsModal == null)
+        {
+            Console.WriteLine("❌ clientDetailsModal is null in OpenModal");
+            return;
+        }
+
+        Console.WriteLine("✅ Opening ReusableModal...");
+        await clientDetailsModal.OpenModal();
+        Console.WriteLine("✅ ReusableModal opened, now loading client details...");
+        await LoadClientDetails(clientNumber);
+    }
+
+    private async Task LoadClientDetails(string clientNumber)
+    {
+        Console.WriteLine($"🔍 LoadClientDetails called for: {clientNumber}");
+        
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            Console.WriteLine("✅ Loading state set, making API call...");
+
+            var result = await ApiClient.GetCBSClientAsync(
+                clientNumber: clientNumber,                    
+                bP_Tenant: null,                  
+                accept_Language: null      
+            );
+
+            Console.WriteLine($"✅ API call completed, result: {result != null}");
+            
+            if (result?.Payload != null)
+            {
+                clientDetails = result.Payload;
+                Console.WriteLine($"✅ Client details loaded: {clientDetails.FullName}");
+            }
+            else
+            {
+                errorMessage = "Failed to load client details.";
+                Console.WriteLine("❌ No payload in API response");
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+            Console.WriteLine($"❌ API Error loading client details: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading client details: {ex.Message}";
+            Console.WriteLine($"❌ Error loading client details: {ex.Message}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+            Console.WriteLine("✅ Loading completed, StateHasChanged called");
+        }
+    }
+    
+    
+    private string GetImageSource(string base64String)
+    {
+        if (string.IsNullOrWhiteSpace(base64String))
+            return "images/default-avatar.png";
+
+        // If the base64 string already has the prefix, return as is
+        if (base64String.StartsWith("data:image"))
+            return base64String;
+
+        // Otherwise, assume it's a JPEG (you can change to PNG if needed)
+        return $"data:image/jpeg;base64,{base64String}";
+    }
+}

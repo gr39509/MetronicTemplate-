@@ -1,0 +1,150 @@
+@page "/clients/cbs/savings"
+@using NovaAccounts.Services.ClientsServices
+@using NovaAccounts.Services.Models
+@using NovaAccounts.Components
+@using NovaAccounts.SharedModels.DataFields
+@using NovaAccounts.Components.Layout
+@using Microsoft.AspNetCore.Authorization
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.Services.Models.ClientModels
+@inject ClientService ClientService
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+@layout MainLayout
+@rendermode InteractiveServer
+
+<PageTitle>CBS Clients with Savings</PageTitle>
+
+<h1 class="page-title">
+    CBS Clients with Savings
+    <small>View clients and their savings accounts</small>
+</h1>
+
+@if (isLoading)
+{
+    <div class="text-center p-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3">Loading clients with savings accounts...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <strong>Error:</strong> @errorMessage
+    </div>
+}
+else
+{
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-briefcase font-dark"></i>
+                <span class="caption-subject bold uppercase">Clients with Savings</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-default" @onclick="LoadClients" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <ReusableDataTable TItem="ClientCBS"
+                               Data="@clients"
+                               Columns="@columns"
+                               Options="@options"
+                               OnRowClick="@OnClientClick" />
+        </div>
+    </div>
+}
+
+@code {
+    private List<ClientCBS> clients = new();
+    private List<DataTableColumn> columns = new();
+    private DataTableOptions options = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureTable();
+        await LoadClients();
+    }
+
+    private async Task LoadClients()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            clients = await ClientService.GetCBSClientsWithSavingsAsync();
+            Console.WriteLine($"Loaded {clients.Count} CBS clients with savings accounts");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.WriteLine($"Error loading clients: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfigureTable()
+    {
+        columns = new List<DataTableColumn>
+        {
+            new() { Header = "CLIENT NO", PropertyName = nameof(ClientCBS.ClientNum), CssClass = "text-center" },
+            new()
+            {
+                Header = "FULL NAME",
+                PropertyName = nameof(ClientCBS.FullName),
+                CustomRenderer = (item) =>
+                {
+                    var client = (ClientCBS)item;
+                    return $"<strong class='text-primary'>{client.FullName}</strong>";
+                }
+            },
+            new() { Header = "GENDER", PropertyName = nameof(ClientCBS.Gender) },
+            new()
+            {
+                Header = "SAVINGS ACCOUNTS",
+                PropertyName = nameof(ClientCBS.SavingsAccounts),
+                CustomRenderer = (item) =>
+                {
+                    var client = (ClientCBS)item;
+                    if (client.SavingsAccounts == null || !client.SavingsAccounts.Any())
+                        return "<span class='text-muted'>No accounts</span>";
+
+                    var accounts = string.Join("<br/>",
+                        client.SavingsAccounts.Select(a =>
+                            $"{a.AccountNumber} - <em>{a.AccountStatus}</em> ({a.Currency})"));
+
+                    return $"<div>{accounts}</div>";
+                }
+            },
+            new() { Header = "BRANCH", PropertyName = nameof(ClientCBS.BranchName) },
+            new() { Header = "RELATIONSHIP OFFICER", PropertyName = nameof(ClientCBS.RelationshipOfficer) }
+        };
+
+        options = new DataTableOptions
+        {
+            PageLength = 10,
+            TableId = "cbsClientsSavingsTable",
+            TableCssClass = "table table-striped table-bordered table-hover",
+            SearchPlaceholder = "Search Clients",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true
+        };
+    }
+
+    private async Task OnClientClick(ClientCBS client)
+    {
+        Console.WriteLine($"Clicked: {client.FullName}");
+        await JSRuntime.InvokeVoidAsync("alert", $"Client: {client.FullName}");
+    }
+}

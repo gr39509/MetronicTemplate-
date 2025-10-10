@@ -1,0 +1,51 @@
+@using Microsoft.AspNetCore.Components
+
+<div class="@ColClass">
+    <div class="dashboard-stat2 bordered">
+        <div class="display">
+            <div class="number">
+                <h3 class="@ValueColorClass">
+                    <span data-counter="counterup" data-value="@Value" id="@Id">@DisplayValue</span>
+                </h3>
+                <small>@Label</small>
+            </div>
+            <div class="icon">
+                <i class="@IconClass"></i>
+            </div>
+        </div>
+        <div class="progress-info">
+            <div class="progress">
+                <span style="width: @(ProgressPercentage)%;" class="progress-bar @ProgressBarClass">
+                    <span class="sr-only">@ProgressPercentage% progress</span>
+                </span>
+            </div>
+            <div class="status">
+                <div class="status-title">@ProgressLabel</div>
+                <div class="status-number">@ProgressPercentage%</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "0";
+    [Parameter] public string DisplayValue { get; set; } = "0";
+    [Parameter] public string Label { get; set; } = "STAT LABEL";
+    [Parameter] public string IconClass { get; set; } = "icon-bar-chart";
+    [Parameter] public int ProgressPercentage { get; set; } = 0;
+    [Parameter] public string ProgressBarClass { get; set; } = "progress-bar-success green-sharp";
+    [Parameter] public string ValueColorClass { get; set; } = "font-green-sharp";
+    [Parameter] public string ProgressLabel { get; set; } = "progress";
+    [Parameter] public string ColClass { get; set; } = "col-lg-3 col-md-3 col-sm-6 col-xs-12";
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+
+    protected override void OnParametersSet()
+    {
+        // If DisplayValue is not explicitly set, use Value
+        if (string.IsNullOrEmpty(DisplayValue) || DisplayValue == "0")
+        {
+            DisplayValue = Value;
+        }
+    }
+}
+

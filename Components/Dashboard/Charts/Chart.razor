@@ -1,0 +1,201 @@
+@page "/chart"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.Charts.DonutChart
+@using NovaAccounts.SharedModels.Charts.LineChart
+
+
+
+<PageTitle>Morris.js Chart Examples</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="text-center">Morris.js Chart Examples</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Financial Overview</h5>
+                </div>
+                <div class="card-body">
+                    <ReusableLineChart 
+                        Data="@financialData"
+                        YKeys="@(new List<string> { "a", "b" })"
+                        Labels="@(new List<string> { "Payables", "Receivables" })"
+                        LineColors="@(new List<string> { "#3598DC", "#555555" })"
+                        OnChartRendered="@OnFinancialChartRendered" />
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <ReusableDonutChart 
+                        Data="@distributionData"
+                        Colors="@(new List<string> { "#3598DC", "#555555" })"
+                        OnChartRendered="@OnDistributionChartRendered" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Sales Performance</h5>
+                </div>
+                <div class="card-body">
+                    <ReusableLineChart 
+                        Data="@salesData"
+                        YKeys="@(new List<string> { "sales", "target" })"
+                        Labels="@(new List<string> { "Actual Sales", "Target" })"
+                        LineColors="@(new List<string> { "#28a745", "#ffc107" })" />
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Market Share</h5>
+                </div>
+                <div class="card-body">
+                    <ReusableDonutChart 
+                        Data="@marketShareData"
+                        Colors="@(new List<string> { "#007bff", "#28a745", "#ffc107", "#dc3545" })" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Interactive Example</h5>
+                    <button class="btn btn-primary" @onclick="UpdateChartsWithNewData">
+                        Update Charts
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <ReusableLineChart @ref="dynamicLineChart"
+                                Data="@dynamicLineData"
+                                YKeys="@(new List<string> { "value1", "value2" })"
+                                Labels="@(new List<string> { "Dataset 1", "Dataset 2" })"
+                                LineColors="@(new List<string> { "#17a2b8", "#6f42c1" })" />
+                        </div>
+                        <div class="col-md-4">
+                            <ReusableDonutChart @ref="dynamicDonutChart"
+                                Data="@dynamicDonutData"
+                                Colors="@(new List<string> { "#17a2b8", "#6f42c1", "#e83e8c" })" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ReusableLineChart? dynamicLineChart;
+    private ReusableDonutChart? dynamicDonutChart;
+
+    // Financial data (original example)
+    private List<LineChartData> financialData = new()
+    {
+        new() { Year = "2008", A = 200, B = 120 },
+        new() { Year = "2009", A = 10, B = 120 },
+        new() { Year = "2010", A = 84, B = 120 },
+        new() { Year = "2011", A = 65, B = 220 },
+        new() { Year = "2012", A = 120, B = 60 }
+    };
+
+    private List<DonutChartData> distributionData = new()
+    {
+        new() { Label = "Receivables", Value = 63.75m },
+        new() { Label = "Payables", Value = 36.25m }
+    };
+
+    // Sales performance data
+    private List<LineChartData> salesData = new()
+    {
+        new() { Year = "Q1", A = 150, B = 180 },
+        new() { Year = "Q2", A = 200, B = 190 },
+        new() { Year = "Q3", A = 180, B = 200 },
+        new() { Year = "Q4", A = 220, B = 210 }
+    };
+
+    // Market share data
+    private List<DonutChartData> marketShareData = new()
+    {
+        new() { Label = "Our Company", Value = 45.2m },
+        new() { Label = "Competitor A", Value = 28.7m },
+        new() { Label = "Competitor B", Value = 16.1m },
+        new() { Label = "Others", Value = 10.0m }
+    };
+
+    // Dynamic data for interactive example
+    private List<LineChartData> dynamicLineData = new()
+    {
+        new() { Year = "Jan", A = 100, B = 80 },
+        new() { Year = "Feb", A = 120, B = 90 },
+        new() { Year = "Mar", A = 140, B = 110 }
+    };
+
+    private List<DonutChartData> dynamicDonutData = new()
+    {
+        new() { Label = "Category A", Value = 40 },
+        new() { Label = "Category B", Value = 35 },
+        new() { Label = "Category C", Value = 25 }
+    };
+
+    private async Task OnFinancialChartRendered()
+    {
+        Console.WriteLine("Financial chart rendered successfully!");
+    }
+
+    private async Task OnDistributionChartRendered()
+    {
+        Console.WriteLine("Distribution chart rendered successfully!");
+    }
+
+    private async Task UpdateChartsWithNewData()
+    {
+        var random = new Random();
+        
+        // Update line chart data
+        var newLineData = new List<LineChartData>();
+        for (int i = 1; i <= 6; i++)
+        {
+            newLineData.Add(new LineChartData 
+            { 
+                Year = $"Month {i}", 
+                A = random.Next(50, 200), 
+                B = random.Next(60, 180) 
+            });
+        }
+
+        // Update donut chart data
+        var newDonutData = new List<DonutChartData>
+        {
+            new() { Label = "Category A", Value = random.Next(20, 50) },
+            new() { Label = "Category B", Value = random.Next(15, 40) },
+            new() { Label = "Category C", Value = random.Next(10, 35) }
+        };
+
+        // Update the charts
+        if (dynamicLineChart != null)
+            await dynamicLineChart.UpdateChart(newLineData);
+        
+        if (dynamicDonutChart != null)
+            await dynamicDonutChart.UpdateChart(newDonutData);
+    }
+}

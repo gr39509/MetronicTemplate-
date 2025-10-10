@@ -1,0 +1,237 @@
+@* CBSClientEditModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.Services.Models
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="clientEditModal"
+               Title="Edit CBS Client"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Save Changes"
+               OnSave="@SaveChanges"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading client details...</p>
+            </div>
+        }
+        else if (clientEditModel != null)
+        {
+            <EditForm Model="@clientEditModel">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label>Client Number</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.ClientNum" disabled />
+                        </div>
+
+                        <div class="mb-3">
+                            <label>First Name</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.FirstName" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Middle Name</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.MiddleName" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Last Name</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.LastName" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Email</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.Email" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label>Mobile</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.Mobile1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Address</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.Address" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label>City</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.City" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Business Name</label>
+                            <InputText class="form-control" @bind-Value="clientEditModel.BusinessName" />
+                        </div>
+                       
+
+                        <div class="mb-3">
+                            <label>Profile Picture</label><br />
+                            @if (!string.IsNullOrEmpty(clientEditModel.Picture))
+                            {
+                                <img src="@GetImageSource(clientEditModel.Picture)"
+                                     alt="Client Photo"
+                                     class="img-thumbnail mb-2"
+                                     style="width:120px;height:120px;object-fit:cover;" />
+                            }
+                            <InputFile OnChange="@OnImageChange" />
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal clientEditModal = null!;
+    private UpdateCBSClientCommand? clientEditModel;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    [Parameter] public EventCallback<UpdateCBSClientCommand> OnClientUpdated { get; set; }
+
+    public async Task OpenModal(string clientNumber)
+    {
+        errorMessage = string.Empty;
+        clientEditModel = null;
+        await clientEditModal.OpenModal();
+        await LoadClient(clientNumber);
+    }
+
+    private async Task LoadClient(string clientNumber)
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            var result = await ApiClient.GetCBSClientAsync(clientNumber, null, null);
+            var client = result?.Payload;
+            if (client != null)
+            {
+                clientEditModel = new UpdateCBSClientCommand
+                {
+                    ClientNum = client.ClientNum,
+                    FirstName = client.FirstName,
+                    MiddleName = client.MiddleName,
+                    LastName = client.LastName,
+                    Email = client.Email,
+                    Mobile1 = client.Mobile1,
+                    Address = client.Address,
+                    City = client.City,
+                    BusinessName = client.BusinessName,
+                    Picture = client.Picture,
+                    // ClientType = client.,
+                    // Gender = client.Gender,
+                    // IdType = client.IdType,
+                    // IdNum = client.IdNum,
+                    //WorkingStatusID = client.WorkingStatusID,
+                    MaritalStatusID = client.MaritalStatusID,
+                    BranchNumber = client.BranchNumber
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load client data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnImageChange(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        using var ms = new MemoryStream();
+        await file.OpenReadStream(maxAllowedSize: 5_000_000).CopyToAsync(ms);
+        clientEditModel!.Picture = Convert.ToBase64String(ms.ToArray());
+    }
+
+    private string GetImageSource(string base64String)
+    {
+        if (string.IsNullOrWhiteSpace(base64String))
+            return "images/default-avatar.png";
+
+        if (base64String.StartsWith("data:image"))
+            return base64String;
+
+        return $"data:image/jpeg;base64,{base64String}";
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            Console.WriteLine($"📝 Saving changes for client: {clientEditModel?.ClientNum}");
+
+            var updateCommand = new UpdateCBSClientCommand
+            {
+                ClientNum = clientEditModel!.ClientNum,
+                FirstName = clientEditModel.FirstName,
+                Email = clientEditModel.Email,
+                Mobile1 = clientEditModel.Mobile1,
+                BranchNumber = clientEditModel.BranchNumber,
+                RelationshipOfficer = clientEditModel.RelationshipOfficer,
+                BusinessName = clientEditModel.BusinessName,
+                Picture = clientEditModel.Picture,
+                WorkingStatusID = 1,
+                MaritalStatusID = 1,
+                City = clientEditModel.City
+            };
+
+            var result = await ApiClient.UpdateCBSClientAsync(
+                bP_Tenant: null,
+                accept_Language: null,
+                body: updateCommand,
+                cancellationToken: CancellationToken.None
+            );
+
+            if (result?.Status == 200)
+            {
+                Console.WriteLine("✅ Client updated successfully");
+                await clientEditModal.CloseModal();
+                await OnClientUpdated.InvokeAsync(clientEditModel);
+            }
+            else
+            {
+                errorMessage = $"❌ Update failed. Server responded with status {result?.Status}";
+                Console.WriteLine(errorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Error saving client: {ex.Message}";
+            Console.WriteLine(errorMessage);
+        }
+    }
+
+
+}

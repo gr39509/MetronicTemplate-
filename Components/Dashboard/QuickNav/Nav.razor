@@ -1,0 +1,134 @@
+
+@inject NovaAccounts.Services.ClientsServices.ClientService ClientService
+@using NovaAccounts.SharedModels.ModalFields
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.QuickNav
+@using NovaAccounts.Services.Models
+
+<ReusableQuickNav NavItems="@navigationItems"
+                  NavId="clientNav"
+                  ActiveUrl="@currentUrl" />
+
+<ReusableModal @ref="addClientModal"
+               Title="Add New Client"
+               TriggerButtonText="Add Client"
+               TriggerButtonClass="btn btn-primary"
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               BodyColor="#333"
+               OnSave="@SaveClientAsync"
+               ShowSaveButton="true"
+               SaveButtonText="Save Client"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel">
+
+    <BodyContent>
+        <div class="form-group mb-3">
+            <label>Client Name</label>
+            <input type="text" class="form-control" @bind="clientName" placeholder="Enter client name" />
+        </div>
+
+        <div class="text-center mt-3">
+            @if (isLoading)
+            {
+                <div class="spinner-border text-primary" role="status"></div>
+            }
+            else if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert @alertClass">@message</div>
+            }
+        </div>
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private string currentUrl = "/clients/add";
+    private ReusableModal addClientModal = null!;
+    private string clientName = string.Empty;
+    private bool isLoading = false;
+    private string? message;
+    private string alertClass = string.Empty;
+
+    private List<NavItem> navigationItems = new();
+
+    protected override void OnInitialized()
+    {
+        navigationItems = new()
+        {
+            new NavItem
+            {
+                Text = "Add Client",
+                Url = "/clients/add",
+                IconClass = "icon-user-follow",
+                OnClick = async () => await OpenModal(),
+                PreventNavigation = true
+            },
+            new NavItem
+            {
+                Text = "View Clients",
+                Url = "/clients",
+                IconClass = "icon-users"
+            },
+            new NavItem
+            {
+                Text = "Client Settings",
+                Url = "/clients/settings",
+                IconClass = "icon-settings"
+            }
+        };
+    }
+
+    private async Task OpenModal()
+    {
+        message = null;
+        clientName = string.Empty;
+        alertClass = string.Empty;
+
+        if (addClientModal != null)
+            await addClientModal.OpenModal();
+    }
+
+    private async Task SaveClientAsync()
+    {
+        if (string.IsNullOrWhiteSpace(clientName))
+        {
+            message = "Please enter a client name.";
+            alertClass = "alert-danger";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            message = null;
+
+            var result = await ClientService.AddClientAsync(clientName);
+
+            isLoading = false;
+
+            if (result != null && result.Payload != null && result.Status == 200)
+            {
+                message = $"Client '{result.Payload.ClientName}' added successfully.";
+                alertClass = "alert-success";
+
+                // ✅ Optionally close modal after 1.5s
+                await Task.Delay(1500);
+                await addClientModal.CloseModal();
+            }
+            else
+            {
+                message = "Failed to add client. Please try again.";
+                alertClass = "alert-danger";
+            }
+        }
+        catch (Exception ex)
+        {
+            isLoading = false;
+            message = $"Error: {ex.Message}";
+            alertClass = "alert-danger";
+        }
+    }
+}

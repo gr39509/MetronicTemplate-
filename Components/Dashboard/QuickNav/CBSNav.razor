@@ -1,0 +1,86 @@
+@* @using NovaAccounts.Components.ModalFields *@
+@* @using NovaAccounts.Components.Shared *@
+@* @using NovaAccounts.Services.Models.ClientModels *@
+@* @inject IJSRuntime JSRuntime *@
+@* <ReusableModal @ref="viewClientModal" *@
+@*                Title="Client Details" *@
+@*                ShowTriggerButton="false" *@
+@*                Size="ModalSize.Large" *@
+@*                TitleFontSize="1.2rem" *@
+@*                TitleColor="#007bff" *@
+@*                BodyFontSize="0.95rem" *@
+@*                BodyColor="#333" *@
+@*                ShowSaveButton="false" *@
+@*                ShowCancelButton="true" *@
+@*                CancelButtonText="Close"> *@
+@* *@
+@*     <BodyContent> *@
+@*         @if (selectedClient != null) *@
+@*         { *@
+@*             <div class="p-3"> *@
+@*                 <h5>@selectedClient.FullName (@selectedClient.ClientNum)</h5> *@
+@*                 <p><strong>Gender:</strong> @selectedClient.Gender</p> *@
+@*                 <p><strong>Branch:</strong> @selectedClient.BranchName</p> *@
+@*                 <p><strong>Relationship Officer:</strong> @selectedClient.RelationshipOfficer</p> *@
+@* *@
+@*                 <h6 class="mt-3">Savings Accounts</h6> *@
+@*                 @if (selectedClient.SavingsAccounts?.Any() == true) *@
+@*                 { *@
+@*                     <table class="table table-sm table-bordered"> *@
+@*                         <thead> *@
+@*                             <tr> *@
+@*                                 <th>Account Number</th> *@
+@*                                 <th>Status</th> *@
+@*                                 <th>Currency</th> *@
+@*                             </tr> *@
+@*                         </thead> *@
+@*                         <tbody> *@
+@*                             @foreach (var account in selectedClient.SavingsAccounts) *@
+@*                             { *@
+@*                                 <tr> *@
+@*                                     <td>@account.AccountNumber</td> *@
+@*                                     <td>@account.AccountStatus</td> *@
+@*                                     <td>@account.Currency</td> *@
+@*                                 </tr> *@
+@*                             } *@
+@*                         </tbody> *@
+@*                     </table> *@
+@*                 } *@
+@*                 else *@
+@*                 { *@
+@*                     <p class="text-muted">No savings accounts found.</p> *@
+@*                 } *@
+@*             </div> *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             <p class="text-muted text-center p-3">No client selected.</p> *@
+@*         } *@
+@*     </BodyContent> *@
+@* </ReusableModal> *@
+@* *@
+@* @code{ *@
+@* *@
+@*     private ReusableModal viewClientModal = null!; *@
+@*     private ClientCBS? selectedClient; *@
+@* *@
+@*     protected override async Task OnAfterRenderAsync(bool firstRender) *@
+@*     { *@
+@*         if (firstRender) *@
+@*         { *@
+@*             await JSRuntime.InvokeVoidAsync("addClientViewButtonHandler", DotNetObjectReference.Create(this)); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     [JSInvokable] *@
+@*     public async Task OnClientViewClicked(string clientNum) *@
+@*     { *@
+@*         selectedClient = clients.FirstOrDefault(c => c.ClientNum == clientNum); *@
+@*         if (selectedClient != null) *@
+@*         { *@
+@*             await viewClientModal.OpenModal(); *@
+@*         } *@
+@*     } *@
+@* *@
+@* *@
+@* } *@

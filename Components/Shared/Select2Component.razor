@@ -1,0 +1,168 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+@using NovaAccounts.SharedModels.ModalFields
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
+
+<div class="form-group">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label for="@Id">@Label</label>
+    }
+    <select class="form-control select2" id="@Id" @onchange="HandleChange">
+        @if (ShowPlaceholder && !string.IsNullOrEmpty(Placeholder))
+        {
+            <option value="">@Placeholder</option>
+        }
+        @if (Options != null)
+        {
+            @foreach (var option in Options)
+            {
+                <option value="@option.Value" selected="@(option.Value == SelectedValue)">
+                    @option.Text
+                </option>
+            }
+        }
+        @ChildContent
+    </select>
+</div>
+
+<script>
+    $(function initSelect2 () {
+        //Initialize Select2 Elements
+        $('.select2').select2({
+            minimumResultsForSearch : 1,
+        })
+    })
+</script>
+
+@code {
+    private DotNetObjectReference<Select2Component>? dotNetRef;
+    private bool isInitialized = false;
+
+    [Parameter] public string Id { get; set; } = $"select2_{Guid.NewGuid():N}";
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? Placeholder { get; set; } = "Please select...";
+    [Parameter] public bool ShowPlaceholder { get; set; } = true;
+    [Parameter] public bool AllowClear { get; set; } = true;
+    [Parameter] public bool AllowSearch { get; set; } = true;
+    [Parameter] public string? SelectedValue { get; set; }
+    [Parameter] public EventCallback<string> SelectedValueChanged { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public List<SelectOption>? Options { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? DropdownParent { get; set; }
+    [Parameter] public string Theme { get; set; } = "bootstrap-5";
+    [Parameter] public string Width { get; set; } = "100%";
+    [Parameter] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isInitialized)
+        {
+            try
+            {
+                dotNetRef = DotNetObjectReference.Create(this);
+                
+                var options = new
+                {
+                    theme = Theme,
+                    width = Width,
+                    placeholder = Placeholder,
+                    allowClear = AllowClear,
+                    minimumResultsForSearch = AllowSearch ? 0 : -1,
+                    dropdownParent = DropdownParent
+                };
+
+               // await JSRuntime.InvokeVoidAsync("blazorSelect2.initialize", Id, options, dotNetRef);
+                isInitialized = true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing Select2: {ex.Message}");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task NotifyValueChanged(string value)
+    {
+        SelectedValue = value;
+        await SelectedValueChanged.InvokeAsync(value);
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? "";
+        SelectedValue = value;
+        await SelectedValueChanged.InvokeAsync(value);
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    public async Task SetValueAsync(string value)
+    {
+        if (isInitialized)
+        {
+            try
+            {
+               // await JSRuntime.InvokeVoidAsync("blazorSelect2.setValue", Id, value);
+                SelectedValue = value;
+                await SelectedValueChanged.InvokeAsync(value);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error setting value: {ex.Message}");
+            }
+        }
+    }
+
+    public async Task ClearSelectionAsync()
+    {
+        if (isInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("blazorSelect2.clearSelection", Id);
+                SelectedValue = "";
+                await SelectedValueChanged.InvokeAsync("");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error clearing selection: {ex.Message}");
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (isInitialized)
+        {
+            try
+            {
+               // await JSRuntime.InvokeVoidAsync("blazorSelect2.destroy", Id);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error disposing Select2: {ex.Message}");
+            }
+        }
+        dotNetRef?.Dispose();
+    }
+    
+    
+}
+
+<style>
+    .select2.select2-container {
+        padding: 8px;
+        border: 1px solid black;
+        border-radius: 6px;
+    }
+    .select2-selection,.select2.select2-container{
+        display: flex;
+        align-items: center;
+        justify-content: start;
+    }
+    
+</style>
