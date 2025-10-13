@@ -1,0 +1,363 @@
+@* CashierDetailsModal *@
+
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+@inject IConfiguration Configuration
+
+<ReusableModal @ref="cashierDetailsModal"
+               Title="Cashier Details"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Update"
+               ShowCancelButton="true"
+               CancelButtonText="Close"
+               OnSave="UpdateCashierDetails">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading cashier details...</p>
+            </div>
+        }
+        else if (cashierDetails != null)
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Cashier ID:</label>
+                        <span class="detail-value fs-6">@cashierDetails.CashierID</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Cashier Name:</label>
+                        <span class="detail-value fs-5">@cashierDetails.CashierName</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Field Agent Account Number:</label>
+                        <span class="detail-value fs-6">@(string.IsNullOrEmpty(cashierDetails.FieldAgentAccountNumber) ? "Not set" : cashierDetails.FieldAgentAccountNumber)</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">GL Code:</label>
+                        <span class="detail-value fs-6">@(cashierDetails.GlCode)</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Date Created:</label>
+                        <span class="detail-value fs-6">@(cashierDetails.DateCreated.ToString())</span>
+                    </div>
+                    
+                    <!-- Boolean Fields with Toggles -->
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">To be withdrawn:</label>
+                        <div class="detail-value">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierDetails.AllowBalToBeOverdrawn">
+                                <label class="form-check-label">
+                                    @if (cashierDetails.AllowBalToBeOverdrawn)
+                                    {
+                                        <span class="badge badge-success">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">No</span>
+                                    }
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Apply Denomination:</label>
+                        <div class="detail-value">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierDetails.ApplyDenomination">
+                                <label class="form-check-label">
+                                    @if (cashierDetails.ApplyDenomination)
+                                    {
+                                        <span class="badge badge-success">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">No</span>
+                                    }
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Enable:</label>
+                        <div class="detail-value">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierDetails.IsEnabled">
+                                <label class="form-check-label">
+                                    @if (cashierDetails.IsEnabled)
+                                    {
+                                        <span class="badge badge-success">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">No</span>
+                                    }
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Field Agent:</label>
+                        <div class="detail-value">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierDetails.IsFieldAgent">
+                                <label class="form-check-label">
+                                    @if (cashierDetails.IsFieldAgent)
+                                    {
+                                        <span class="badge badge-success">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">No</span>
+                                    }
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Is Vault:</label>
+                        <div class="detail-value">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierDetails.IsVault">
+                                <label class="form-check-label">
+                                    @if (cashierDetails.IsVault)
+                                    {
+                                        <span class="badge badge-success">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">No</span>
+                                    }
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Opening Cash:</label>
+                        <span class="detail-value fs-6 @GetBalanceClass(cashierDetails.OpeningCash)">
+                            GH₵ @cashierDetails.OpeningCash.ToString("N2")
+                        </span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Cash Deposits:</label>
+                        <span class="detail-value fs-6">GH₵ @(cashierDetails.CashDeposits)</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Cheque Deposits:</label>
+                        <span class="detail-value fs-6">GH₵ @(cashierDetails.ChequeDeposits)</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Withdrawals:</label>
+                        <span class="detail-value fs-6 @GetBalanceClass(cashierDetails.Withdrawals)">
+                            GH₵ @cashierDetails.Withdrawals.ToString("N2")
+                        </span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Transaction Limit:</label>
+                        <span class="detail-value fs-6 @GetBalanceClass(cashierDetails.TransactionLimit)">
+                            GH₵ @cashierDetails.TransactionLimit.ToString("N2")
+                        </span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Cash Balance:</label>
+                        <span class="detail-value fs-6 @GetBalanceClass(cashierDetails.CashBalance)">
+                            GH₵ @cashierDetails.CashBalance.ToString("N2")
+                        </span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label fs-6">Total Balance:</label>
+                        <span class="detail-value fs-6 @GetBalanceClass(cashierDetails.TotalBalance)">
+                            GH₵ @cashierDetails.TotalBalance.ToString("N2")
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(cashierDetails.GlName))
+            {
+                <div class="detail-group mt-3">
+                    <label class="detail-label v">GL Name:</label>
+                    <p class="detail-value fs-6">@cashierDetails.GlName</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(updateMessage))
+            {
+                <div class="alert @(isUpdateSuccess ? "alert-success" : "alert-danger") mt-3">
+                    @updateMessage
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal cashierDetailsModal = null!;
+    private CashierViewModel? cashierDetails;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private string updateMessage = string.Empty;
+    private bool isUpdateSuccess = false;
+
+    public async Task OpenModal(string cashierId)
+    {
+        errorMessage = string.Empty;
+        updateMessage = string.Empty;
+        cashierDetails = null;
+        
+        if (cashierDetailsModal != null)
+        {
+            await cashierDetailsModal.OpenModal();
+            await LoadCashierDetails(cashierId);
+        }
+    }
+
+    private async Task LoadCashierDetails(string cashierId)
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            // Call the API with proper parameters
+            var result = await ApiClient.GetCashierAsync(
+                cashierID: cashierId,                    
+                bP_Tenant: null,                  
+                accept_Language: null      
+            );
+
+            if (result?.Payload != null)
+            {
+                cashierDetails = result.Payload;
+            }
+            else
+            {
+                errorMessage = "Failed to load client details.";
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+            Console.WriteLine($"❌ API Error loading client details: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading client details: {ex.Message}";
+            Console.WriteLine($"❌ Error loading client details: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateCashierDetails()
+    {
+        if (cashierDetails == null)
+            return;
+
+        try
+        {
+            isLoading = true;
+            updateMessage = string.Empty;
+            StateHasChanged();
+
+            // Create update model with only the boolean fields that can be toggled
+            var UpdateCashier = new UpdateCashierCommand
+            {
+                CashierID = cashierDetails.CashierID,
+                AllowBalToBeOverdrawn = cashierDetails.AllowBalToBeOverdrawn,
+                ApplyDenomination = cashierDetails.ApplyDenomination,
+                IsEnabled = cashierDetails.IsEnabled,
+                IsVault = cashierDetails.IsVault,
+                UserID = cashierDetails.UserID,
+                FieldAgentAccountNumber = cashierDetails.FieldAgentAccountNumber
+                // Add other fields that should be updatable here
+            };
+
+            
+            var result = await ApiClient.UpdateCashierAsync(
+                bP_Tenant: null,
+                accept_Language: null,
+                body: UpdateCashier,
+                cancellationToken: CancellationToken.None
+                );
+
+            if (result.Status == 200)
+            {
+                updateMessage = "Cashier details updated successfully!";
+                isUpdateSuccess = true;
+                
+                // Reload the details to ensure we have the latest data
+                await LoadCashierDetails(cashierDetails.CashierID);
+            }
+            else
+            {
+                updateMessage = "Failed to update cashier details.";
+                isUpdateSuccess = false;
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            updateMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+            isUpdateSuccess = false;
+            Console.WriteLine($"❌ API Error updating cashier details: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            updateMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            isUpdateSuccess = false;
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            updateMessage = $"Error updating cashier details: {ex.Message}";
+            isUpdateSuccess = false;
+            Console.WriteLine($"❌ Error updating cashier details: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetBalanceClass(double balance)
+    {
+        return balance > 0 ? "text-success" : balance < 0 ? "text-danger" : "text-muted";
+    }
+}

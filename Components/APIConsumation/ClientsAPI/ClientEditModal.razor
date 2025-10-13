@@ -1,0 +1,356 @@
+@* ClientEditModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="clientEditModal"
+               Title="Edit CBS Client"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Save Changes"
+               OnSave="@SaveChanges"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading client details...</p>
+            </div>
+        }
+        else if (clientEditModel != null)
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Client ID</label>
+                        <input class="form-control" value="@clientEditModel.Id" disabled />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Client Name</label>
+                        <input class="form-control @(string.IsNullOrEmpty(clientNameError) ? "" : "is-invalid")" 
+                               @bind="clientEditModel.ClientName" 
+                               @oninput="OnClientNameInput" />
+                        @if (!string.IsNullOrEmpty(clientNameError))
+                        {
+                            <div class="invalid-feedback">@clientNameError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input class="form-control @(string.IsNullOrEmpty(phoneError) ? "" : "is-invalid")" 
+                               @bind="clientEditModel.PhoneNumber" 
+                               @oninput="OnPhoneInput"
+                               placeholder="0XXXXXXXXX" />
+                        @if (!string.IsNullOrEmpty(phoneError))
+                        {
+                            <div class="invalid-feedback">@phoneError</div>
+                        }
+                        <small class="form-text text-muted">Must start with 0 and be exactly 10 digits long</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <input class="form-control @(string.IsNullOrEmpty(emailError) ? "" : "is-invalid")" 
+                               @bind="clientEditModel.EmailAddress" 
+                               @oninput="OnEmailInput" />
+                        @if (!string.IsNullOrEmpty(emailError))
+                        {
+                            <div class="invalid-feedback">@emailError</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger">@formError</div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal clientEditModal = null!;
+    private UpdateClientCommand? clientEditModel;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private string formError = string.Empty;
+    private string phoneError = string.Empty;
+    private string emailError = string.Empty;
+    private string clientNameError = string.Empty;
+
+    [Parameter] public EventCallback<UpdateClientCommand> OnClientUpdated { get; set; }
+
+    public async Task OpenModal(int clientNumber)
+    {
+        errorMessage = string.Empty;
+        formError = string.Empty;
+        phoneError = string.Empty;
+        emailError = string.Empty;
+        clientNameError = string.Empty;
+        clientEditModel = null;
+        await clientEditModal.OpenModal();
+        await LoadClient(clientNumber);
+    }
+
+    private async Task LoadClient(int clientNumber)
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            var result = await ApiClient.GetClientAsync(clientNumber, bP_Tenant: null, accept_Language: null);
+            var client = result?.Payload;
+            if (client != null)
+            {
+                clientEditModel = new UpdateClientCommand
+                {
+                    Id = client.Id,
+                    ClientName = client.ClientName,
+                    EmailAddress = client.EmailAddress,
+                    PhoneNumber = client.PhoneNumber
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load client data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnPhoneInput(ChangeEventArgs e)
+    {
+        phoneError = string.Empty;
+        formError = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        
+        // Remove any existing error when user starts typing
+        if (!string.IsNullOrEmpty(value))
+        {
+            // Real-time validation as user types
+            if (!IsPhoneNumberValid(value))
+            {
+                phoneError = "Phone number must start with 0 and be exactly 10 digits";
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnEmailInput(ChangeEventArgs e)
+    {
+        emailError = string.Empty;
+        formError = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        
+        if (!string.IsNullOrEmpty(value) && !IsValidEmail(value))
+        {
+            emailError = "Please enter a valid email address";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnClientNameInput(ChangeEventArgs e)
+    {
+        clientNameError = string.Empty;
+        formError = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            clientNameError = "Client name is required";
+        }
+        else if (value.Length > 100)
+        {
+            clientNameError = "Client name cannot exceed 100 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            // Clear previous errors
+            formError = string.Empty;
+            
+            // Validate all fields
+            var isValid = ValidateForm();
+            
+            if (!isValid)
+            {
+                formError = "Please fix the validation errors before saving.";
+                return;
+            }
+
+            Console.WriteLine($"📝 Saving changes for client: {clientEditModel?.Id}");
+            Console.WriteLine($"📝 Client Name: {clientEditModel?.ClientName}");
+            Console.WriteLine($"📝 Phone: {clientEditModel?.PhoneNumber}");
+            Console.WriteLine($"📝 Email: {clientEditModel?.EmailAddress}");
+
+            if (clientEditModel == null)
+            {
+                formError = "Client data is null";
+                return;
+            }
+
+            var updateCommand = new UpdateClientCommand
+            {
+                Id = clientEditModel.Id,
+                ClientName = clientEditModel.ClientName?.Trim() ?? string.Empty,
+                EmailAddress = clientEditModel.EmailAddress?.Trim() ?? string.Empty,
+                PhoneNumber = clientEditModel.PhoneNumber?.Trim() ?? string.Empty
+            };
+
+            Console.WriteLine("🔄 Calling UpdateClientAsync...");
+
+            var result = await ApiClient.UpdateClientAsync(
+                bP_Tenant: null,
+                accept_Language: null,
+                body: updateCommand,
+                cancellationToken: CancellationToken.None
+            );
+
+            Console.WriteLine($"✅ API Response Status: {result?.Status}");
+            Console.WriteLine($"✅ API Success: {result?.Payload}");
+            Console.WriteLine($"✅ API Message: {result?.Payload}");
+
+            if (result?.Status == 200)
+            {
+                Console.WriteLine("✅ Client updated successfully");
+                await clientEditModal.CloseModal();
+                await OnClientUpdated.InvokeAsync(clientEditModel);
+               
+            }
+            else
+            {
+                formError = $"Update failed. Status: {result?.Status}, Message: {result?.Payload}";
+                Console.WriteLine(formError);
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            formError = $"API Error: {apiEx.Result?.ErrorMessage ?? apiEx.Message}";
+            Console.WriteLine($"❌ API Exception Details: {apiEx}");
+            Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"❌ API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error saving client: {ex.Message}";
+            Console.WriteLine($"❌ Exception: {ex}");
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Client Name
+        if (string.IsNullOrWhiteSpace(clientEditModel?.ClientName))
+        {
+            clientNameError = "Client name is required";
+            isValid = false;
+        }
+        else if (clientEditModel.ClientName.Length > 100)
+        {
+            clientNameError = "Client name cannot exceed 100 characters";
+            isValid = false;
+        }
+        else
+        {
+            clientNameError = string.Empty;
+        }
+
+        // Validate Phone Number
+        if (string.IsNullOrWhiteSpace(clientEditModel?.PhoneNumber))
+        {
+            phoneError = "Phone number is required";
+            isValid = false;
+        }
+        else if (!IsPhoneNumberValid(clientEditModel.PhoneNumber))
+        {
+            phoneError = "Phone number must start with 0 and be exactly 10 digits";
+            isValid = false;
+        }
+        else
+        {
+            phoneError = string.Empty;
+        }
+
+        // Validate Email (optional field)
+        if (!string.IsNullOrWhiteSpace(clientEditModel?.EmailAddress) && !IsValidEmail(clientEditModel.EmailAddress))
+        {
+            emailError = "Please enter a valid email address";
+            isValid = false;
+        }
+        else
+        {
+            emailError = string.Empty;
+        }
+
+        return isValid;
+    }
+
+    private bool IsPhoneNumberValid(string? phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            return false;
+
+        // Remove any spaces, dashes, or other characters
+        var cleanPhone = new string(phoneNumber.Where(char.IsDigit).ToArray());
+        
+        // Check if it starts with 0 and has exactly 10 digits
+        return cleanPhone.Length == 10 && cleanPhone.StartsWith('0');
+    }
+
+    private bool IsValidEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return true; // Email is optional
+
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}

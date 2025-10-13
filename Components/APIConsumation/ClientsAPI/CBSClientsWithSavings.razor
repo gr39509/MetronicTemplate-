@@ -1,14 +1,13 @@
 @page "/clients/cbs/savings"
-@using NovaAccounts.Services.ClientsServices
-@using NovaAccounts.Services.Models
 @using NovaAccounts.Components
 @using NovaAccounts.SharedModels.DataFields
 @using NovaAccounts.Components.Layout
 @using Microsoft.AspNetCore.Authorization
 @using NovaAccounts.Components.Shared
-@using NovaAccounts.Services.Models.ClientModels
-@inject ClientService ClientService
+@using NovaAccounts.SharedModels.ApiService
+
 @inject IJSRuntime JSRuntime
+@inject ApiClient ApiClient
 @attribute [Authorize]
 @layout MainLayout
 @rendermode InteractiveServer
@@ -42,13 +41,13 @@ else
                 <span class="caption-subject bold uppercase">Clients with Savings</span>
             </div>
             <div class="actions">
-                <button class="btn btn-circle btn-default" @onclick="LoadClients" title="Refresh">
+                <button class="btn btn-circle btn-default" @onclick="LoadCbsClientsWithSavings" title="Refresh">
                     <i class="fa fa-refresh"></i>
                 </button>
             </div>
         </div>
         <div class="portlet-body">
-            <ReusableDataTable TItem="ClientCBS"
+            <ReusableDataTable TItem="CBSClientViewModel"
                                Data="@clients"
                                Columns="@columns"
                                Options="@options"
@@ -58,7 +57,7 @@ else
 }
 
 @code {
-    private List<ClientCBS> clients = new();
+    private List<CBSClientViewModel> clients = new();
     private List<DataTableColumn> columns = new();
     private DataTableOptions options = new();
     private bool isLoading = true;
@@ -67,10 +66,10 @@ else
     protected override async Task OnInitializedAsync()
     {
         ConfigureTable();
-        await LoadClients();
+        await LoadCbsClientsWithSavings();
     }
-
-    private async Task LoadClients()
+    
+    private async Task LoadCbsClientsWithSavings()
     {
         try
         {
@@ -78,13 +77,37 @@ else
             errorMessage = string.Empty;
             StateHasChanged();
 
-            clients = await ClientService.GetCBSClientsWithSavingsAsync();
-            Console.WriteLine($"Loaded {clients.Count} CBS clients with savings accounts");
+            
+            var result = await ApiClient.GetCBSClientsWithSavingsAccountsAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                clients = result.Payload.ToList();
+                Console.WriteLine($"✅ Loaded {clients.Count} clients");
+            }
+            else
+            {
+                errorMessage = "No clients data received from server.";
+                clients = new List<CBSClientViewModel>();
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load clients.";
+            Console.WriteLine($"❌ API Error loading clients: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
-            Console.WriteLine($"Error loading clients: {ex.Message}");
+            errorMessage = "Failed to load clients. Please try and login again.";
+            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
         }
         finally
         {
@@ -93,29 +116,52 @@ else
         }
     }
 
+    // private async Task LoadClients()
+    // {
+    //     try
+    //     {
+    //         isLoading = true;
+    //         errorMessage = string.Empty;
+    //         StateHasChanged();
+    //
+    //         clients = await ClientService.GetCBSClientsWithSavingsAsync();
+    //         Console.WriteLine($"Loaded {clients.Count} CBS clients with savings accounts");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errorMessage = ex.Message;
+    //         Console.WriteLine($"Error loading clients: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         isLoading = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
     private void ConfigureTable()
     {
         columns = new List<DataTableColumn>
         {
-            new() { Header = "CLIENT NO", PropertyName = nameof(ClientCBS.ClientNum), CssClass = "text-center" },
+            new() { Header = "CLIENT NO", PropertyName = nameof(CBSClientViewModel.ClientNum), CssClass = "text-center" },
             new()
             {
                 Header = "FULL NAME",
-                PropertyName = nameof(ClientCBS.FullName),
+                PropertyName = nameof(CBSClientViewModel.FullName),
                 CustomRenderer = (item) =>
                 {
-                    var client = (ClientCBS)item;
+                    var client = (CBSClientViewModel)item;
                     return $"<strong class='text-primary'>{client.FullName}</strong>";
                 }
             },
-            new() { Header = "GENDER", PropertyName = nameof(ClientCBS.Gender) },
+            new() { Header = "GENDER", PropertyName = nameof(CBSClientViewModel.Gender) },
             new()
             {
                 Header = "SAVINGS ACCOUNTS",
-                PropertyName = nameof(ClientCBS.SavingsAccounts),
+                PropertyName = nameof(CBSClientViewModel.SavingsAccounts),
                 CustomRenderer = (item) =>
                 {
-                    var client = (ClientCBS)item;
+                    var client = (CBSClientViewModel)item;
                     if (client.SavingsAccounts == null || !client.SavingsAccounts.Any())
                         return "<span class='text-muted'>No accounts</span>";
 
@@ -126,8 +172,8 @@ else
                     return $"<div>{accounts}</div>";
                 }
             },
-            new() { Header = "BRANCH", PropertyName = nameof(ClientCBS.BranchName) },
-            new() { Header = "RELATIONSHIP OFFICER", PropertyName = nameof(ClientCBS.RelationshipOfficer) }
+            new() { Header = "BRANCH", PropertyName = nameof(CBSClientViewModel.BranchName) },
+            new() { Header = "RELATIONSHIP OFFICER", PropertyName = nameof(CBSClientViewModel.RelationshipOfficer) }
         };
 
         options = new DataTableOptions
@@ -142,7 +188,7 @@ else
         };
     }
 
-    private async Task OnClientClick(ClientCBS client)
+    private async Task OnClientClick(CBSClientViewModel client)
     {
         Console.WriteLine($"Clicked: {client.FullName}");
         await JSRuntime.InvokeVoidAsync("alert", $"Client: {client.FullName}");

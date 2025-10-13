@@ -1,13 +1,11 @@
 @page "/clients/with-balances"
-@using NovaAccounts.Services.ClientsServices
-@using NovaAccounts.Services.Models
 @using NovaAccounts.Components
 @using NovaAccounts.SharedModels.DataFields
 @using NovaAccounts.Components.Layout
 @using Microsoft.AspNetCore.Authorization
 @using NovaAccounts.Components.Shared
-@using NovaAccounts.Services.Models.ClientModels
-@inject ClientService ClientService
+@using NovaAccounts.SharedModels.ApiService
+@inject ApiClient ApiClient
 @inject IJSRuntime JSRuntime
 @attribute [Authorize]
 @layout MainLayout
@@ -42,13 +40,13 @@ else
                 <span class="caption-subject bold uppercase">Clients with Balances</span>
             </div>
             <div class="actions">
-                <button class="btn btn-circle btn-default" @onclick="LoadClients" title="Refresh">
+                <button class="btn btn-circle btn-default" @onclick="LoadCbsClientsWithBalances" title="Refresh">
                     <i class="fa fa-refresh"></i>
                 </button>
             </div>
         </div>
         <div class="portlet-body">
-            <ReusableDataTable TItem="ClientBalanceModel"
+            <ReusableDataTable TItem="ClientViewModel"
                                Data="@clients"
                                Columns="@columns"
                                Options="@options"
@@ -58,7 +56,7 @@ else
 }
 
 @code {
-    private List<ClientBalanceModel> clients = new();
+    private List<ClientViewModel> clients = new();
     private List<DataTableColumn> columns = new();
     private DataTableOptions options = new();
     private bool isLoading = true;
@@ -67,10 +65,10 @@ else
     protected override async Task OnInitializedAsync()
     {
         ConfigureTable();
-        await LoadClients();
+        await LoadCbsClientsWithBalances();
     }
 
-    private async Task LoadClients()
+    private async Task LoadCbsClientsWithBalances()
     {
         try
         {
@@ -78,13 +76,37 @@ else
             errorMessage = string.Empty;
             StateHasChanged();
 
-            clients = await ClientService.GetClientsAlongWithBalancesAsync();
-            Console.WriteLine($"Loaded {clients.Count} clients with balances");
+            
+            var result = await ApiClient.GetClientsAlongWithBalancesAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                clients = result.Payload.ToList();
+                Console.WriteLine($"✅ Loaded {clients.Count} clients");
+            }
+            else
+            {
+                errorMessage = "No clients data received from server.";
+                clients = new List<ClientViewModel>();
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load clients.";
+            Console.WriteLine($"❌ API Error loading clients: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
-            Console.WriteLine($"Error loading clients with balances: {ex.Message}");
+            errorMessage = "Failed to load clients. Please try and login again.";
+            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
         }
         finally
         {
@@ -97,27 +119,27 @@ else
     {
         columns = new List<DataTableColumn>
         {
-            new() { Header = "CLIENT ID", PropertyName = nameof(ClientBalanceModel.ClientID), CssClass = "text-center" },
-            new() { Header = "CLIENT NAME", PropertyName = nameof(ClientBalanceModel.ClientName),
+            new() { Header = "CLIENT ID", PropertyName = nameof(ClientViewModel.ClientID), CssClass = "text-center" },
+            new() { Header = "CLIENT NAME", PropertyName = nameof(ClientViewModel.ClientName),
                 CustomRenderer = (item) =>
                 {
-                    var client = (ClientBalanceModel)item;
+                    var client = (ClientViewModel)item;
                     return $"<strong class='text-primary'>{client.ClientName}</strong>";
                 }
             },
-            new() { Header = "ACCOUNT NAME", PropertyName = nameof(ClientBalanceModel.AccountName),
+            new() { Header = "ACCOUNT NAME", PropertyName = nameof(ClientViewModel.AccountName),
                 CustomRenderer = (item) =>
                 {
-                    var client = (ClientBalanceModel)item;
+                    var client = (ClientViewModel)item;
                     return string.IsNullOrWhiteSpace(client.AccountName) ? "<span class='text-muted'>—</span>" : client.AccountName;
                 }
             },
-            new() { Header = "PHONE", PropertyName = nameof(ClientBalanceModel.PhoneNumber) },
-            new() { Header = "EMAIL", PropertyName = nameof(ClientBalanceModel.EmailAddress) },
-            new() { Header = "BALANCE (GH¢)", PropertyName = nameof(ClientBalanceModel.Balance),
+            new() { Header = "PHONE", PropertyName = nameof(ClientViewModel.PhoneNumber) },
+            new() { Header = "EMAIL", PropertyName = nameof(ClientViewModel.EmailAddress) },
+            new() { Header = "BALANCE (GH¢)", PropertyName = nameof(ClientViewModel.Balance),
                 CustomRenderer = (item) =>
                 {
-                    var client = (ClientBalanceModel)item;
+                    var client = (ClientViewModel)item;
                     return $"<span class='fw-bold text-success'>{client.Balance:N2}</span>";
                 }
             }
@@ -135,7 +157,7 @@ else
         };
     }
 
-    private async Task OnClientClick(ClientBalanceModel client)
+    private async Task OnClientClick(ClientViewModel client)
     {
         await JSRuntime.InvokeVoidAsync("alert", $"Client: {client.ClientName}\nBalance: {client.Balance:N2}");
     }

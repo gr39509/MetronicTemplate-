@@ -1,0 +1,239 @@
+@* CashierDetailsModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="cashierDetailsModal"
+               Title="Edit Cashier Details"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Save Changes"
+               OnSave="@SaveChanges"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading cashier details...</p>
+            </div>
+        }
+        else if (cashierEditModel != null)
+        {
+            <EditForm Model="@cashierEditModel">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Cashier ID</label>
+                            <InputText class="form-control" @bind-Value="cashierEditModel.CashierID" disabled />
+                        </div>
+                        
+
+                        <div class="mb-3">
+                            <label class="form-label">Field Agent Account Number</label>
+                            <InputText class="form-control" @bind-Value="cashierEditModel.FieldAgentAccountNumber" />
+                        </div>
+
+                        @* <div class="mb-3"> *@
+                        @*     <label class="form-label">GL Code</label> *@
+                        @*     <InputText class="form-control disabled" @bind-Value="cashierEditModel.GlCode" /> *@
+                        @* </div> *@
+
+                        <div class="mb-3">
+                            <label class="form-label">Transaction Limit</label>
+                            <InputNumber class="form-control" @bind-Value="cashierEditModel.TransactionLimit" />
+                        </div>
+
+                        <!-- Boolean Fields with Toggles -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierEditModel.AllowBalToBeOverdrawn">
+                                <label class="form-check-label">Allow Balance to be Overdrawn</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierEditModel.ApplyDenomination">
+                                <label class="form-check-label">Apply Denomination</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierEditModel.IsEnabled">
+                                <label class="form-check-label">Enabled</label>
+                            </div>
+                        </div>
+
+
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="cashierEditModel.IsVault">
+                                <label class="form-check-label">Is Vault</label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </EditForm>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal cashierDetailsModal = null!;
+    private UpdateCashierCommand? cashierEditModel;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    [Parameter] public EventCallback<UpdateCashierCommand> OnCashierUpdated { get; set; }
+
+    public async Task OpenModal(string cashierId)
+    {
+        errorMessage = string.Empty;
+        cashierEditModel = null;
+        
+        if (cashierDetailsModal != null)
+        {
+            await cashierDetailsModal.OpenModal();
+            await LoadCashierDetails(cashierId);
+        }
+    }
+
+    private async Task LoadCashierDetails(string cashierId)
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            var result = await ApiClient.GetCashierAsync(
+                cashierID: cashierId,                    
+                bP_Tenant: null,                  
+                accept_Language: null      
+            );
+
+            if (result?.Payload != null)
+            {
+                var cashier = result.Payload;
+                cashierEditModel = new UpdateCashierCommand
+                {
+                    CashierID = cashier.CashierID,
+                    UserID = cashier.UserID,
+                    FieldAgentAccountNumber = cashier.FieldAgentAccountNumber,
+                    GlCode = cashier.GlCode,
+                    TransactionLimit = cashier.TransactionLimit,
+                    AllowBalToBeOverdrawn = cashier.AllowBalToBeOverdrawn,
+                    ApplyDenomination = cashier.ApplyDenomination,
+                    IsEnabled = cashier.IsEnabled,
+                    IsVault = cashier.IsVault,
+                 
+                };
+            }
+            else
+            {
+                errorMessage = "Failed to load cashier details.";
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+            Console.WriteLine($"❌ API Error loading cashier details: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading cashier details: {ex.Message}";
+            Console.WriteLine($"❌ Error loading cashier details: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            Console.WriteLine($"📝 Saving changes for cashier: {cashierEditModel?.CashierID}");
+            
+            cashierEditModel = new UpdateCashierCommand
+            {
+                CashierID = cashierEditModel.CashierID,
+                UserID = cashierEditModel.UserID,
+                MoMoExpense = cashierEditModel.MoMoExpense,
+                FieldAgentAccountNumber = cashierEditModel.FieldAgentAccountNumber,
+                GlCode = cashierEditModel.GlCode,
+                TransactionLimit = cashierEditModel.TransactionLimit,
+                AllowBalToBeOverdrawn = cashierEditModel.AllowBalToBeOverdrawn,
+                ApplyDenomination = cashierEditModel.ApplyDenomination,
+                IsEnabled = cashierEditModel.IsEnabled,
+                ExternalFieldAgentID = cashierEditModel.ExternalFieldAgentID,
+                IsVault = cashierEditModel.IsVault,
+               
+            };
+
+            if (cashierEditModel == null)
+                return;
+            
+            
+
+            var result = await ApiClient.UpdateCashierAsync( bP_Tenant: null,                  
+                accept_Language: null, cashierEditModel);
+
+            if (result?.Status == 200)
+            {
+                Console.WriteLine("✅ Cashier updated successfully");
+                await cashierDetailsModal.CloseModal();
+                await OnCashierUpdated.InvokeAsync(cashierEditModel);
+            }
+            else
+            {
+                errorMessage = "❌ Update failed";
+                Console.WriteLine(errorMessage);
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+            Console.WriteLine($"❌ API Error updating cashier: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"❌ Error saving cashier: {ex.Message}";
+            Console.WriteLine(errorMessage);
+        }
+    }
+}

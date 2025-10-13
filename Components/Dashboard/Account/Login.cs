@@ -27,111 +27,119 @@ public partial class Login
         }
     }
 
-    private async Task HandleLogin()
+   private async Task HandleLogin()
+{
+    Console.WriteLine("🔐 Starting login process...");
+
+    // Reset error states
+    showEmailError = false;
+    showPasswordError = false;
+    errorMessage = string.Empty;
+
+    // Simple client-side validation
+    if (!ValidateForm())
     {
-        Console.WriteLine("🔐 Starting login process...");
+        return;
+    }
 
-        // Reset error states
-        showEmailError = false;
-        showPasswordError = false;
-        errorMessage = string.Empty;
+    isLoading = true;
+    StateHasChanged();
 
-        // Simple client-side validation
-        if (!ValidateForm())
+    try
+    {
+        Console.WriteLine($"📤 Calling API with email: {loginCommand.Email}");
+
+        var result = await ApiClient.LoginAsync(
+            bP_Tenant: null,
+            accept_Language: null,
+            body: loginCommand
+        );
+
+        Console.WriteLine($"✅ API Response received. Has token: {!string.IsNullOrEmpty(result?.Payload?.AuthResponse?.AccessToken)}");
+
+        if (result?.Payload?.AuthResponse?.AccessToken != null)
         {
-            return;
-        }
+            Console.WriteLine("🔑 Storing token and notifying auth provider...");
 
-        isLoading = true;
-        StateHasChanged();
-
-        try
-        {
-            Console.WriteLine($"📤 Calling API with email: {loginCommand.Email}");
-
-            var result = await ApiClient.LoginAsync(
-                bP_Tenant: null,
-                accept_Language: null,
-                body: loginCommand
-            );
-
-            Console.WriteLine($"✅ API Response received. Has token: {!string.IsNullOrEmpty(result?.Payload?.AuthResponse?.AccessToken)}");
-
-            if (result?.Payload?.AuthResponse?.AccessToken != null)
+            // Notify CustomAuthStateProvider with token and email as username
+            if (AuthStateProvider is CustomAuthStateProvider customProvider)
             {
-                Console.WriteLine("🔑 Storing token and notifying auth provider...");
+                // Extract username from email (part before @) or use full email
+                string userName = loginCommand.Email.Contains("@") 
+                    ? loginCommand.Email.Split("@")[0] 
+                    : loginCommand.Email;
+                
+                await customProvider.NotifyUserAuthentication(
+                    result.Payload.AuthResponse.AccessToken,
+                    userName
+                );
+                Console.WriteLine("✅ Auth provider notified");
+            }
 
-                // Notify CustomAuthStateProvider
-                if (AuthStateProvider is CustomAuthStateProvider customProvider)
-                {
-                    await customProvider.NotifyUserAuthentication(result.Payload.AuthResponse.AccessToken);
-                    Console.WriteLine("✅ Auth provider notified");
-                }
+            // Small delay to ensure state propagation
+            await Task.Delay(100);
 
-                // Small delay to ensure state propagation
-                await Task.Delay(100);
-
-                // Determine redirect URL
-                string redirectUrl;
-                if (result.Payload.RequiresTwoFactor)
-                {
-                    redirectUrl = string.IsNullOrEmpty(ReturnUrl)
-                        ? "/two-factor"
-                        : $"/two-factor?ReturnUrl={Uri.EscapeDataString(ReturnUrl)}";
-                    Console.WriteLine($"➡️ Redirecting to two-factor: {redirectUrl}");
-                }
-                else
-                {
-                    redirectUrl = GetRedirectUrl();
-                    Console.WriteLine($"➡️ Redirecting to: {redirectUrl}");
-                }
-
-                // Force navigation with forceLoad
-                NavigationManager.NavigateTo(redirectUrl, forceLoad: true);
+            // Determine redirect URL
+            string redirectUrl;
+            if (result.Payload.RequiresTwoFactor)
+            {
+                redirectUrl = string.IsNullOrEmpty(ReturnUrl)
+                    ? "/two-factor"
+                    : $"/two-factor?ReturnUrl={Uri.EscapeDataString(ReturnUrl)}";
+                Console.WriteLine($"➡️ Redirecting to two-factor: {redirectUrl}");
             }
             else
             {
-                Console.WriteLine("❌ No valid token in response");
-                errorMessage = "Invalid email or password. Please try again.";
+                redirectUrl = GetRedirectUrl();
+                Console.WriteLine($"➡️ Redirecting to: {redirectUrl}");
             }
+
+            // Force navigation with forceLoad
+            NavigationManager.NavigateTo(redirectUrl, forceLoad: true);
         }
-        catch (ApiException<ApiErrorResponse> apiEx)
+        else
         {
-            Console.WriteLine($"❌ API Exception: {apiEx.Result?.ErrorMessage}");
-            errorMessage = apiEx.Result?.ErrorMessage ?? "An error occurred during login.";
-        }
-        catch (ApiException ex) when (ex.StatusCode == 400)
-        {
-            Console.WriteLine($"❌ Bad request: {ex.Message}");
-            errorMessage = "Invalid request. Please check your input.";
-        }
-        catch (ApiException ex) when (ex.StatusCode == 401)
-        {
-            Console.WriteLine($"❌ Unauthorized: {ex.Message}");
-            errorMessage = "Invalid email or password.";
-        }
-        catch (ApiException ex) when  (ex.StatusCode == 422)
-        {
-            Console.WriteLine($"❌ API Exception: {ex.StatusCode} - {ex.Message}");
-            errorMessage = $"Invalid email or password.";
-        }
-        catch (HttpRequestException ex)
-        {
-            Console.WriteLine($"❌ HTTP Request Exception: {ex.Message}");
-            errorMessage = "Unable to connect to the server. Please check your connection.";
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Unexpected error: {ex.GetType().Name} - {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            errorMessage = $"An unexpected error occurred: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
+            Console.WriteLine("❌ No valid token in response");
+            errorMessage = "Invalid email or password. Please try again.";
         }
     }
+    catch (ApiException<ApiErrorResponse> apiEx)
+    {
+        Console.WriteLine($"❌ API Exception: {apiEx.Result?.ErrorMessage}");
+        errorMessage = apiEx.Result?.ErrorMessage ?? "An error occurred during login.";
+    }
+    catch (ApiException ex) when (ex.StatusCode == 400)
+    {
+        Console.WriteLine($"❌ Bad request: {ex.Message}");
+        errorMessage = "Invalid request. Please check your input.";
+    }
+    catch (ApiException ex) when (ex.StatusCode == 401)
+    {
+        Console.WriteLine($"❌ Unauthorized: {ex.Message}");
+        errorMessage = "Invalid email or password.";
+    }
+    catch (ApiException ex) when (ex.StatusCode == 422)
+    {
+        Console.WriteLine($"❌ API Exception: {ex.StatusCode} - {ex.Message}");
+        errorMessage = $"Invalid email or password.";
+    }
+    catch (HttpRequestException ex)
+    {
+        Console.WriteLine($"❌ HTTP Request Exception: {ex.Message}");
+        errorMessage = "Unable to connect to the server. Please check your connection.";
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Unexpected error: {ex.GetType().Name} - {ex.Message}");
+        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        errorMessage = $"An unexpected error occurred: {ex.Message}";
+    }
+    finally
+    {
+        isLoading = false;
+        StateHasChanged();
+    }
+}
 
     private bool ValidateForm()
     {

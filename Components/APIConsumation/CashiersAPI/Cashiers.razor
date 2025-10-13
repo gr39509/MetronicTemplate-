@@ -1,4 +1,4 @@
-@page "/clients/cbs"
+@page "/cashiers"
 @using Microsoft.AspNetCore.Authorization
 @using NovaAccounts.SharedModels.DataFields
 @using NovaAccounts.Components.Layout
@@ -14,11 +14,12 @@
 
 <PageTitle>CBS Clients</PageTitle>
 
-<Nav></Nav>
+@* <Nav></Nav> *@
+@* *@
 
 @* The below codes are very important for the modals to open *@
-<CBSClentDetailsModal @ref="clientDetailsModalModal" />
-<CBSClientEditModal @ref="clientEditModal" OnClientUpdated="HandleCBSUpdated"/>
+<CashierDetailsModal @ref="cashierDetailsModal" />
+<CashierEditModal @ref="cashierEditModal" OnCashierUpdated="HandleCashierUpdated"/>
 
 
 
@@ -46,7 +47,7 @@ else if (!string.IsNullOrEmpty(errorMessage))
             <span>&times;</span>
         </button>
         <strong>Error!</strong> @errorMessage
-        <button class="btn btn-sm btn-warning" @onclick="LoadCbsClients" style="margin-left: 10px;">
+        <button class="btn btn-sm btn-warning" @onclick="LoadCashiers" style="margin-left: 10px;">
             <i class="fa fa-refresh"></i> Retry
         </button>
     </div>
@@ -60,14 +61,14 @@ else
                 <span class="caption-subject bold uppercase">CBS Clients</span>
             </div>
             <div class="actions">
-                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadCbsClients" title="Refresh">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadCashiers" title="Refresh">
                     <i class="fa fa-refresh"></i>
                 </button>
             </div>
         </div>
         <div class="portlet-body">
-            <ReusableDataTable TItem="CBSClientViewModel"
-                               Data="@cbsClients"
+            <ReusableDataTable TItem="CashierViewModel"
+                               Data="@cashiers"
                                Columns="@cbsColumns"
                                Options="@cbsOptions"
                                OnRowClick="@OnCbsClientRowClick" />
@@ -76,13 +77,13 @@ else
 }
 
 @code {
-    private List<CBSClientViewModel> cbsClients = new();
+    private List<CashierViewModel> cashiers = new();
     private List<DataTableColumn> cbsColumns = new();
     private DataTableOptions cbsOptions = new();
     private bool isLoading = true;
     private string errorMessage = string.Empty;
-    private CBSClentDetailsModal clientDetailsModalModal = null!;
-    private CBSClientEditModal clientEditModal = null!;
+    private CashierDetailsModal cashierDetailsModal = null!;
+    private CashierEditModal cashierEditModal = null!;
     
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -94,7 +95,7 @@ else
                 DotNetObjectReference.Create(this));
             
             // Check if modal component is initialized
-            if (clientDetailsModalModal == null)
+            if (cashierDetailsModal == null)
             {
                 Console.WriteLine("❌ Modal component is NULL after first render");
             }
@@ -107,17 +108,17 @@ else
 
 
     [JSInvokable]
-    public async Task EditClient(string clientNumber)
+    public async Task EditCashier(string cashierID)
     {
-        Console.WriteLine($"📝 EditClient called with clientNumber: {clientNumber}");
-
-        if (clientEditModal == null)
+        Console.WriteLine($"📝 EditClient called with clientNumber: {cashierID}");
+    
+        if (cashierEditModal == null)
         {
             Console.WriteLine("❌ clientEditModal is null");
             return;
         }
-
-        await clientEditModal.OpenModal(clientNumber);
+    
+        await cashierEditModal.OpenModal(cashierID);
     }
 
 
@@ -126,25 +127,25 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        ConfigureCbsClientTable();
-        await LoadCbsClients();
+        ConfigureCbsCashiersTable();
+        await LoadCashiers();
     }
     
     [JSInvokable]
-    public async Task ViewClient(string clientNumber)
+    public async Task ViewCashier(string cashierId)
     {
-        Console.WriteLine($"🔍 ViewClient called with clientNumber: {clientNumber}");
+        Console.WriteLine($"🔍 ViewCashier called with clientNumber: {cashierId}");
         
         try
         {
-            if (clientDetailsModalModal == null)
+            if (cashierDetailsModal == null)
             {
                 Console.WriteLine("❌ clientDetailsModalModal is null - modal component not found");
                 return;
             }
-
+    
             Console.WriteLine("✅ Modal reference found, calling OpenModal...");
-            await clientDetailsModalModal.OpenModal(clientNumber);
+            await cashierDetailsModal.OpenModal(cashierId);
             Console.WriteLine("✅ OpenModal completed");
         }
         catch (Exception ex)
@@ -154,7 +155,7 @@ else
         }
     }
 
-    private async Task LoadCbsClients()
+    private async Task LoadCashiers()
     {
         try
         {
@@ -163,20 +164,20 @@ else
             StateHasChanged();
 
             
-            var result = await ApiClient.GetCBSClientsAsync(
+            var result = await ApiClient.GetCashiersAsync(
                 bP_Tenant: null,
                 accept_Language: null
             );
 
             if (result?.Payload != null)
             {
-                cbsClients = result.Payload.ToList();
-                Console.WriteLine($"✅ Loaded {cbsClients.Count} clients");
+                cashiers = result.Payload.ToList();
+                Console.WriteLine($"✅ Loaded {cashiers.Count} clients");
             }
             else
             {
                 errorMessage = "No clients data received from server.";
-                cbsClients = new List<CBSClientViewModel>();
+                cashiers = new List<CashierViewModel>();
             }
         }
         catch (ApiException<ApiErrorResponse> apiEx)
@@ -203,71 +204,76 @@ else
 
 
 
-    private void ConfigureCbsClientTable()
+    private void ConfigureCbsCashiersTable()
     {
         cbsColumns = new List<DataTableColumn>
         {
             new()
             {
-                Header = "CLIENT NO",
-                PropertyName = nameof(CBSClientViewModel.ClientNum),
+                Header = "CASHIER NO",
+                PropertyName = nameof(CashierViewModel.CashierID),
                 CssClass = "text-center"
             },
             new()
             {
                 Header = "FULL NAME",
-                PropertyName = nameof(CBSClientViewModel.FullName),
+                PropertyName = nameof(CashierViewModel.CashierName),
                 CustomRenderer = (item) =>
-                    $"<strong class='text-primary'>{((CBSClientViewModel)item).FullName}</strong>"
+                    $"<strong class='text-primary'>{((CashierViewModel)item).CashierName}</strong>"
             },
             new()
             {
-                Header = "GENDER",
-                PropertyName = nameof(CBSClientViewModel.Gender)
+                Header = "Cash Deposits",
+                PropertyName = nameof(CashierViewModel.CashDeposits)
             },
             new()
             {
-                Header = "MOBILE",
-                PropertyName = nameof(CBSClientViewModel.Mobile1),
+                Header = "Cheque Deposits",
+                PropertyName = nameof(CashierViewModel.ChequeDeposits)
+            },
+            new()
+            {
+                Header = "Field Agent Account Number",
+                PropertyName = nameof(CashierViewModel.FieldAgentAccountNumber),
                 CustomRenderer = (item) =>
                 {
-                    var phone = ((CBSClientViewModel)item).Mobile1;
-                    return string.IsNullOrEmpty(phone)
+                    var agentAccountNumber = ((CashierViewModel)item).FieldAgentAccountNumber;
+                    return string.IsNullOrEmpty(agentAccountNumber)
                         ? "<span class='text-muted'>Not provided</span>"
-                        : $"<a href='tel:{phone}'>{phone}</a>";
+                        : $"<a href='tel:{agentAccountNumber}'>{agentAccountNumber}</a>";
                 }
             },
-            new()
-            {
-                Header = "EMAIL",
-                PropertyName = nameof(CBSClientViewModel.Email),
-                CustomRenderer = (item) =>
-                {
-                    var email = ((CBSClientViewModel)item).Email;
-                    return string.IsNullOrEmpty(email)
-                        ? "<span class='text-muted'>Not provided</span>"
-                        : $"<a href='mailto:{email}'>{email}</a>";
-                }
-            },
-            new()
-            {
-                Header = "BRANCH",
-                PropertyName = nameof(CBSClientViewModel.BranchName),
-                CustomRenderer = (item) =>
-                {
-                    var branch = ((CBSClientViewModel)item).BranchName;
-                    return string.IsNullOrEmpty(branch)
-                        ? "<span class='text-muted'>N/A</span>"
-                        : branch;
-                }
-            },
-            new()
-            {
-                Header = "RELATIONSHIP OFFICER",
-                PropertyName = nameof(CBSClientViewModel.RelationshipOfficer),
-                CustomRenderer = (item) =>
-                    $"<span>{((CBSClientViewModel)item).RelationshipOfficer ?? "N/A"}</span>"
-            },
+            // new()
+            // {
+            //     Header = "EMAIL",
+            //     PropertyName = nameof(CBSClientViewModel.Email),
+            //     CustomRenderer = (item) =>
+            //     {
+            //         var email = ((CBSClientViewModel)item).Email;
+            //         return string.IsNullOrEmpty(email)
+            //             ? "<span class='text-muted'>Not provided</span>"
+            //             : $"<a href='mailto:{email}'>{email}</a>";
+            //     }
+            // },
+            // new()
+            // {
+            //     Header = "BRANCH",
+            //     PropertyName = nameof(CBSClientViewModel.BranchName),
+            //     CustomRenderer = (item) =>
+            //     {
+            //         var branch = ((CBSClientViewModel)item).BranchName;
+            //         return string.IsNullOrEmpty(branch)
+            //             ? "<span class='text-muted'>N/A</span>"
+            //             : branch;
+            //     }
+            // },
+            // new()
+            // {
+            //     Header = "RELATIONSHIP OFFICER",
+            //     PropertyName = nameof(CBSClientViewModel.RelationshipOfficer),
+            //     CustomRenderer = (item) =>
+            //         $"<span>{((CBSClientViewModel)item).RelationshipOfficer ?? "N/A"}</span>"
+            // },
             new()
             {
                 Header = "ACTIONS",
@@ -278,16 +284,16 @@ else
                 CssClass = "text-center",
                 CustomRenderer = (item) => 
                 {
-                    var client = (CBSClientViewModel)item;
+                    var cashier = (CashierViewModel)item;
                     return $@"
         <div class='btn-group btn-group-sm' role='group'>
-            <button type='button' class='btn btn-primary btn-xs' onclick='viewClient(""{client.ClientNum}"")' title='View Details'>
+            <button type='button' class='btn btn-primary btn-xs' onclick='viewCashier(""{cashier.CashierID}"")' title='View Details'>
                 <i class='fa fa-eye'></i>
             </button>
-            <button type='button' class='btn btn-info btn-xs' onclick='editClient(""{client.ClientNum}"")' title='Edit Client'>
+            <button type='button' class='btn btn-info btn-xs' onclick='editCashier(""{cashier.CashierID}"")' title='Edit Cashier'>
                 <i class='fa fa-edit'></i>
             </button>
-            <button type='button' class='btn btn-success btn-xs' onclick='transactionHistory({client.Id})' title='Transactions'>
+            <button type='button' class='btn btn-success btn-xs' onclick='transactionHistory({cashier.CashierID})' title='Transactions'>
                 <i class='fa fa-history'></i>
             </button>
         </div>";
@@ -317,10 +323,11 @@ else
     }
     
     
+    
     // THIS METHOD TO HANDLE CLIENT UPDATES
-    private async Task HandleCBSUpdated(UpdateCBSClientCommand updatedCBS)
+    private async Task HandleCashierUpdated(UpdateCashierCommand updatedCashier)
     {
-        Console.WriteLine($"🔄 Handling client update for ID: {updatedCBS.IdNum}");
+        Console.WriteLine($"🔄 Handling client update for ID: {updatedCashier.CashierID}");
         
         try
         {
@@ -332,7 +339,7 @@ else
             await Task.Delay(300);
             
             // Reload the clients from server to get fresh data
-            await LoadCbsClients();
+            await LoadCashiers();
             
             Console.WriteLine("✅ Client list refreshed after update");
         }
@@ -346,10 +353,10 @@ else
     
    
 
-    private async Task OnCbsClientRowClick(CBSClientViewModel client)
+    private async Task OnCbsClientRowClick(CashierViewModel cashier)
     {
-        Console.WriteLine($"CBS Client clicked: {client.FullName}");
-        await JSRuntime.InvokeVoidAsync("viewCbsClient", client.Id);
+        Console.WriteLine($"CBS Client clicked: {cashier.CashierName}");
+        await JSRuntime.InvokeVoidAsync("viewCbsClient", cashier.Id);
     }
 }
 
@@ -393,20 +400,20 @@ else
         window.dotNetReference = reference;
     };
 
-    window.viewClient = function(clientNumber) {
+    window.viewCashier = function(cashierNumber) {
         if (window.dotNetReference) {
-            window.dotNetReference.invokeMethodAsync('ViewClient', clientNumber)
+            window.dotNetReference.invokeMethodAsync('ViewCashier', cashierNumber)
                 .catch(err => {
-                    console.error('Error calling ViewClient:', err);
+                    console.error('Error calling ViewCashier:', err);
                 });
         } else {
             console.error('DotNet reference not available');
         }
     };
 
-    window.editClient = function (clientNumber) {
+    window.editCashier = function (cashierID) {
         if (window.dotNetReference) {
-            window.dotNetReference.invokeMethodAsync('EditClient', clientNumber)
+            window.dotNetReference.invokeMethodAsync('EditCashier', cashierID)
                 .catch(err => {
                     console.error('Error calling EditClient:', err);
                 });

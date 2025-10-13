@@ -1,9 +1,11 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using NovaAccounts.Services
 @using NovaAccounts.Services.AuthServices
-@inject AuthService AuthService
+@using NovaAccounts.SharedModels.ApiService
+@* @inject AuthService AuthService *@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ApiClient ApiClient
 @inherits LayoutComponentBase
 
 <!-- BEGIN HEAD -->
@@ -193,7 +195,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try
         {
-            await AuthService.LogoutAsync();
+            await ApiClient.LogoutAsync( bP_Tenant: null,
+                accept_Language: null);
 
             if (AuthStateProvider is CustomAuthStateProvider customProvider)
             {

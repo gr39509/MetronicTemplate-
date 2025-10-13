@@ -80,7 +80,6 @@
 
 
 
-
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -88,12 +87,9 @@ using NovaAccounts;
 using NovaAccounts.Components;
 using NovaAccounts.Services;
 using NovaAccounts.Services.AuthServices;
-using NovaAccounts.Services.ClientsServices;
+
 using NovaAccounts.SharedModels;
 using NovaAccounts.SharedModels.ApiService;
-
-//using NovaAccounts.SharedModels.ApiService.NovaAccounts.SharedModels.ApiService;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -103,20 +99,23 @@ builder.Services.AddRazorComponents()
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
+// Add Protected Storage BEFORE creating ApiClient
+builder.Services.AddScoped<ProtectedSessionStorage>();
+builder.Services.AddScoped<ProtectedLocalStorage>();
 
 // Configure HttpClient with base address
 builder.Services.AddScoped(sp => new HttpClient
 {
     BaseAddress = new Uri("http://185.132.37.188:8070")
 });
+
 builder.Services.AddScoped<ClientGeneratorService>();
-// Replace your current ApiClient registration with this:
+
+// Register ApiClient with auth header handler
 builder.Services.AddScoped<ApiClient>(provider =>
 {
-    var httpClient = provider.GetRequiredService<HttpClient>();
     var authStateProvider = provider.GetRequiredService<AuthenticationStateProvider>();
     
-    // Create a new HttpClient with auth header
     var authenticatedHttpClient = new HttpClient(new AuthHeaderHandler(authStateProvider)
     {
         InnerHandler = new HttpClientHandler()
@@ -129,7 +128,8 @@ builder.Services.AddScoped<ApiClient>(provider =>
 });
 
 builder.Services.AddScoped<AuthHeaderHandler>();
-// Add Authentication FIRST
+
+// Add Authentication
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -138,22 +138,19 @@ builder.Services.AddAuthentication(options =>
     .AddCookie(options =>
     {
         options.Cookie.Name = "novaaccounts.auth";
-        options.LoginPath = "/login"; // Optional: redirect to login page
-        options.LogoutPath = "/logout"; // Optional: redirect after logout
-        options.ExpireTimeSpan = TimeSpan.FromHours(72); // Adjust as needed
+        options.LoginPath = "/login";
+        options.LogoutPath = "/logout";
+        options.ExpireTimeSpan = TimeSpan.FromHours(72);
     });
 
-
 builder.Services.AddAuthorization();
-// Register authentication services
-builder.Services.AddScoped<AuthService>();
 
+// Register authentication services - CustomAuthStateProvider MUST come after ProtectedStorage registration
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddCascadingAuthenticationState();
 
-// Register application services
-builder.Services.AddScoped<ClientService>();
-
+// builder.Services.AddScoped<AuthService>();
+// builder.Services.AddScoped<ClientService>();
 
 var app = builder.Build();
 
