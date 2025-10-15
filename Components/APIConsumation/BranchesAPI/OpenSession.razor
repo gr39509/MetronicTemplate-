@@ -1,0 +1,16 @@
+
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@inject ApiClient ApiClient
+@inject IJSRuntime JS
+
+
+<ReusableApprove
+    ButtonText="Open Branch Session"
+    IconClass="icon-wallet"
+    ValidationUrl="/api/branchsession/open"
+    RedirectUrl="/clients/cbs/savings"
+    DialogTitle="Enter Branch Code to Open"
+    InputPlaceholder="e.g., A010010010002"
+    ConfirmButtonText="Open Session"
+    ParameterName="BranchCode"/>

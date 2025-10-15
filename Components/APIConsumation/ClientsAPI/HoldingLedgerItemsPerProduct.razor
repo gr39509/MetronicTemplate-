@@ -1,0 +1,553 @@
+@* @page "/get-ledger-items-per-product" *@
+@* @using NovaAccounts.Components.Shared *@
+@* @using NovaAccounts.SharedModels.ApiService *@
+@* @using NovaAccounts.SharedModels.DataFields *@
+@* @inject ApiClient ApiClient *@
+@* @inject IJSRuntime JSRuntime *@
+@* *@
+@* <div class="container mt-4"> *@
+@*     <h1 class="page-title"> *@
+@*         Get Ledger Items Per Product *@
+@*         <small>Search ledger transactions by product and date range</small> *@
+@*     </h1> *@
+@* *@
+@*     <div class="portlet light bordered"> *@
+@*         <div class="portlet-title"> *@
+@*             <div class="caption font-dark"> *@
+@*                 <i class="icon-calendar font-dark"></i> *@
+@*                 <span class="caption-subject bold uppercase">Search Ledger Items</span> *@
+@*             </div> *@
+@*         </div> *@
+@*         <div class="portlet-body"> *@
+@*             <div class="row justify-content-center"> *@
+@*                 <div class="col-md-10"> *@
+@*                     <div class="form-horizontal"> *@
+@*                         <div class="row mb-3"> *@
+@*                             <div class="col-md-6"> *@
+@*                                 <div class="form-group"> *@
+@*                                     <label class="form-label">Start Date</label> *@
+@*                                     <div class="input-group"> *@
+@*                                         <span class="input-group-text"><i class="fa fa-calendar"></i></span> *@
+@*                                         <input type="date" class="form-control" @bind="startDate" @bind:format="yyyy-MM-dd" /> *@
+@*                                     </div> *@
+@*                                 </div> *@
+@*                             </div> *@
+@*                             <div class="col-md-6"> *@
+@*                                 <div class="form-group"> *@
+@*                                     <label class="form-label">End Date</label> *@
+@*                                     <div class="input-group"> *@
+@*                                         <span class="input-group-text"><i class="fa fa-calendar"></i></span> *@
+@*                                         <input type="date" class="form-control" @bind="endDate" @bind:format="yyyy-MM-dd" /> *@
+@*                                     </div> *@
+@*                                 </div> *@
+@*                             </div> *@
+@*                         </div> *@
+@* *@
+@*                         <div class="form-group row mb-4"> *@
+@*                             <label class="col-md-3 col-form-label text-md-right">Product ID</label> *@
+@*                             <div class="col-md-9"> *@
+@*                                 <div class="input-group"> *@
+@*                                     <span class="input-group-text"><i class="fa fa-product-hunt"></i></span> *@
+@*                                     <input type="number" class="form-control" @bind="productId" placeholder="Enter product ID" required /> *@
+@*                                 </div> *@
+@*                                 <small class="form-text text-muted">Enter the product ID to search for ledger transactions</small> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                          *@
+@*                         <div class="form-group row"> *@
+@*                             <div class="col-md-3"></div> *@
+@*                             <div class="col-md-9"> *@
+@*                                 <button type="button" class="btn btn-info" @onclick="SearchLedgerItems" disabled="@isLoading"> *@
+@*                                     <i class="fa fa-chart-line"></i>  *@
+@*                                     @if (isLoading) *@
+@*                                     { *@
+@*                                         <span>Searching...</span> *@
+@*                                     } *@
+@*                                     else *@
+@*                                     { *@
+@*                                         <span>Search Ledger Items</span> *@
+@*                                     } *@
+@*                                 </button> *@
+@*                                 @if (ledgerItems?.Any() == true) *@
+@*                                 { *@
+@*                                     <button type="button" class="btn btn-secondary ms-2" @onclick="ClearSearch"> *@
+@*                                         <i class="fa fa-times"></i> Clear *@
+@*                                     </button> *@
+@*                                     <button type="button" class="btn btn-success ms-2" @onclick="ExportToExcel"> *@
+@*                                         <i class="fa fa-file-excel"></i> Export *@
+@*                                     </button> *@
+@*                                 } *@
+@*                             </div> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@* *@
+@*             <!-- Date Validation Warning --> *@
+@*             @if (hasDateValidationError) *@
+@*             { *@
+@*                 <div class="row justify-content-center mt-3"> *@
+@*                     <div class="col-md-10"> *@
+@*                         <div class="alert alert-warning"> *@
+@*                             <i class="fa fa-exclamation-triangle"></i> *@
+@*                             <strong>Date Range Warning:</strong> End date should be greater than or equal to start date. *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             } *@
+@* *@
+@*             <!-- Results Section --> *@
+@*             @if (!string.IsNullOrEmpty(errorMessage)) *@
+@*             { *@
+@*                 <div class="row justify-content-center mt-4"> *@
+@*                     <div class="col-md-10"> *@
+@*                         <div class="alert alert-danger alert-dismissible"> *@
+@*                             <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)"> *@
+@*                                 <span>&times;</span> *@
+@*                             </button> *@
+@*                             <strong>Error!</strong> @errorMessage *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             } *@
+@* *@
+@*             @if (ledgerItems?.Any() == true) *@
+@*             { *@
+@*                 <div class="row mt-4"> *@
+@*                     <div class="col-12"> *@
+@*                         <div class="card"> *@
+@*                             <div class="card-header bg-info text-white"> *@
+@*                                 <h5 class="mb-0"> *@
+@*                                     <i class="fa fa-list-alt me-2"></i> *@
+@*                                     Ledger Items for Product ID: @productId *@
+@*                                     <span class="badge bg-light text-dark ms-2">@ledgerItems.Count transactions found</span> *@
+@*                                     <small class="ms-3"> *@
+@*                                         Period: @startDate.ToString("dd MMM yyyy") - @endDate.ToString("dd MMM yyyy") *@
+@*                                     </small> *@
+@*                                 </h5> *@
+@*                             </div> *@
+@*                             <div class="card-body p-0"> *@
+@*                                 <ReusableDataTable TItem="TempTransaction" *@
+@*                                                  Data="@ledgerItems" *@
+@*                                                  Columns="@ledgerItemColumns" *@
+@*                                                  Options="@ledgerItemOptions" *@
+@*                                                  OnRowClick="@OnLedgerItemRowClick" /> *@
+@*                             </div> *@
+@*                              *@
+@*                             <!-- Summary Section --> *@
+@*                             <div class="card-footer"> *@
+@*                                 <div class="row text-center"> *@
+@*                                     <div class="col-md-3"> *@
+@*                                         <small class="text-muted">Total Transactions</small> *@
+@*                                         <h5 class="mb-0">@ledgerItems.Count</h5> *@
+@*                                     </div> *@
+@*                                     $1$ <div class="col-md-3"> #1# *@
+@*                                     $1$     <small class="text-muted">Total Debit</small> #1# *@
+@*                                     $1$     <h5 class="mb-0 text-danger">GH₵ @ledgerItems.Where(x => x. > 0).Sum(x => x.Debit).ToString("N2")</h5> #1# *@
+@*                                     $1$ </div> #1# *@
+@*                                     $1$ <div class="col-md-3"> #1# *@
+@*                                     $1$     <small class="text-muted">Total Credit</small> #1# *@
+@*                                     $1$     <h5 class="mb-0 text-success">GH₵ @ledgerItems.Where(x => x.Credit > 0).Sum(x => x.Credit).ToString("N2")</h5> #1# *@
+@*                                     $1$ </div> #1# *@
+@*                                     $1$ <div class="col-md-3"> #1# *@
+@*                                     $1$     <small class="text-muted">Net Amount</small> #1# *@
+@*                                     $1$     @{ #1# *@
+@*                                     $1$         var netAmount = ledgerItems.Sum(x => x.Credit) - ledgerItems.Sum(x => x.Debit); #1# *@
+@*                                     $1$         var netClass = netAmount >= 0 ? "text-success" : "text-danger"; #1# *@
+@*                                     $1$     } #1# *@
+@*                                     $1$     <h5 class="mb-0 @netClass">GH₵ @Math.Abs(netAmount).ToString("N2")</h5> #1# *@
+@*                                     $1$ </div> #1# *@
+@*                                 </div> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             } *@
+@*             else if (hasSearched && !isLoading) *@
+@*             { *@
+@*                 <div class="row justify-content-center mt-4"> *@
+@*                     <div class="col-md-10"> *@
+@*                         <div class="alert alert-info text-center"> *@
+@*                             <i class="fa fa-info-circle fa-2x mb-3"></i> *@
+@*                             <h5>No Ledger Items Found</h5> *@
+@*                             <p class="mb-0"> *@
+@*                                 No ledger transactions found for Product ID: <strong>@productId</strong><br /> *@
+@*                                 Period: <strong>@startDate.ToString("dd MMM yyyy") - @endDate.ToString("dd MMM yyyy")</strong> *@
+@*                             </p> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             } *@
+@*         </div> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* @code { *@
+@*     private DateTime startDate = DateTime.Today.AddDays(-30); // Default to last 30 days *@
+@*     private DateTime endDate = DateTime.Today; *@
+@*     private int productId = 0; *@
+@*     private List<TempTransaction> ledgerItems = new(); *@
+@*     private List<DataTableColumn> ledgerItemColumns = new(); *@
+@*     private DataTableOptions ledgerItemOptions = new(); *@
+@*     private bool isLoading = false; *@
+@*     private string errorMessage = string.Empty; *@
+@*     private bool hasSearched = false; *@
+@*     private bool hasDateValidationError = false; *@
+@* *@
+@*     protected override void OnInitialized() *@
+@*     { *@
+@*         ConfigureLedgerItemTable(); *@
+@*     } *@
+@* *@
+@*     private void ConfigureLedgerItemTable() *@
+@*     { *@
+@*         ledgerItemColumns = new List<DataTableColumn> *@
+@*         { *@
+@*             new() *@
+@*             { *@
+@*                 Header = "TRANSACTION DATE", *@
+@*                 PropertyName = nameof(TempTransaction.TransactionDate), *@
+@*                 Width = 120, *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var transactionDate = ((TempTransaction)item).TransactionDate.ToString("dd MMM yyyy"); *@
+@*                     return transactionDate; *@
+@*                     //     ? $"<small>{transactionDate.Value.ToString("dd MMM yyyy")}</small>" *@
+@*                     //     : "<span class='text-muted'>N/A</span>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "ACCOUNT NUMBER", *@
+@*                 PropertyName = nameof(TempTransaction.AccountNumber), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var accountNumber = ((TempTransaction)item).AccountNumber; *@
+@*                     return string.IsNullOrEmpty(accountNumber) *@
+@*                         ? "<span class='text-muted'>N/A</span>" *@
+@*                         : $"<strong class='text-primary'>{accountNumber}</strong>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "ACCOUNT NAME", *@
+@*                 PropertyName = nameof(TempTransaction.AccountName), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var accountName = ((TempTransaction)item).AccountName; *@
+@*                     return string.IsNullOrEmpty(accountName) *@
+@*                         ? "<span class='text-muted'>N/A</span>" *@
+@*                         : accountName; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "BATCH NUMBER", *@
+@*                 PropertyName = nameof(TempTransaction.BatchNumber), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var description = ((TempTransaction)item).BatchNumber; *@
+@*                     return string.IsNullOrEmpty(description) *@
+@*                         ? "<span class='text-muted'>No description</span>" *@
+@*                         : $"<div class='text-truncate' style='max-width: 250px;' title='{description}'>{description}</div>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "BRANCH CODE", *@
+@*                 PropertyName = nameof(TempTransaction.BranchCode), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var description = ((TempTransaction)item).BranchCode; *@
+@*                     return string.IsNullOrEmpty(description) *@
+@*                         ? "<span class='text-muted'>No description</span>" *@
+@*                         : $"<div class='text-truncate' style='max-width: 250px;' title='{description}'>{description}</div>"; *@
+@*                 } *@
+@*             }, *@
+@* *@
+@*            *@
+@*             new() *@
+@*             { *@
+@*                 Header = "DEBIT", *@
+@*                 PropertyName = nameof(TempTransaction.TransAmount), *@
+@*                 DataType = "num", *@
+@*                 CssClass = "text-right", *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var debit = ((TempTransaction)item).TransAmount; *@
+@*                     return debit > 0  *@
+@*                         ? $"<span class='text-danger'><strong>GH₵ {debit:N2}</strong></span>" *@
+@*                         : "<span class='text-muted'>-</span>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "TRANSACTION TYPE", *@
+@*                 PropertyName = nameof(TempTransaction.TransactionType), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var description = ((TempTransaction)item).TransactionType; *@
+@*                     return string.IsNullOrEmpty(description) *@
+@*                         ? "<span class='text-muted'>No description</span>" *@
+@*                         : $"<div class='text-truncate' style='max-width: 250px;' title='{description}'>{description}</div>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "BALANCE", *@
+@*                 PropertyName = nameof(TempTransaction.OBalance), *@
+@*                 DataType = "num", *@
+@*                 CssClass = "text-right", *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var balance = ((TempTransaction)item).OBalance; *@
+@*                     var cssClass = balance > 0 ? "text-success" : balance < 0 ? "text-danger" : "text-muted"; *@
+@*                     return $"<span class='{cssClass}'><strong>GH₵ {balance:N2}</strong></span>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "OPENING BALANCE", *@
+@*                 PropertyName = nameof(TempTransaction.CBalance), *@
+@*                 DataType = "num", *@
+@*                 CssClass = "text-right", *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var balance = ((TempTransaction)item).CBalance; *@
+@*                     var cssClass = balance > 0 ? "text-success" : balance < 0 ? "text-danger" : "text-muted"; *@
+@*                     return $"<span class='{cssClass}'><strong>GH₵ {balance:N2}</strong></span>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "TRANSACTION TYPE", *@
+@*                 PropertyName = nameof(TempTransaction.TransactionType), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var transactionType = ((TempTransaction)item).TransactionType; *@
+@*                     var badgeClass = transactionType?.ToLower() switch *@
+@*                     { *@
+@*                         "deposit" => "bg-success", *@
+@*                         "withdrawal" => "bg-danger", *@
+@*                         "transfer" => "bg-info", *@
+@*                         "payment" => "bg-warning", *@
+@*                         "fee" => "bg-secondary", *@
+@*                         _ => "bg-primary" *@
+@*                     }; *@
+@*                     return string.IsNullOrEmpty(transactionType) *@
+@*                         ? "<span class='text-muted'>N/A</span>" *@
+@*                         : $"<span class='badge {badgeClass}'>{transactionType}</span>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "STATUS", *@
+@*                 PropertyName = nameof(TempTransaction.Status), *@
+@*                 Width = 100, *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var status = ((TempTransaction)item).Status; *@
+@*                     var badgeClass = status?.ToLower() switch *@
+@*                     { *@
+@*                         "completed" => "bg-success", *@
+@*                         "pending" => "bg-warning", *@
+@*                         "failed" => "bg-danger", *@
+@*                         "reversed" => "bg-secondary", *@
+@*                         _ => "bg-info" *@
+@*                     }; *@
+@*                     return string.IsNullOrEmpty(status) *@
+@*                         ? "<span class='text-muted'>N/A</span>" *@
+@*                         : $"<span class='badge {badgeClass}'>{status}</span>"; *@
+@*                 } *@
+@*             } *@
+@*         }; *@
+@* *@
+@*         ledgerItemOptions = new DataTableOptions *@
+@*         { *@
+@*             PageLength = 20, *@
+@*             LengthMenu = new[] { 20, 50, 100, 200 }, *@
+@*             LengthMenuLabels = new[] { "20", "50", "100", "200" }, *@
+@*             SearchPlaceholder = "Search ledger items...", *@
+@*             TableId = "ledgerItemsTable", *@
+@*             TableCssClass = "table table-striped table-bordered table-hover mb-0", *@
+@*             HeaderCssClass = "leadBold bg-blue-chambray font-white", *@
+@*             RowCssClass = "", *@
+@*             ShowSearch = true, *@
+@*             ShowPaging = true, *@
+@*             ShowInfo = true, *@
+@*             ShowLengthMenu = true, *@
+@*             Responsive = true, *@
+@*             AdditionalOptions = new Dictionary<string, object> *@
+@*             { *@
+@*                 ["order"] = new object[] { new object[] { 0, "desc" } }, // Default sort by date (newest first) *@
+@*                 ["language"] = new Dictionary<string, object> *@
+@*                 { *@
+@*                     ["search"] = "Search transactions:", *@
+@*                     ["lengthMenu"] = "Show _MENU_ transactions per page", *@
+@*                     ["info"] = "Showing _START_ to _END_ of _TOTAL_ transactions", *@
+@*                     ["infoEmpty"] = "No transactions found", *@
+@*                     ["infoFiltered"] = "(filtered from _MAX_ total transactions)", *@
+@*                     ["emptyTable"] = "No transaction data available", *@
+@*                     ["zeroRecords"] = "No matching transactions found" *@
+@*                 } *@
+@*             } *@
+@*         }; *@
+@*     } *@
+@* *@
+@*     private async Task SearchLedgerItems() *@
+@*     { *@
+@*         // Validate inputs *@
+@*         if (productId <= 0) *@
+@*         { *@
+@*             errorMessage = "Please enter a valid product ID."; *@
+@*             return; *@
+@*         } *@
+@* *@
+@*         if (endDate < startDate) *@
+@*         { *@
+@*             hasDateValidationError = true; *@
+@*             errorMessage = "End date cannot be earlier than start date."; *@
+@*             return; *@
+@*         } *@
+@* *@
+@*         hasDateValidationError = false; *@
+@* *@
+@*         try *@
+@*         { *@
+@*             isLoading = true; *@
+@*             errorMessage = string.Empty; *@
+@*             hasSearched = true; *@
+@*             StateHasChanged(); *@
+@* *@
+@*             Console.WriteLine($"🔍 Searching ledger items for Product ID: {productId}, Date Range: {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}"); *@
+@* *@
+@*             var result = await ApiClient.GetHoldingLedgerItemsPerProductAsync( *@
+@*                 startDate: startDate, *@
+@*                 endDate: endDate, *@
+@*                 productID: productId, *@
+@*                 bP_Tenant: null, *@
+@*                 accept_Language: null *@
+@*             ); *@
+@*              *@
+@*             *@
+@* *@
+@*             if (result?.Payload != null) *@
+@*             { *@
+@*                 ledgerItems = result.Payload.ToList(); *@
+@*                 Console.WriteLine($"✅ Found {ledgerItems.Count} ledger items for Product ID: {productId}"); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 ledgerItems = new List<TempTransaction>(); *@
+@*                 Console.WriteLine($"ℹ️ No ledger items found for Product ID: {productId}"); *@
+@*             } *@
+@*         } *@
+@*         catch (ApiException<ApiErrorResponse> apiEx) *@
+@*         { *@
+@*             errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to search ledger items."; *@
+@*             Console.WriteLine($"❌ API Error searching ledger items: {apiEx.Message}"); *@
+@*             ledgerItems = new List<TempTransaction>(); *@
+@*         } *@
+@*         catch (ApiException ex) *@
+@*         { *@
+@*             errorMessage = $"Server error ({ex.StatusCode}). Please try again."; *@
+@*             Console.WriteLine($"❌ API Exception: {ex.Message}"); *@
+@*             ledgerItems = new List<TempTransaction>(); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             errorMessage = "Failed to search ledger items. Please check your connection."; *@
+@*             Console.WriteLine($"❌ Error searching ledger items: {ex.Message}"); *@
+@*             ledgerItems = new List<TempTransaction>(); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoading = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void ClearSearch() *@
+@*     { *@
+@*         startDate = DateTime.Today.AddDays(-30); *@
+@*         endDate = DateTime.Today; *@
+@*         productId = 0; *@
+@*         ledgerItems = new List<TempTransaction>(); *@
+@*         hasSearched = false; *@
+@*         errorMessage = string.Empty; *@
+@*         hasDateValidationError = false; *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private async Task ExportToExcel() *@
+@*     { *@
+@*         // Implement Excel export functionality *@
+@*         Console.WriteLine("Exporting to Excel..."); *@
+@*         // You can implement this using a library like ClosedXML or generate CSV *@
+@*         await JSRuntime.InvokeVoidAsync("alert", "Export functionality would be implemented here"); *@
+@*     } *@
+@* *@
+@*     private void OnLedgerItemRowClick(TempTransaction ledgerItem) *@
+@*     { *@
+@*         Console.WriteLine($"Ledger item row clicked: {ledgerItem.TransRef} - {ledgerItem.TransRef}"); *@
+@*         // You can add additional functionality here, like opening a transaction details modal *@
+@*     } *@
+@* } *@
+@* *@
+@* <style> *@
+@*     .page-title { *@
+@*         margin: 20px 0; *@
+@*         font-size: 28px; *@
+@*         font-weight: 300; *@
+@*     } *@
+@* *@
+@*     .page-title small { *@
+@*         color: #888; *@
+@*         font-size: 14px; *@
+@*         margin-left: 10px; *@
+@*     } *@
+@* *@
+@*     .portlet.light.bordered { *@
+@*         background-color: #fff; *@
+@*         border: 1px solid #e7ecf1; *@
+@*         margin-bottom: 20px; *@
+@*     } *@
+@* *@
+@*     .portlet > .portlet-title { *@
+@*         border-bottom: 1px solid #eee; *@
+@*         padding: 15px 20px; *@
+@*         margin-bottom: 0; *@
+@*     } *@
+@* *@
+@*     .portlet > .portlet-body { *@
+@*         padding: 20px; *@
+@*     } *@
+@* *@
+@*     .input-group-text { *@
+@*         background-color: #f8f9fa; *@
+@*         border-color: #ddd; *@
+@*     } *@
+@* *@
+@*     .btn:disabled { *@
+@*         cursor: not-allowed; *@
+@*         opacity: 0.6; *@
+@*     } *@
+@* *@
+@*     .text-truncate { *@
+@*         overflow: hidden; *@
+@*         text-overflow: ellipsis; *@
+@*         white-space: nowrap; *@
+@*     } *@
+@* *@
+@*     .card-footer { *@
+@*         background-color: #f8f9fa; *@
+@*         border-top: 1px solid #dee2e6; *@
+@*     } *@
+@* *@
+@*     code { *@
+@*         background-color: #f8f9fa; *@
+@*         padding: 2px 4px; *@
+@*         border-radius: 3px; *@
+@*         font-size: 0.875em; *@
+@*     } *@
+@* </style> *@

@@ -1,0 +1,470 @@
+@page "/get-branch-holidays"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+<OpenSession></OpenSession>
+@* <CloseSession></CloseSession> *@
+<div class="container mt-4">
+    <h1 class="page-title">
+        Get Branch Holidays
+        <small>Search branch holidays by branch code</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-calendar font-dark"></i>
+                <span class="caption-subject bold uppercase">Search Branch Holidays</span>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="form-horizontal">
+                        <div class="form-group row mb-4">
+                            <label class="col-md-3 col-form-label text-md-right">Branch Code</label>
+                            <div class="col-md-9">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa fa-building"></i></span>
+                                    <input type="text" class="form-control" @bind="branchCode" placeholder="Enter branch code" required />
+                                </div>
+                                <small class="form-text text-muted">Enter the branch code to search for holiday information</small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <div class="col-md-3"></div>
+                            <div class="col-md-9">
+                                <button type="button" class="btn btn-info text-white" @onclick="SearchBranchHolidays" disabled="@isLoading">
+                                    <i class="fa fa-search"></i>
+                                    @if (isLoading)
+                                    {
+                                    <span>Searching...</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="padding-left: 10px;">Search Holidays</span>
+                                    }
+                                </button>
+                                @if (branchHolidays?.Any() == true)
+                                {
+                                <button type="button" class="btn btn-secondary ms-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear
+                                </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-8">
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+                            <span>&times;</span>
+                        </button>
+                        <strong>Error!</strong> @errorMessage
+                    </div>
+                </div>
+            </div>
+            }
+
+            @if (branchHolidays?.Any() == true)
+            {
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="fa fa-calendar me-2"></i>
+                                Branch Holidays for: @branchCode
+                                <span class="badge bg-light text-dark ms-2">@branchHolidays.Count holiday records found</span>
+                            </h5>
+                        </div>
+                        <br/>
+                        <div class="card-body p-0">
+                            <ReusableDataTable TItem="BranchHolidayViewModel"
+                                               Data="@branchHolidays"
+                                               Columns="@branchHolidayColumns"
+                                               Options="@branchHolidayOptions"
+                                               OnRowClick="@OnBranchHolidayRowClick" />
+                        </div>
+
+                        <!-- Summary Section -->
+                        <div class="card-footer">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <small class="text-muted">Total Holidays</small>
+                                    <h5 class="mb-0">@branchHolidays.Sum(x => x.Holidays?.Count ?? 0)</h5>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Friday Holiday</small>
+                                    <h5 class="mb-0 @(branchHolidays.Any(x => x.IsFridayHoliday) ? "text-warning" : "text-muted")">
+                                        @(branchHolidays.Any(x => x.IsFridayHoliday) ? "Yes" : "No")
+                                    </h5>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Saturday Holiday</small>
+                                    <h5 class="mb-0 @(branchHolidays.Any(x => x.IsSaturdayHoliday) ? "text-warning" : "text-muted")">
+                                        @(branchHolidays.Any(x => x.IsSaturdayHoliday) ? "Yes" : "No")
+                                    </h5>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Sunday Holiday</small>
+                                    <h5 class="mb-0 @(branchHolidays.Any(x => x.IsSundaydayHoliday) ? "text-warning" : "text-muted")">
+                                        @(branchHolidays.Any(x => x.IsSundaydayHoliday) ? "Yes" : "No")
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+            else if (hasSearched && !isLoading)
+            {
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-8">
+                    <div class="alert alert-info text-center">
+                        <i class="fa fa-info-circle fa-2x mb-3"></i>
+                        <h5>No Branch Holidays Found</h5>
+                        <p class="mb-0">No holiday information found for branch code: <strong>@branchCode</strong></p>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+</div>
+@code {
+private string branchCode = string.Empty;
+private List<BranchHolidayViewModel> branchHolidays = new();
+private List<DataTableColumn> branchHolidayColumns = new();
+private DataTableOptions branchHolidayOptions = new();
+private bool isLoading = false;
+private string errorMessage = string.Empty;
+private bool hasSearched = false;
+
+protected override void OnInitialized()
+{
+    ConfigureBranchHolidayTable();
+}
+
+private void ConfigureBranchHolidayTable()
+{
+    branchHolidayColumns = new List<DataTableColumn>
+    {
+        new()
+        {
+            Header = "BRANCH CODE",
+            PropertyName = nameof(BranchHolidayViewModel.BranchCode),
+            Width = 120,
+            CustomRenderer = (item) =>
+            {
+                var branch = ((BranchHolidayViewModel)item).BranchCode;
+                return string.IsNullOrEmpty(branch)
+                    ? "<span class='text-muted'>N/A</span>"
+                    : $"<strong class='text-primary'>{branch}</strong>";
+            }
+        },
+        new()
+        {
+            Header = "HOLIDAY DATES",
+            PropertyName = nameof(BranchHolidayViewModel.HolidayDates),
+            CustomRenderer = (item) =>
+            {
+                var holidayDates = ((BranchHolidayViewModel)item).HolidayDates;
+                return string.IsNullOrEmpty(holidayDates)
+                    ? "<span class='text-muted'>No specific dates</span>"
+                    : $"<div class='text-truncate' style='max-width: 300px;' title='{holidayDates}'>{holidayDates}</div>";
+            }
+        },
+        new()
+        {
+            Header = "TOTAL HOLIDAYS",
+            PropertyName = nameof(BranchHolidayViewModel.Holidays),
+            CustomRenderer = (item) =>
+            {
+                var holidays = ((BranchHolidayViewModel)item).Holidays;
+                var count = holidays?.Count ?? 0;
+                return count > 0
+                    ? $"<span class='badge bg-info'>{count} dates</span>"
+                    : "<span class='text-muted'>0</span>";
+            }
+        },
+        new()
+        {
+            Header = "FRIDAY",
+            PropertyName = nameof(BranchHolidayViewModel.IsFridayHoliday),
+            Width = 100,
+            CustomRenderer = (item) =>
+            {
+                var isHoliday = ((BranchHolidayViewModel)item).IsFridayHoliday;
+                return isHoliday
+                    ? "<span class='badge bg-warning'>Yes</span>"
+                    : "<span class='badge bg-secondary'>No</span>";
+            }
+        },
+        new()
+        {
+            Header = "SATURDAY",
+            PropertyName = nameof(BranchHolidayViewModel.IsSaturdayHoliday),
+            Width = 100,
+            CustomRenderer = (item) =>
+            {
+                var isHoliday = ((BranchHolidayViewModel)item).IsSaturdayHoliday;
+                return isHoliday
+                    ? "<span class='badge bg-warning'>Yes</span>"
+                    : "<span class='badge bg-secondary'>No</span>";
+            }
+        },
+        new()
+        {
+            Header = "SUNDAY",
+            PropertyName = nameof(BranchHolidayViewModel.IsSundaydayHoliday),
+            Width = 100,
+            CustomRenderer = (item) =>
+            {
+                var isHoliday = ((BranchHolidayViewModel)item).IsSundaydayHoliday;
+                return isHoliday
+                    ? "<span class='badge bg-warning'>Yes</span>"
+                    : "<span class='badge bg-secondary'>No</span>";
+            }
+        },
+        new()
+        {
+            Header = "SKIP TO WORKING DAY",
+            PropertyName = nameof(BranchHolidayViewModel.SkipForwardToNextWorkingDay),
+            Width = 120,
+            CustomRenderer = (item) =>
+            {
+                var skipForward = ((BranchHolidayViewModel)item).SkipForwardToNextWorkingDay;
+                return skipForward
+                    ? "<span class='badge bg-success'>Yes</span>"
+                    : "<span class='badge bg-secondary'>No</span>";
+            }
+        },
+        new()
+        {
+            Header = "HOLIDAY LIST",
+            PropertyName = nameof(BranchHolidayViewModel.Holidays),
+            Sortable = false,
+            Width = 250,
+            CustomRenderer = (item) =>
+            {
+                var holidays = ((BranchHolidayViewModel)item).Holidays;
+                if (holidays == null || !holidays.Any())
+                {
+                    return "<span class='text-muted'>No holidays</span>";
+                }
+
+                // Show all holidays in a scrollable container
+                var holidayList = string.Join("<br>", holidays.Select(h => h.ToString("dd MMM yyyy")));
+
+                return $@"
+                        <div class='holiday-list-container' style='max-height: 150px; overflow-y: auto; padding: 5px; border: 1px solid #e9ecef; border-radius: 4px; background-color: #f8f9fa;'>
+                            <div class='small'>{holidayList}</div>
+                        </div>";
+            }
+        }
+    };
+
+    branchHolidayOptions = new DataTableOptions
+    {
+        PageLength = 10,
+        LengthMenu = new[] { 10, 25, 50 },
+        LengthMenuLabels = new[] { "10", "25", "50" },
+        SearchPlaceholder = "Search branch holidays...",
+        TableId = "branchHolidaysTable",
+        TableCssClass = "table table-striped table-bordered table-hover mb-0",
+        HeaderCssClass = "leadBold bg-blue-chambray font-white",
+        RowCssClass = "",
+        ShowSearch = true,
+        ShowPaging = true,
+        ShowInfo = true,
+        ShowLengthMenu = true,
+        Responsive = true,
+        AdditionalOptions = new Dictionary<string, object>
+        {
+            ["order"] = new object[] { new object[] { 0, "asc" } }, // Default sort by branch code
+            ["language"] = new Dictionary<string, object>
+            {
+                ["search"] = "Search holidays:",
+                ["lengthMenu"] = "Show _MENU_ records per page",
+                ["info"] = "Showing _START_ to _END_ of _TOTAL_ holiday records",
+                ["infoEmpty"] = "No holiday records found",
+                ["infoFiltered"] = "(filtered from _MAX_ total records)",
+                ["emptyTable"] = "No holiday data available",
+                ["zeroRecords"] = "No matching holiday records found"
+            }
+        }
+    };
+}
+
+private async Task SearchBranchHolidays()
+{
+    // Validate inputs
+    if (string.IsNullOrWhiteSpace(branchCode))
+    {
+        errorMessage = "Please enter a valid branch code.";
+        return;
+    }
+
+    try
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        hasSearched = true;
+        StateHasChanged();
+
+        Console.WriteLine($"🔍 Searching branch holidays for branch code: {branchCode}");
+
+        var result = await ApiClient.GetBranchHolidaysAsync(
+            branchCode: branchCode.Trim(),
+            bP_Tenant: null,
+            accept_Language: null
+        );
+
+        if (result?.Payload != null)
+        {
+            branchHolidays = result.Payload.ToList();
+            Console.WriteLine($"✅ Found {branchHolidays.Count} holiday records for branch: {branchCode}");
+
+            // Log holiday counts for debugging
+            foreach (var holiday in branchHolidays)
+            {
+                Console.WriteLine($"📅 Branch {holiday.BranchCode}: {holiday.Holidays?.Count ?? 0} holidays");
+            }
+        }
+        else
+        {
+            branchHolidays = new List<BranchHolidayViewModel>();
+            Console.WriteLine($"ℹ️ No holiday records found for branch: {branchCode}");
+        }
+    }
+    catch (ApiException<ApiErrorResponse> apiEx)
+    {
+        errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to search branch holidays.";
+        Console.WriteLine($"❌ API Error searching branch holidays: {apiEx.Message}");
+        branchHolidays = new List<BranchHolidayViewModel>();
+    }
+    catch (ApiException ex)
+    {
+        errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+        Console.WriteLine($"❌ API Exception: {ex.Message}");
+        branchHolidays = new List<BranchHolidayViewModel>();
+    }
+    catch (Exception ex)
+    {
+        errorMessage = "Failed to search branch holidays. Please check your connection.";
+        Console.WriteLine($"❌ Error searching branch holidays: {ex.Message}");
+        branchHolidays = new List<BranchHolidayViewModel>();
+    }
+    finally
+    {
+        isLoading = false;
+        StateHasChanged();
+    }
+}
+
+private void ClearSearch()
+{
+    branchCode = string.Empty;
+    branchHolidays = new List<BranchHolidayViewModel>();
+    hasSearched = false;
+    errorMessage = string.Empty;
+    StateHasChanged();
+}
+
+private void OnBranchHolidayRowClick(BranchHolidayViewModel branchHoliday)
+{
+    Console.WriteLine($"Branch holiday row clicked: {branchHoliday.BranchCode}");
+    // You can add additional functionality here, like opening a details modal
+}
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ddd;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .card-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+
+    /* Custom styles for holiday list container */
+    .holiday-list-container {
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 8px;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+        font-size: 0.875rem;
+    }
+
+    .holiday-list-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .holiday-list-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .holiday-list-container::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    .holiday-list-container::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+</style>

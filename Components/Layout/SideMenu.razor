@@ -46,20 +46,26 @@
                         <!-- Direct Blazor equivalents of your MVC helpers -->
                         @* <SubMenuLink Text="Add Client" Icon="icon-briefcase" Path="/" /> *@
                         @* <MenuFirstLevelLink Text="INVOICES" Path="/invoices" Icon="icon-calculator" /> *@
-                        <MenuFirstLevelLink Text="DASHBOARD" Path="/" Icon="icon-docs"/>
-                        <MenuFirstLevelLink Text="RECEIPTS" Path="/" Icon="icon-docs"/>
-                        <MenuFirstLevelLink Text="DEPOSITS" Path="/fggf" Icon="icon-briefcase"/>
-                        <MenuFirstLevelLink Text="PAYMENTS" Path="/fhfg" Icon="icon-wallet"/>
+                        @* <MenuFirstLevelLink Text="DASHBOARD" Path="/" Icon="icon-docs"/> *@
+                        @* <MenuFirstLevelLink Text="RECEIPTS" Path="/" Icon="icon-docs"/> *@
+                        @* <MenuFirstLevelLink Text="DEPOSITS" Path="/fggf" Icon="icon-briefcase"/> *@
+                        <MenuFirstLevelLink Text="Home" Path="/" Icon="icon-wallet"/>
                         <MenuFirstLevel Text="Cashiers" Icon="fa fa-users">
-                            <SubMenuLink Text="All Cashiers" Path="/cashiers"/>
+                            <SubMenuLink Text="All Cashiers" Path="/"/>
                            
                         </MenuFirstLevel>
+                        <MenuFirstLevelLink Text="Branch Holidays" Path="/get-branch-holidays" Icon="icon-wallet"/>
                         <MenuFirstLevel Text="CBS Clients" Icon="fa fa-users">
                             <SubMenuLink Text="All Clients" Path="/clients"/>
                             <SubMenuLink Text="CBS Client" Path="/clients/cbs"/>
                             <SubMenuLink Text="CBS Client Savings" Path="/clients/cbs/savings"/>
                             <SubMenuLink Text="CBS Client With Balances" Path="/clients/with-balances"/>
+                            <SubMenuLink Text="Get Clients Accounts" Path="/get-client-account"/>
+                            <SubMenuLink Text="Get Clients Docs" Path="/get-client-documents"/>
+                            <SubMenuLink Text="Get Ledger Per Product" Path="/get-ledger-items-per-product"/>
+                            <SubMenuLink Text="Get Client ledger Items" Path="/get-client-ledger-items"/>
                         </MenuFirstLevel>
+                        <MenuFirstLevelLink Text="Audit Logs" Path="/get-audit-logs" Icon="icon-wallet"/>
                     </ul>
 
                     

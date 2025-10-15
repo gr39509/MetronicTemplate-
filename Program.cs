@@ -92,7 +92,7 @@ using NovaAccounts.SharedModels;
 using NovaAccounts.SharedModels.ApiService;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Services.AddControllers();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -128,6 +128,7 @@ builder.Services.AddScoped<ApiClient>(provider =>
 });
 
 builder.Services.AddScoped<AuthHeaderHandler>();
+builder.Services.AddHttpClient(); 
 
 // Add Authentication
 builder.Services.AddAuthentication(options =>
@@ -166,7 +167,7 @@ app.UseAntiforgery();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.MapControllers();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

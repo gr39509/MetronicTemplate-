@@ -1,0 +1,534 @@
+@page "/get-audit-logs"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Get Audit Logs
+        <small>Search audit logs by username and date range</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-notebook font-dark"></i>
+                <span class="caption-subject bold uppercase">Search Audit Logs</span>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <div class="row justify-content-center">
+                <div class="col-md-10">
+                    <div class="form-horizontal">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Start Date</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-calendar"></i></span>
+                                        <input type="date" class="form-control" @bind="startDate" @bind:format="yyyy-MM-dd" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">End Date</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-calendar"></i></span>
+                                        <input type="date" class="form-control" @bind="endDate" @bind:format="yyyy-MM-dd" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group row mb-4">
+                            <label class="col-md-3 col-form-label text-md-right">Username</label>
+                            <div class="col-md-9">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa fa-user"></i></span>
+                                    <input type="text" class="form-control" @bind="username" placeholder="Enter username (optional)" />
+                                </div>
+                                <small class="form-text text-muted">Leave blank to search all users</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group row">
+                            <div class="col-md-3"></div>
+                            <div class="col-md-9">
+                                <button type="button" class="btn btn-info text-white" @onclick="SearchAuditLogs" disabled="@isLoading">
+                                    <i class="fa fa-search"></i>
+                                    @if (isLoading)
+                                    {
+                                        <span>Searching...</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="padding-left: 10px;">Search Audit Logs</span>
+                                    }
+                                </button>
+                                @if (auditLogs?.Any() == true)
+                                {
+                                    <button type="button" class="btn btn-secondary ms-2" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Validation Warning -->
+            @if (hasDateValidationError)
+            {
+                <div class="row justify-content-center mt-3">
+                    <div class="col-md-10">
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            <strong>Date Range Warning:</strong> End date should be greater than or equal to start date.
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-10">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (auditLogs?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-warning text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-history me-2"></i>
+                                    Audit Logs
+                                    <span class="badge bg-light text-dark ms-2">@auditLogs.Count records found</span>
+                                    @if (!string.IsNullOrEmpty(username))
+                                    {
+                                        <small class="ms-3">User: @username</small>
+                                    }
+                                    <small class="ms-3">
+                                        Period: @startDate.ToString("dd MMM yyyy") - @endDate.ToString("dd MMM yyyy")
+                                    </small>
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="AuditLogViewModel"
+                                                 Data="@auditLogs"
+                                                 Columns="@auditLogColumns"
+                                                 Options="@auditLogOptions"
+                                                 OnRowClick="@OnAuditLogRowClick" />
+                            </div>
+                            
+                            <!-- Summary Section -->
+                            <div class="card-footer">
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Total Records</small>
+                                        <h5 class="mb-0">@auditLogs.Count</h5>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Unique Users</small>
+                                        <h5 class="mb-0 text-primary">@auditLogs.Select(x => x.Username).Distinct().Count()</h5>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Operations</small>
+                                        <h5 class="mb-0 text-info">@auditLogs.Select(x => x.Operation).Distinct().Count()</h5>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Latest Activity</small>
+                                        <h5 class="mb-0 text-success">@auditLogs.Max(x => x.Timestamp).ToString("dd MMM HH:mm")</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasSearched && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-10">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Audit Logs Found</h5>
+                            <p class="mb-0">
+                                No audit logs found 
+                                @if (!string.IsNullOrEmpty(username))
+                                {
+                                    <text>for user: <strong>@username</strong><br /></text>
+                                }
+                                Period: <strong>@startDate.ToString("dd MMM yyyy") - @endDate.ToString("dd MMM yyyy")</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private DateTime startDate = DateTime.Today.AddDays(-7); // Default to last 7 days
+    private DateTime endDate = DateTime.Today;
+    private string username = string.Empty;
+    private List<AuditLogViewModel> auditLogs = new();
+    private List<DataTableColumn> auditLogColumns = new();
+    private DataTableOptions auditLogOptions = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private bool hasSearched = false;
+    private bool hasDateValidationError = false;
+
+    protected override void OnInitialized()
+    {
+        ConfigureAuditLogTable();
+    }
+
+    private void ConfigureAuditLogTable()
+    {
+        auditLogColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "TIMESTAMP",
+                PropertyName = nameof(AuditLogViewModel.Timestamp),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var timestamp = ((AuditLogViewModel)item).Timestamp;
+                    return $"<small>{timestamp:dd MMM yyyy HH:mm}</small>";
+                }
+            },
+            new()
+            {
+                Header = "USERNAME",
+                PropertyName = nameof(AuditLogViewModel.Username),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var user = ((AuditLogViewModel)item).Username;
+                    return string.IsNullOrEmpty(user)
+                        ? "<span class='text-muted'>System</span>"
+                        : $"<strong class='text-primary'>{user}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "OPERATION",
+                PropertyName = nameof(AuditLogViewModel.Operation),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var operation = ((AuditLogViewModel)item).Operation;
+                    var badgeClass = operation?.ToLower() switch
+                    {
+                        "create" or "insert" => "bg-success",
+                        "update" or "modify" => "bg-warning",
+                        "delete" or "remove" => "bg-danger",
+                        "read" or "view" => "bg-info",
+                        "login" => "bg-primary",
+                        "logout" => "bg-secondary",
+                        _ => "bg-dark"
+                    };
+                    return string.IsNullOrEmpty(operation)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge {badgeClass}'>{operation}</span>";
+                }
+            },
+            new()
+            {
+                Header = "CHANGES",
+                PropertyName = nameof(AuditLogViewModel.Changes),
+                CustomRenderer = (item) =>
+                {
+                    var changes = ((AuditLogViewModel)item).Changes;
+                    if (string.IsNullOrEmpty(changes))
+                    {
+                        return "<span class='text-muted'>No changes recorded</span>";
+                    }
+
+                    // Format JSON changes if possible
+                    if (changes.Trim().StartsWith("{") || changes.Trim().StartsWith("["))
+                    {
+                        try
+                        {
+                            var formattedJson = System.Text.Json.JsonSerializer.Serialize(
+                                System.Text.Json.JsonSerializer.Deserialize<object>(changes),
+                                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                            
+                            return $@"
+                                <div class='changes-container' style='max-height: 120px; overflow-y: auto; padding: 5px; border: 1px solid #e9ecef; border-radius: 4px; background-color: #f8f9fa;'>
+                                    <pre class='mb-0 small' style='white-space: pre-wrap;'>{formattedJson}</pre>
+                                </div>";
+                        }
+                        catch
+                        {
+                            // If JSON parsing fails, show as plain text
+                            return $"<div class='text-truncate' style='max-width: 300px;' title='{changes}'>{changes}</div>";
+                        }
+                    }
+                    
+                    return $"<div class='text-truncate' style='max-width: 300px;' title='{changes}'>{changes}</div>";
+                }
+            },
+            new()
+            {
+                Header = "IP ADDRESS",
+                PropertyName = nameof(AuditLogViewModel.RemoteIpAddress),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var ip = ((AuditLogViewModel)item).RemoteIpAddress;
+                    return string.IsNullOrEmpty(ip)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code>{ip}</code>";
+                }
+            }
+            // new()
+            // {
+            //     Header = "ACTIONS",
+            //     PropertyName = "",
+            //     Sortable = false,
+            //     Searchable = false,
+            //     Width = 100,
+            //     CssClass = "text-center",
+            //     CustomRenderer = (item) => 
+            //     {
+            //         var log = (AuditLogViewModel)item;
+            //         return $@"
+            //             <div class='btn-group btn-group-sm' role='group'>
+            //                 <button type='button' class='btn btn-info btn-xs' onclick='viewAuditDetails({log.Id})' title='View Details'>
+            //                     <i class='fa fa-eye'></i>
+            //                 </button>
+            //             </div>";
+            //     }
+            // }
+        };
+
+        auditLogOptions = new DataTableOptions
+        {
+            PageLength = 20,
+            LengthMenu = new[] { 20, 50, 100, 200 },
+            LengthMenuLabels = new[] { "20", "50", "100", "200" },
+            SearchPlaceholder = "Search audit logs...",
+            TableId = "auditLogsTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 0, "desc" } }, // Default sort by timestamp (newest first)
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search audit logs:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ audit records",
+                    ["infoEmpty"] = "No audit records found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total records)",
+                    ["emptyTable"] = "No audit data available",
+                    ["zeroRecords"] = "No matching audit records found"
+                }
+            }
+        };
+    }
+
+    private async Task SearchAuditLogs()
+    {
+        // Validate inputs
+        if (endDate < startDate)
+        {
+            hasDateValidationError = true;
+            errorMessage = "End date cannot be earlier than start date.";
+            return;
+        }
+
+        hasDateValidationError = false;
+
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            hasSearched = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Searching audit logs - Username: {username}, Date Range: {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}");
+
+            var result = await ApiClient.GetAuditLogsAsync(
+                username: string.IsNullOrWhiteSpace(username) ? null : username.Trim(),
+                startDate: startDate,
+                endDate: endDate,
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                auditLogs = result.Payload.ToList();
+                Console.WriteLine($"✅ Found {auditLogs.Count} audit log records");
+            }
+            else
+            {
+                auditLogs = new List<AuditLogViewModel>();
+                Console.WriteLine($"ℹ️ No audit log records found");
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to search audit logs.";
+            Console.WriteLine($"❌ API Error searching audit logs: {apiEx.Message}");
+            auditLogs = new List<AuditLogViewModel>();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            auditLogs = new List<AuditLogViewModel>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to search audit logs. Please check your connection.";
+            Console.WriteLine($"❌ Error searching audit logs: {ex.Message}");
+            auditLogs = new List<AuditLogViewModel>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        startDate = DateTime.Today.AddDays(-7);
+        endDate = DateTime.Today;
+        username = string.Empty;
+        auditLogs = new List<AuditLogViewModel>();
+        hasSearched = false;
+        errorMessage = string.Empty;
+        hasDateValidationError = false;
+        StateHasChanged();
+    }
+
+    private void OnAuditLogRowClick(AuditLogViewModel auditLog)
+    {
+        Console.WriteLine($"Audit log row clicked: {auditLog.Operation} by {auditLog.Username}");
+        // You can add additional functionality here, like opening a details modal
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ddd;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .card-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+
+    /* Custom styles for changes container */
+    .changes-container {
+        max-height: 120px;
+        overflow-y: auto;
+        padding: 8px;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+        font-size: 0.75rem;
+    }
+
+    .changes-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .changes-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .changes-container::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    .changes-container::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+</style>
+
+<script>
+    window.viewAuditDetails = function(auditId) {
+        console.log('View audit details for ID:', auditId);
+        // Implement audit details view functionality
+    };
+</script>

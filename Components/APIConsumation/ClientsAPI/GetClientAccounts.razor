@@ -1,0 +1,379 @@
+@page "/get-client-account"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Get Client Accounts
+        <small>Search client accounts by product ID</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-magnifier font-dark"></i>
+                <span class="caption-subject bold uppercase">Search Client Accounts</span>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="form-horizontal">
+                        <div class="form-group row mb-4">
+                            <label class="col-md-4 col-form-label text-md-right">Product ID</label>
+                            <div class="col-md-8">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa fa-product-hunt"></i></span>
+                                    <input type="number" class="form-control" @bind="productId" placeholder="Enter product ID" required />
+                                </div>
+                                <small class="form-text text-muted">Enter the product ID to search for associated client accounts</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group row">
+                            <div class="col-md-4"></div>
+                            <div class="col-md-8">
+                                <button type="button" class="btn btn-success" @onclick="SearchClientAccounts" disabled="@isLoading">
+                                    <i class="fa fa-search"></i> 
+                                    @if (isLoading)
+                                    {
+                                        <span>Searching...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Search</span>
+                                    }
+                                </button>
+                                @if (clientAccounts?.Any() == true)
+                                {
+                                    <button type="button" class="btn btn-secondary ms-2" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-8">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (clientAccounts?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-users me-2"></i>
+                                    Client Accounts for Product ID: @productId
+                                    <span class="badge bg-light text-dark ms-2">@clientAccounts.Count accounts found</span>
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="ClientViewModel"
+                                                 Data="@clientAccounts"
+                                                 Columns="@clientAccountColumns"
+                                                 Options="@clientAccountOptions"
+                                                 OnRowClick="@OnClientAccountRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasSearched && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-8">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Client Accounts Found</h5>
+                            <p class="mb-0">No client accounts were found for product ID: <strong>@productId</strong></p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private int productId = 0;
+    private List<ClientViewModel> clientAccounts = new();
+    private List<DataTableColumn> clientAccountColumns = new();
+    private DataTableOptions clientAccountOptions = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private bool hasSearched = false;
+
+    protected override void OnInitialized()
+    {
+        ConfigureClientAccountTable();
+    }
+
+    private void ConfigureClientAccountTable()
+    {
+        clientAccountColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "ACCOUNT NUMBER",
+                PropertyName = nameof(ClientViewModel.AccountName),
+                Width = 150,
+                CustomRenderer = (item) => $"<strong class='text-primary'>{((ClientViewModel)item).AccountName}</strong>"
+            },
+            new()
+            {
+                Header = "CLIENT NAME",
+                PropertyName = nameof(ClientViewModel.ClientName),
+                CustomRenderer = (item) =>
+                {
+                    var clientName = ((ClientViewModel)item).ClientName;
+                    return string.IsNullOrEmpty(clientName)
+                        ? "<span class='text-muted'>Not set</span>"
+                        : $"<strong>{clientName}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT NAME",
+                PropertyName = nameof(ClientViewModel.AccountName),
+                CustomRenderer = (item) =>
+                {
+                    var accountName = ((ClientViewModel)item).AccountName;
+                    return string.IsNullOrEmpty(accountName)
+                        ? "<span class='text-muted'>Not set</span>"
+                        : accountName;
+                }
+            }
+            // new()
+            // {
+            //     Header = "PRODUCT",
+            //     PropertyName = nameof(ClientViewModel.ProductName),
+            //     CustomRenderer = (item) =>
+            //     {
+            //         var productName = ((ClientViewModel)item).ProductName;
+            //         return string.IsNullOrEmpty(productName)
+            //             ? "<span class='text-muted'>N/A</span>"
+            //             : $"<span class='badge bg-info'>{productName}</span>";
+            //     }
+            // },
+            // new()
+            // {
+            //     Header = "BALANCE",
+            //     PropertyName = nameof(ClientViewModel.AccountBalance),
+            //     DataType = "num",
+            //     CssClass = "text-right",
+            //     CustomRenderer = (item) =>
+            //     {
+            //         var balance = ((ClientViewModel)item).AccountBalance;
+            //         var cssClass = balance > 0 ? "text-success" : balance < 0 ? "text-danger" : "text-muted";
+            //         return $"<span class='{cssClass}'><strong>GH₵ {balance:N2}</strong></span>";
+            //     }
+            // },
+            // new()
+            // {
+            //     Header = "STATUS",
+            //     PropertyName = nameof(ClientViewModel.),
+            //     CustomRenderer = (item) =>
+            //     {
+            //         var status = ((ClientViewModel)item).AccountStatus;
+            //         var badgeClass = status?.ToLower() switch
+            //         {
+            //             "active" => "bg-success",
+            //             "inactive" => "bg-secondary",
+            //             "dormant" => "bg-warning",
+            //             "closed" => "bg-danger",
+            //             "pending" => "bg-info",
+            //             _ => "bg-secondary"
+            //         };
+            //         return $"<span class='badge {badgeClass}'>{status ?? "Unknown"}</span>";
+            //     }
+            // },
+            // new()
+            // {
+            //     // Header = "OPENING DATE",
+            //     // PropertyName = nameof(ClientViewModel.AccountOpeningDate),
+            //     // CustomRenderer = (item) =>
+            //     // {
+            //     //     var openingDate = ((ClientViewModel)item).Balance;
+            //     //     return openingDate.HasValue 
+            //     //         ? $"<small>{openingDate.Value.ToString("dd MMM yyyy")}</small>"
+            //     //         : "<span class='text-muted'>N/A</span>";
+            //     // }
+            // }
+            // new()
+            // {
+            //     Header = "BRANCH",
+            //     PropertyName = nameof(ClientAccountViewModel.BranchCode),
+            //     CustomRenderer = (item) =>
+            //     {
+            //         var branch = ((ClientAccountViewModel)item).BranchCode;
+            //         return string.IsNullOrEmpty(branch)
+            //             ? "<span class='text-muted'>N/A</span>"
+            //             : branch;
+            //     }
+            // }
+        };
+
+        clientAccountOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            LengthMenu = new[] { 10, 25, 50, 100 },
+            LengthMenuLabels = new[] { "10", "25", "50", "100" },
+            SearchPlaceholder = "Search client accounts...",
+            TableId = "clientAccountsTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 0, "asc" } },
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search accounts:",
+                    ["lengthMenu"] = "Show _MENU_ accounts per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ accounts",
+                    ["infoEmpty"] = "No accounts found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total accounts)",
+                    ["emptyTable"] = "No account data available",
+                    ["zeroRecords"] = "No matching accounts found"
+                }
+            }
+        };
+    }
+
+    private async Task SearchClientAccounts()
+    {
+        if (productId <= 0)
+        {
+            errorMessage = "Please enter a valid product ID.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            hasSearched = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Searching client accounts for product ID: {productId}");
+
+            var result = await ApiClient.GetClientAccountsAsync(
+                productId: productId,
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                clientAccounts = result.Payload.ToList();
+                Console.WriteLine($"✅ Found {clientAccounts.Count} client accounts for product ID: {productId}");
+            }
+            else
+            {
+                clientAccounts = new List<ClientViewModel>();
+                Console.WriteLine($"ℹ️ No client accounts found for product ID: {productId}");
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to search client accounts.";
+            Console.WriteLine($"❌ API Error searching client accounts: {apiEx.Message}");
+            clientAccounts = new List<ClientViewModel>();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            clientAccounts = new List<ClientViewModel>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to search client accounts. Please check your connection.";
+            Console.WriteLine($"❌ Error searching client accounts: {ex.Message}");
+            clientAccounts = new List<ClientViewModel>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        productId = 0;
+        clientAccounts = new List<ClientViewModel>();
+        hasSearched = false;
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnClientAccountRowClick(ClientViewModel clientAccount)
+    {
+        Console.WriteLine($"Client account row clicked: {clientAccount.AccountName}");
+        // You can add additional functionality here, like opening a details modal
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ddd;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+</style>

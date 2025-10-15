@@ -1,0 +1,173 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+
+<nav class="quick-nav">
+    <a class="quick-nav-trigger" href="#0">
+        <span aria-hidden="true"></span>
+    </a>
+    <ul id="myNav">
+        <li @onclick="HandleAction">
+            <a class="active">
+                <span style="font-size: 15px;">@ButtonText</span>
+                <i class="@IconClass"></i>
+            </a>
+        </li>
+    </ul>
+    <span aria-hidden="true" class="quick-nav-bg"></span>
+</nav>
+<div class="quick-nav-overlay"></div>
+
+@code {
+    [Parameter]
+    public string ButtonText { get; set; } = "Start New Action";
+
+    [Parameter]
+    public string IconClass { get; set; } = "icon-wallet";
+
+    [Parameter]
+    public string ValidationUrl { get; set; } = "/api/validate";
+
+    [Parameter]
+    public string RedirectUrl { get; set; } = "/action/create";
+
+    [Parameter]
+    public string DialogTitle { get; set; } = "Enter Value";
+
+    [Parameter]
+    public string InputPlaceholder { get; set; } = "";
+
+    [Parameter]
+    public string ParameterName { get; set; } = "value";
+    [Parameter]
+    public string ConfirmButtonText { get; set; } = "Approve";
+
+
+    private async Task HandleAction()
+    {
+        // Get the authentication token
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var token = authState.User.FindFirst("token")?.Value;
+
+        Console.WriteLine($"🔄 HandleAction called, token present: {!string.IsNullOrEmpty(token)}");
+
+        var result = await JS.InvokeAsync<string>("showInputDialog", 
+            DialogTitle,
+            InputPlaceholder,
+            ValidationUrl,
+            RedirectUrl,
+            ParameterName,
+            token,
+            ConfirmButtonText); // Pass token to JavaScript
+
+        Console.WriteLine($"✅ Dialog completed with result: {result}");
+    }
+}
+<style>
+   .quick-nav a {
+        text-decoration: none;
+        
+    }
+   
+</style>
+<script>
+    window.showInputDialog = function(title, placeholder, validationUrl, redirectUrl, paramName, authToken, confirmButtonText) {
+        return new Promise((resolve) => {
+            swal({
+                title: '<span class="lead"><span class="font-red-flamingo">' + title + '</span></span>',
+                input: 'text',
+                inputPlaceholder: placeholder,
+                showCancelButton: true,
+                confirmButtonText: confirmButtonText || 'Approve',
+                confirmButtonColor: '#1BA39C',
+                cancelButtonColor: '#22313F',
+                showLoaderOnConfirm: true,
+                preConfirm: function (inputValue) {
+                    return new Promise(function (resolveInner, reject) {
+                        console.log('Validation started for:', inputValue);
+                        console.log('Auth token present:', !!authToken);
+
+                        if (!inputValue || inputValue.trim() === '') {
+                            reject('Please enter an account number.');
+                            return;
+                        }
+
+                        if (!validationUrl) {
+                            console.log('No validation URL provided');
+                            resolveInner();
+                            return;
+                        }
+
+                        var url = validationUrl;
+                        if (validationUrl.indexOf('?') === -1) {
+                            url += '?' + paramName + '=' + encodeURIComponent(inputValue.trim());
+                        } else {
+                            url += '&' + paramName + '=' + encodeURIComponent(inputValue.trim());
+                        }
+
+                        console.log('Making request to:', url);
+
+                        // Include authorization header
+                        var headers = {};
+                        if (authToken) {
+                            headers['Authorization'] = 'Bearer ' + authToken;
+                        }
+
+                        fetch(url, {
+                            headers: headers
+                        })
+                            .then(response => {
+                                console.log('Response status:', response.status);
+                                if (!response.ok) {
+                                    return response.text().then(errorText => {
+                                        throw new Error(`HTTP ${response.status}: ${errorText || 'Unknown error'}`);
+                                    });
+                                }
+                                return response.text();
+                            })
+                            .then(data => {
+                                console.log('Response data:', data);
+                                if (data && data.includes('success')) {
+                                    swal({
+                                        title: 'Verified!',
+                                        text: data.replace('success - ', ''),
+                                        icon: 'success'
+                                    }).then(function () {
+                                        if (redirectUrl) {
+                                            window.location.href = redirectUrl + '?' + paramName + '=' + encodeURIComponent(inputValue);
+                                        }
+                                        resolveInner();
+                                    });
+                                } else {
+                                    swal({
+                                        title: 'Error!',
+                                        text: data || 'Validation failed',
+                                        icon: 'error'
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Fetch error:', error);
+                                swal({
+                                    title: 'Error!',
+                                    text: error.message,
+                                    icon: 'error'
+                                });
+                            });
+                    });
+                },
+                allowOutsideClick: false
+            }).then(function(result) {
+                resolve('completed');
+            }).catch(function(error) {
+                resolve('cancelled');
+            });
+        });
+    }
+
+</script>
+
+<link href="@Assets["/assets/global/plugins/SweetAlert2/sweetalert2.css"]" rel="stylesheet" />
+<script src="@Assets["/assets/global/plugins/SweetAlert2/sweetalert2.all.js"]"></script>
+<script src="@Assets["/assets/layouts/global/scripts/quick-nav.js"]" type="text/javascript"></script>

@@ -1,0 +1,482 @@
+@page "/get-client-documents"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Get Client Documents
+        <small>Search client documents by client number</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-docs font-dark"></i>
+                <span class="caption-subject bold uppercase">Search Client Documents</span>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="form-horizontal">
+                        <div class="form-group row mb-4">
+                            <label class="col-md-4 col-form-label text-md-right">Client Number</label>
+                            <div class="col-md-8">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa fa-user"></i></span>
+                                    <input type="text" class="form-control" @bind="clientNumber" placeholder="Enter client number" required />
+                                </div>
+                                <small class="form-text text-muted">Enter the client number to search for associated documents</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group row">
+                            <div class="col-md-4"></div>
+                            <div class="col-md-8">
+                                <button type="button" class="btn btn-primary" @onclick="SearchClientDocuments" disabled="@isLoading">
+                                    <i class="fa fa-search"></i> 
+                                    @if (isLoading)
+                                    {
+                                        <span>Searching...</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="margin-left: 10px;">Search Documents</span>
+                                    }
+                                </button>
+                                @if (clientDocuments?.Any() == true)
+                                {
+                                    <button type="button" class="btn btn-secondary ms-2" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-8">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (clientDocuments?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-folder me-2"></i>
+                                    Client Documents for: @clientNumber
+                                    <span class="badge bg-light text-dark ms-2">@clientDocuments.Count documents found</span>
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="ClientDocumentViewModel"
+                                                 Data="@clientDocuments"
+                                                 Columns="@clientDocumentColumns"
+                                                 Options="@clientDocumentOptions"
+                                                 OnRowClick="@OnClientDocumentRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasSearched && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-8">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Client Documents Found</h5>
+                            <p class="mb-0">No documents were found for client number: <strong>@clientNumber</strong></p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string clientNumber = string.Empty;
+    private List<ClientDocumentViewModel> clientDocuments = new();
+    private List<DataTableColumn> clientDocumentColumns = new();
+    private DataTableOptions clientDocumentOptions = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private bool hasSearched = false;
+
+    protected override void OnInitialized()
+    {
+        ConfigureClientDocumentTable();
+    }
+
+    private void ConfigureClientDocumentTable()
+    {
+        clientDocumentColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "DOCUMENT TYPE",
+                PropertyName = nameof(ClientDocumentViewModel.DocumentType),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var documentType = ((ClientDocumentViewModel)item).DocumentType;
+                    return string.IsNullOrEmpty(documentType)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{documentType}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "CLIENT NAME",
+                PropertyName = nameof(ClientDocumentViewModel.ClientName),
+                CustomRenderer = (item) =>
+                {
+                    var clientName = ((ClientDocumentViewModel)item).ClientName;
+                    return string.IsNullOrEmpty(clientName)
+                        ? "<span class='text-muted'>Not set</span>"
+                        : $"<strong>{clientName}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "DESCRIPTION",
+                PropertyName = nameof(ClientDocumentViewModel.Description),
+                CustomRenderer = (item) =>
+                {
+                    var description = ((ClientDocumentViewModel)item).Description;
+                    return string.IsNullOrEmpty(description)
+                        ? "<span class='text-muted'>No description</span>"
+                        : $"<div class='text-truncate' style='max-width: 200px;' title='{description}'>{description}</div>";
+                }
+            },
+            new()
+            {
+                Header = "ATTACHED BY",
+                PropertyName = nameof(ClientDocumentViewModel.AttachedBy),
+                CustomRenderer = (item) =>
+                {
+                    var attachedBy = ((ClientDocumentViewModel)item).AttachedBy;
+                    return string.IsNullOrEmpty(attachedBy)
+                        ? "<span class='text-muted'>Unknown</span>"
+                        : attachedBy;
+                }
+            },
+            new()
+            {
+                Header = "DATE ATTACHED",
+                PropertyName = nameof(ClientDocumentViewModel.DateAttached),
+                CustomRenderer = (item) =>
+                {
+                    var dateAttached = ((ClientDocumentViewModel)item).DateAttached;
+                    return $"<small>{dateAttached.ToString("dd MMM yyyy HH:mm")}</small>";
+                }
+            },
+            new()
+            {
+                Header = "DOCUMENT",
+                PropertyName = nameof(ClientDocumentViewModel.AttachedDocument),
+                Sortable = false,
+                CustomRenderer = (item) =>
+                {
+                    var document = ((ClientDocumentViewModel)item).AttachedDocument;
+                    var documentId = ((ClientDocumentViewModel)item).ClientDocumentID;
+                    
+                    if (string.IsNullOrEmpty(document))
+                    {
+                        return "<span class='text-muted'>No document</span>";
+                    }
+                    
+                    // Check if it's a base64 document or a file reference
+                    if (document.StartsWith("data:") || document.Length > 100) // Likely base64
+                    {
+                        return $@"
+                            <div class='btn-group btn-group-sm' role='group'>
+                                <button type='button' class='btn btn-info btn-xs' onclick='viewDocument({documentId})' title='View Document'>
+                                    <i class='fa fa-eye'></i> View
+                                </button>
+                                <button type='button' class='btn btn-success btn-xs' onclick='downloadDocument({documentId})' title='Download Document'>
+                                    <i class='fa fa-download'></i> Download
+                                </button>
+                            </div>";
+                    }
+                    else
+                    {
+                        return $"<span class='badge bg-secondary'>{document}</span>";
+                    }
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var document = (ClientDocumentViewModel)item;
+                    return $@"
+                        <div class='btn-group btn-group-sm' role='group'>
+                            <button type='button' class='btn btn-primary btn-xs' onclick='viewDocumentDetails({document.ClientDocumentID})' title='View Details'>
+                                <i class='fa fa-info-circle'></i>
+                            </button>
+                            <button type='button' class='btn btn-warning btn-xs' onclick='editDocument({document.ClientDocumentID})' title='Edit Document'>
+                                <i class='fa fa-edit'></i>
+                            </button>
+                        </div>";
+                }
+            }
+        };
+
+        clientDocumentOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            LengthMenu = new[] { 10, 25, 50, 100 },
+            LengthMenuLabels = new[] { "10", "25", "50", "100" },
+            SearchPlaceholder = "Search documents...",
+            TableId = "clientDocumentsTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 4, "desc" } }, // Default sort by date attached (newest first)
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search documents:",
+                    ["lengthMenu"] = "Show _MENU_ documents per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ documents",
+                    ["infoEmpty"] = "No documents found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total documents)",
+                    ["emptyTable"] = "No document data available",
+                    ["zeroRecords"] = "No matching documents found"
+                }
+            }
+        };
+    }
+
+    private async Task SearchClientDocuments()
+    {
+        if (string.IsNullOrWhiteSpace(clientNumber))
+        {
+            errorMessage = "Please enter a valid client number.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            hasSearched = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Searching client documents for client number: {clientNumber}");
+
+            var result = await ApiClient.GetClientDocumentsAsync(
+                clientNumber: clientNumber.Trim(),
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                clientDocuments = result.Payload.ToList();
+                Console.WriteLine($"✅ Found {clientDocuments.Count} documents for client: {clientNumber}");
+            }
+            else
+            {
+                clientDocuments = new List<ClientDocumentViewModel>();
+                Console.WriteLine($"ℹ️ No documents found for client: {clientNumber}");
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to search client documents.";
+            Console.WriteLine($"❌ API Error searching client documents: {apiEx.Message}");
+            clientDocuments = new List<ClientDocumentViewModel>();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            clientDocuments = new List<ClientDocumentViewModel>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to search client documents. Please check your connection.";
+            Console.WriteLine($"❌ Error searching client documents: {ex.Message}");
+            clientDocuments = new List<ClientDocumentViewModel>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        clientNumber = string.Empty;
+        clientDocuments = new List<ClientDocumentViewModel>();
+        hasSearched = false;
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnClientDocumentRowClick(ClientDocumentViewModel clientDocument)
+    {
+        Console.WriteLine($"Client document row clicked: {clientDocument.DocumentType}");
+        // You can add additional functionality here, like opening a document preview modal
+    }
+
+    // Add these methods for JavaScript interop if needed
+    [JSInvokable]
+    public async Task ViewDocument(int documentId)
+    {
+        var document = clientDocuments.FirstOrDefault(d => d.ClientDocumentID == documentId);
+        if (document != null && !string.IsNullOrEmpty(document.AttachedDocument))
+        {
+            // Open document in new tab or modal
+            await JSRuntime.InvokeVoidAsync("open", GetDocumentUrl(document.AttachedDocument), "_blank");
+        }
+    }
+
+    [JSInvokable]
+    public async Task DownloadDocument(int documentId)
+    {
+        var document = clientDocuments.FirstOrDefault(d => d.ClientDocumentID == documentId);
+        if (document != null && !string.IsNullOrEmpty(document.AttachedDocument))
+        {
+            // Trigger download
+            await JSRuntime.InvokeVoidAsync("downloadDocument", document.AttachedDocument, $"{document.DocumentType}_{document.DateAttached:yyyyMMdd}.pdf");
+        }
+    }
+
+    private string GetDocumentUrl(string attachedDocument)
+    {
+        if (string.IsNullOrEmpty(attachedDocument))
+            return "#";
+
+        if (attachedDocument.StartsWith("data:"))
+            return attachedDocument;
+
+        // If it's a file path or URL, return as is
+        return attachedDocument;
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ddd;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+
+<script>
+    // JavaScript functions for document handling
+    window.viewDocument = function(documentId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ViewDocument', documentId)
+                .catch(err => {
+                    console.error('Error calling ViewDocument:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.downloadDocument = function(documentId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DownloadDocument', documentId)
+                .catch(err => {
+                    console.error('Error calling DownloadDocument:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.viewDocumentDetails = function(documentId) {
+        console.log('View document details:', documentId);
+        // Implement document details view
+    };
+
+    window.editDocument = function(documentId) {
+        console.log('Edit document:', documentId);
+        // Implement document editing
+    };
+
+    // Helper function to trigger download
+    window.downloadDocumentFile = function(base64Data, fileName) {
+        const link = document.createElement('a');
+        link.href = base64Data;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+</script>

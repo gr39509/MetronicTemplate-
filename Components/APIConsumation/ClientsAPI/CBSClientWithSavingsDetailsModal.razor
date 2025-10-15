@@ -1,0 +1,477 @@
+@* CBSClientDetailsModal *@
+
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="clientDetailsModal"
+               Title="CBS Client Details"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="false"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading client details...</p>
+            </div>
+        }
+        else if (clientDetails != null)
+        {
+            <!-- Client Basic Information -->
+            <div class="row mb-4">
+                <div class="col-md-4 text-center mb-3">
+                    @if (!string.IsNullOrEmpty(clientDetails.Picture))
+                    {
+                        <img src="@GetImageSource(clientDetails.Picture)"
+                             alt="Client Photo"
+                             class="img-thumbnail"
+                             style="width:150px; height:150px; object-fit:cover; border-radius:10px;" />
+                    }
+                    else
+                    {
+                        <img src="images/default-avatar.png"
+                             alt="No Photo"
+                             class="img-thumbnail"
+                             style="width:150px; height:150px; object-fit:cover; opacity:0.6;" />
+                        <div><small class="text-muted">No photo available</small></div>
+                    }
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="detail-group">
+                                <label class="detail-label">Client Number:</label>
+                                <span class="detail-value">@clientDetails.ClientNum</span>
+                            </div>
+                            <div class="detail-group">
+                                <label class="detail-label">Full Name:</label>
+                                <span class="detail-value">@clientDetails.FullName</span>
+                            </div>
+                            <div class="detail-group">
+                                <label class="detail-label">Gender:</label>
+                                <span class="detail-value">@clientDetails.Gender</span>
+                            </div>
+                            <div class="detail-group">
+                                <label class="detail-label">Mobile:</label>
+                                <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.Mobile1) ? "Not provided" : clientDetails.Mobile1)</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-group">
+                                <label class="detail-label">Email:</label>
+                                <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.Email) ? "Not provided" : clientDetails.Email)</span>
+                            </div>
+                            <div class="detail-group">
+                                <label class="detail-label">Branch Name:</label>
+                                <span class="detail-value">@clientDetails.BranchName</span>
+                            </div>
+                            <div class="detail-group">
+                                <label class="detail-label">Branch Number:</label>
+                                <span class="detail-value">@clientDetails.BranchNumber</span>
+                            </div>
+                            <div class="detail-group">
+                                <label class="detail-label">Relationship Officer:</label>
+                                <span class="detail-value">@(clientDetails.RelationshipOfficer ?? "N/A")</span>
+                            </div>
+                            <div class="detail-group">
+                                <label class="detail-label">Registration Date:</label>
+                                <span class="detail-value">@clientDetails.RegistrationDate.ToString("dd MMM yyyy")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Business Information (if available) -->
+            @if (!string.IsNullOrEmpty(clientDetails.BusinessName))
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Business Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="detail-group">
+                                    <label class="detail-label">Business Name:</label>
+                                    <span class="detail-value">@clientDetails.BusinessName</span>
+                                </div>
+                                <div class="detail-group">
+                                    <label class="detail-label">TIN Number:</label>
+                                    <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.TinNumber) ? "N/A" : clientDetails.TinNumber)</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="detail-group">
+                                    <label class="detail-label">Registration Number:</label>
+                                    <span class="detail-value">@(string.IsNullOrEmpty(clientDetails.BusinessRegistrationNumber) ? "N/A" : clientDetails.BusinessRegistrationNumber)</span>
+                                </div>
+                                <div class="detail-group">
+                                    <label class="detail-label">Business Type:</label>
+                                    <span class="detail-value">@(clientDetails.Profession ?? "N/A")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Savings Accounts Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        Savings Accounts 
+                        <span class="badge bg-light text-dark">@(clientDetails.SavingsAccounts?.Count ?? 0)</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (clientDetails.SavingsAccounts?.Any() == true)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Account Number</th>
+                                        <th>Account Name</th>
+                                        <th>Product</th>
+                                        <th>Balance</th>
+                                        <th>Status</th>
+                                        <th>Opening Date</th>
+                                        <th>Currency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var account in clientDetails.SavingsAccounts)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@account.AccountNumber</strong>
+                                            </td>
+                                            <td>@account.AccountName</td>
+                                            <td>@(account.SavingsProduct ?? "N/A")</td>
+                                            <td class="text-end @GetBalanceClass(account.AccountBalance)">
+                                                <strong>@account.Currency @account.AccountBalance.ToString("N2")</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetAccountStatusBadgeClass(account.AccountStatus)">
+                                                    @GetAccountStatusDisplay(account.AccountStatus)
+                                                </span>
+                                            </td>
+                                            <td>
+                                               <span>@account.AccountOpeningDate.ToString("dd MMM yyyy")</span>
+                                               
+                                            </td>
+                                            <td>@account.Currency</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                @if (clientDetails.SavingsAccounts.Count > 1)
+                                {
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <td colspan="3" class="text-end"><strong>Total Savings:</strong></td>
+                                            <td class="text-end">
+                                                <strong class="@GetBalanceClass(clientDetails.SavingsAccounts.Sum(a => a.AccountBalance))">
+                                                    @clientDetails.SavingsAccounts.First().Currency @clientDetails.SavingsAccounts.Sum(a => a.AccountBalance).ToString("N2")
+                                                </strong>
+                                            </td>
+                                            <td colspan="3"></td>
+                                        </tr>
+                                    </tfoot>
+                                }
+                            </table>
+                        </div>
+                        
+                        <!-- Savings Account Features Summary -->
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fa fa-info-circle"></i> 
+                                    @clientDetails.SavingsAccounts.Count(a => a.AllowDeposits) of @clientDetails.SavingsAccounts.Count accounts allow deposits
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fa fa-info-circle"></i> 
+                                    @clientDetails.SavingsAccounts.Count(a => a.AllowWithdrawals) of @clientDetails.SavingsAccounts.Count accounts allow withdrawals
+                                </small>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="fa fa-wallet fa-2x mb-2"></i>
+                            <p>No savings accounts found</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Loan Accounts Section -->
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        Loan Accounts 
+                        <span class="badge bg-light text-dark">@(clientDetails.LoanAccounts?.Count ?? 0)</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (clientDetails.LoanAccounts?.Any() == true)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Loan Number</th>
+                                        <th>Product</th>
+                                        <th>Principal</th>
+                                        <th>Interest</th>
+                                        <th>Total Amount</th>
+                                        <th>Status</th>
+                                        <th>Loan Officer</th>
+                                        <th>Application Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var loan in clientDetails.LoanAccounts)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@loan.LoanAccountNumber</strong>
+                                            </td>
+                                            <td>@(loan.ProductName ?? "N/A")</td>
+                                            <td class="text-end">GH₵ @((loan.PrincipalAmount).ToString("N2"))</td>
+                                            <td class="text-end">GH₵ @((loan.TotalInterest).ToString("N2"))</td>
+                                            <td class="text-end @GetLoanAmountClass(loan.PrincipalAmount + loan.TotalInterest)">
+                                                <strong>GH₵ @((loan.PrincipalAmount + loan.TotalInterest).ToString("N2"))</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge @GetLoanStatusBadgeClass(loan.LoanStatusName)">
+                                                    @GetLoanStatusDisplay(loan.LoanStatusName)
+                                                </span>
+                                            </td>
+                                            <td>@(loan.LoanOfficer ?? "N/A")</td>
+                                            <td>
+                                               <span>@loan.LoanApplicationDate.ToString("dd MMM yyyy")</span>
+                                              
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                @if (clientDetails.LoanAccounts.Count > 1)
+                                {
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <td colspan="2" class="text-end"><strong>Totals:</strong></td>
+                                            <td class="text-end">
+                                                <strong>GH₵ @clientDetails.LoanAccounts.Sum(l => l.PrincipalAmount).ToString("N2")</strong>
+                                            </td>
+                                            <td class="text-end">
+                                                <strong>GH₵ @clientDetails.LoanAccounts.Sum(l => l.TotalInterest).ToString("N2")</strong>
+                                            </td>
+                                            <td class="text-end">
+                                                <strong>GH₵ @clientDetails.LoanAccounts.Sum(l => l.PrincipalAmount + l.TotalInterest).ToString("N2")</strong>
+                                            </td>
+                                            <td colspan="3"></td>
+                                        </tr>
+                                    </tfoot>
+                                }
+                            </table>
+                        </div>
+                        
+                        <!-- Loan Summary Information -->
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <small class="text-muted">
+                                    <i class="fa fa-percentage"></i> 
+                                    Average Interest Rate: @(clientDetails.LoanAccounts.Average(l => l.InterestRate).ToString("N1"))%
+                                </small>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">
+                                    <i class="fa fa-calendar"></i> 
+                                    Average Period: @(clientDetails.LoanAccounts.Average(l => l.Period).ToString("N0")) months
+                                </small>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">
+                                    <i class="fa fa-user-tie"></i> 
+                                    Active Loans: @clientDetails.LoanAccounts.Count(l => l.LoanStatusName?.ToLower() == "active")
+                                </small>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="fa fa-hand-holding-usd fa-2x mb-2"></i>
+                            <p>No loan accounts found</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                @errorMessage
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal clientDetailsModal = null!;
+    private CBSClientViewModel? clientDetails;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    public async Task OpenModal(string clientNumber)
+    {
+        Console.WriteLine($"🔍 CBSClientDetailsModal.OpenModal called with: {clientNumber}");
+        
+        errorMessage = string.Empty;
+        clientDetails = null;
+        
+        if (clientDetailsModal == null)
+        {
+            Console.WriteLine("❌ clientDetailsModal is null in OpenModal");
+            return;
+        }
+
+        Console.WriteLine("✅ Opening ReusableModal...");
+        await clientDetailsModal.OpenModal();
+        Console.WriteLine("✅ ReusableModal opened, now loading client details...");
+        await LoadClientDetails(clientNumber);
+    }
+
+    private async Task LoadClientDetails(string clientNumber)
+    {
+        Console.WriteLine($"🔍 LoadClientDetails called for: {clientNumber}");
+        
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            Console.WriteLine("✅ Loading state set, making API call...");
+
+            var result = await ApiClient.GetCBSClientWithSavingsAccountsAsync(
+                clientNumber: clientNumber,                    
+                bP_Tenant: null,                  
+                accept_Language: null      
+            );
+
+            Console.WriteLine($"✅ API call completed, result: {result != null}");
+            
+            if (result?.Payload != null)
+            {
+                clientDetails = result.Payload;
+                Console.WriteLine($"✅ Client details loaded: {clientDetails.FullName}");
+                Console.WriteLine($"✅ Savings Accounts: {clientDetails.SavingsAccounts?.Count ?? 0}");
+                Console.WriteLine($"✅ Loan Accounts: {clientDetails.LoanAccounts?.Count ?? 0}");
+            }
+            else
+            {
+                errorMessage = "Failed to load client details.";
+                Console.WriteLine("❌ No payload in API response");
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+            Console.WriteLine($"❌ API Error loading client details: {apiEx.Message}");
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading client details: {ex.Message}";
+            Console.WriteLine($"❌ Error loading client details: {ex.Message}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+            Console.WriteLine("✅ Loading completed, StateHasChanged called");
+        }
+    }
+    
+    private string GetImageSource(string base64String)
+    {
+        if (string.IsNullOrWhiteSpace(base64String))
+            return "images/default-avatar.png";
+
+        if (base64String.StartsWith("data:image"))
+            return base64String;
+
+        return $"data:image/jpeg;base64,{base64String}";
+    }
+
+    private string GetBalanceClass(double balance)
+    {
+        return balance > 0 ? "text-success" : balance < 0 ? "text-danger" : "text-muted";
+    }
+
+    private string GetLoanAmountClass(double amount)
+    {
+        return amount > 0 ? "text-primary" : "text-muted";
+    }
+
+    private string GetAccountStatusBadgeClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "active" => "bg-success",
+            "inactive" => "bg-secondary",
+            "dormant" => "bg-warning",
+            "closed" => "bg-danger",
+            "pending" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetAccountStatusDisplay(string status)
+    {
+        return string.IsNullOrEmpty(status) ? "Unknown" : status;
+    }
+
+    private string GetLoanStatusBadgeClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "active" => "bg-success",
+            "pending" => "bg-warning",
+            "approved" => "bg-info",
+            "disbursed" => "bg-primary",
+            "closed" => "bg-secondary",
+            "defaulted" => "bg-danger",
+            "written off" => "bg-dark",
+            "completed" => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetLoanStatusDisplay(string status)
+    {
+        return string.IsNullOrEmpty(status) ? "Unknown" : status;
+    }
+}

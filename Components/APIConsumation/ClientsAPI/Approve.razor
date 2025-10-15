@@ -1,0 +1,17 @@
+@* SavingsApprove.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@inject ApiClient ApiClient
+@inject IJSRuntime JS
+
+
+<ReusableApprove
+    ButtonText="Approve Savings"
+    IconClass="icon-wallet"
+    ValidationUrl="/api/savingsapproval/validate-and-approve"
+    RedirectUrl="/clients/cbs/savings"
+    DialogTitle="Enter Account Number to Approve"
+    InputPlaceholder="e.g., A010010010002"
+    ParameterName="AccountNumber"/>
+    
+    

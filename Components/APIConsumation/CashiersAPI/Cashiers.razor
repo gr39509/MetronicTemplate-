@@ -1,4 +1,4 @@
-@page "/cashiers"
+@page "/"
 @using Microsoft.AspNetCore.Authorization
 @using NovaAccounts.SharedModels.DataFields
 @using NovaAccounts.Components.Layout
@@ -13,9 +13,6 @@
 @layout MainLayout
 
 <PageTitle>CBS Clients</PageTitle>
-
-@* <Nav></Nav> *@
-@* *@
 
 @* The below codes are very important for the modals to open *@
 <CashierDetailsModal @ref="cashierDetailsModal" />
@@ -187,7 +184,7 @@ else
         }
         catch (ApiException ex)
         {
-            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            errorMessage = $"Server error ({ex.StatusCode}). Please try and login again.";
             Console.WriteLine($"❌ API Exception: {ex.Message}");
         }
         catch (Exception ex)
@@ -243,37 +240,7 @@ else
                         : $"<a href='tel:{agentAccountNumber}'>{agentAccountNumber}</a>";
                 }
             },
-            // new()
-            // {
-            //     Header = "EMAIL",
-            //     PropertyName = nameof(CBSClientViewModel.Email),
-            //     CustomRenderer = (item) =>
-            //     {
-            //         var email = ((CBSClientViewModel)item).Email;
-            //         return string.IsNullOrEmpty(email)
-            //             ? "<span class='text-muted'>Not provided</span>"
-            //             : $"<a href='mailto:{email}'>{email}</a>";
-            //     }
-            // },
-            // new()
-            // {
-            //     Header = "BRANCH",
-            //     PropertyName = nameof(CBSClientViewModel.BranchName),
-            //     CustomRenderer = (item) =>
-            //     {
-            //         var branch = ((CBSClientViewModel)item).BranchName;
-            //         return string.IsNullOrEmpty(branch)
-            //             ? "<span class='text-muted'>N/A</span>"
-            //             : branch;
-            //     }
-            // },
-            // new()
-            // {
-            //     Header = "RELATIONSHIP OFFICER",
-            //     PropertyName = nameof(CBSClientViewModel.RelationshipOfficer),
-            //     CustomRenderer = (item) =>
-            //         $"<span>{((CBSClientViewModel)item).RelationshipOfficer ?? "N/A"}</span>"
-            // },
+           
             new()
             {
                 Header = "ACTIONS",

@@ -168,6 +168,9 @@ else
                 accept_Language: null
             );
 
+           
+
+
             if (result?.Payload != null)
             {
                 cbsClients = result.Payload.ToList();
@@ -186,7 +189,7 @@ else
         }
         catch (ApiException ex)
         {
-            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            errorMessage = $"Server error ({ex.StatusCode}). Please try and login again.";
             Console.WriteLine($"❌ API Exception: {ex.Message}");
         }
         catch (Exception ex)

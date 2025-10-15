@@ -1,0 +1,15 @@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@inject ApiClient ApiClient
+@inject IJSRuntime JS
+
+
+<ReusableApprove
+    ButtonText="Close Branch Session"
+    IconClass="icon-wallet"
+    ValidationUrl="/api/branchsession/close"
+    RedirectUrl="/clients/cbs/savings"
+    DialogTitle="Enter Branch Code to Close"
+    InputPlaceholder="e.g., A010010010002"
+    ConfirmButtonText="Close Session"
+    ParameterName="BranchCode"/>
