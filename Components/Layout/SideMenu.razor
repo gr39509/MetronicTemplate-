@@ -54,7 +54,16 @@
                             <SubMenuLink Text="All Cashiers" Path="/"/>
                            
                         </MenuFirstLevel>
+                        <MenuFirstLevel Text="Transactions" Icon="fa fa-users">
+                            <SubMenuLink Text="Get Batch Trans" Path="/get-transactions-per-batch"/>
+                            <SubMenuLink Text="Cashier Transactions" Path="/cashier-transactions"/>
+                            <SubMenuLink Text="Transactions Per Date" Path="/transactions-by-date"/>
+                            <SubMenuLink Text="Temp Transactions" Path="/temp-transactions"/>
+                            <SubMenuLink Text="Transactions Pending" Path="/transactions-pending-approval"/>
+                            <SubMenuLink Text="Transactions Batch Summary" Path="/transactions-batch-summary"/>
+                        </MenuFirstLevel>
                         <MenuFirstLevelLink Text="Branch Holidays" Path="/get-branch-holidays" Icon="icon-wallet"/>
+                        <MenuFirstLevelLink Text="Account Types" Path="/account-types" Icon="icon-wallet"/>
                         <MenuFirstLevel Text="CBS Clients" Icon="fa fa-users">
                             <SubMenuLink Text="All Clients" Path="/clients"/>
                             <SubMenuLink Text="CBS Client" Path="/clients/cbs"/>
@@ -64,6 +73,11 @@
                             <SubMenuLink Text="Get Clients Docs" Path="/get-client-documents"/>
                             <SubMenuLink Text="Get Ledger Per Product" Path="/get-ledger-items-per-product"/>
                             <SubMenuLink Text="Get Client ledger Items" Path="/get-client-ledger-items"/>
+                        </MenuFirstLevel>
+                        <MenuFirstLevel Text="Configurations" Icon="fa fa-users">
+                            <SubMenuLink Text="Document Types" Path="/document-types"/>
+                            <SubMenuLink Text="Working Status" Path="/working-statuses"/>
+                            <SubMenuLink Text="Savings Product Charges" Path="/savings-product-charges"/>
                         </MenuFirstLevel>
                         <MenuFirstLevelLink Text="Audit Logs" Path="/get-audit-logs" Icon="icon-wallet"/>
                     </ul>

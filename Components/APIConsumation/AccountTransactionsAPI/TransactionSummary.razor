@@ -1,0 +1,877 @@
+@page "/transactions-batch-summary"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Transactions Batch Summary
+        <small>View and manage transaction batches</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-layers font-dark"></i>
+                <span class="caption-subject bold uppercase">Batch Summary</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadBatchSummary" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@batchSummaries.Count</h4>
+                                    <small>Total Batches</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-cubes fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@approvedBatches</h4>
+                                    <small>Approved</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@pendingBatches</h4>
+                                    <small>Pending</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-clock-o fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@uniqueUsers</h4>
+                                    <small>Unique Users</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-users fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fa fa-filter me-2"></i>
+                                Filters
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Status</label>
+                                        <select class="form-select" @bind="selectedStatus">
+                                            <option value="">All Status</option>
+                                            <option value="Approved">Approved</option>
+                                            <option value="Pending">Pending</option>
+                                            <option value="Rejected">Rejected</option>
+                                            <option value="Processing">Processing</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">User ID</label>
+                                        <input type="text" class="form-control" @bind="filterUserId" placeholder="Filter by user..." />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Batch Number</label>
+                                        <input type="text" class="form-control" @bind="filterBatchNumber" placeholder="Filter by batch..." />
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Branch</label>
+                                        <input type="text" class="form-control" @bind="filterBranch" placeholder="Filter by branch..." />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <button class="btn btn-info me-2" @onclick="ApplyFilters">
+                                        <i class="fa fa-search"></i> Apply Filters
+                                    </button>
+                                    <button class="btn btn-secondary" @onclick="ClearFilters">
+                                        <i class="fa fa-times"></i> Clear Filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (batchSummaries?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-list-alt me-2"></i>
+                                    Batch Summary
+                                    <span class="badge bg-light text-dark ms-2">@filteredBatches.Count records</span>
+                                    @if (!string.IsNullOrEmpty(selectedStatus))
+                                    {
+                                        <span class="badge bg-info ms-2">Status: @selectedStatus</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(filterUserId))
+                                    {
+                                        <span class="badge bg-info ms-2">User: @filterUserId</span>
+                                    }
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="AccTransactionsBatchSummaryView"
+                                                 Data="@filteredBatches"
+                                                 Columns="@batchColumns"
+                                                 Options="@batchOptions"
+                                                 OnRowClick="@OnBatchRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Batch Details Modal -->
+                @if (showBatchModal && selectedBatch != null)
+                {
+                    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fa fa-info-circle me-2"></i>
+                                        Batch Details - @selectedBatch.BatchNumber
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" @onclick="CloseBatchModal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="detail-group">
+                                                <span class="detail-label">Batch Number</span>
+                                                <span class="detail-value"><code>@selectedBatch.BatchNumber</code></span>
+                                            </div>
+                                            <div class="detail-group">
+                                                <span class="detail-label">Voucher Number</span>
+                                                <span class="detail-value">@selectedBatch.VoucherNumber</span>
+                                            </div>
+                                            <div class="detail-group">
+                                                <span class="detail-label">Transaction Date</span>
+                                                <span class="detail-value">@selectedBatch.TransactionDate.ToString("dd MMM yyyy HH:mm")</span>
+                                            </div>
+                                            <div class="detail-group">
+                                                <span class="detail-label">Initiated By</span>
+                                                <span class="detail-value"><code>@selectedBatch.UserID</code></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="detail-group">
+                                                <span class="detail-label">Status</span>
+                                                <span class="detail-value">
+                                                    <span class="badge @GetStatusBadgeClass(selectedBatch.Status)">@selectedBatch.Status</span>
+                                                </span>
+                                            </div>
+                                            <div class="detail-group">
+                                                <span class="detail-label">Approved By</span>
+                                                <span class="detail-value">
+                                                    @if (string.IsNullOrEmpty(selectedBatch.UserApproved))
+                                                    {
+                                                        <span class="text-muted">Not approved</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <code>@selectedBatch.UserApproved</code>
+                                                    }
+                                                </span>
+                                            </div>
+                                            <div class="detail-group">
+                                                <span class="detail-label">Branch Code</span>
+                                                <span class="detail-value"><code>@selectedBatch.BranchCode</code></span>
+                                            </div>
+                                            <div class="detail-group">
+                                                <span class="detail-label">Batch ID</span>
+                                                <span class="detail-value">@selectedBatch.Id</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="card">
+                                                <div class="card-header bg-light">
+                                                    <h6 class="mb-0">Batch Actions</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-success me-2" @onclick="ApproveBatch" disabled="@(selectedBatch.Status == "Approved")">
+                                                            <i class="fa fa-check"></i> Approve Batch
+                                                        </button>
+                                                        <button class="btn btn-warning me-2" @onclick="ViewBatchTransactions">
+                                                            <i class="fa fa-eye"></i> View Transactions
+                                                        </button>
+                                                        <button class="btn btn-info" @onclick="ExportBatchDetails">
+                                                            <i class="fa fa-download"></i> Export Details
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" @onclick="CloseBatchModal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Batch Summaries Found</h5>
+                            <p class="mb-0">No transaction batch summaries available at the moment.</p>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading batch summaries...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<AccTransactionsBatchSummaryView> batchSummaries = new();
+    private List<AccTransactionsBatchSummaryView> filteredBatches = new();
+    private List<DataTableColumn> batchColumns = new();
+    private DataTableOptions batchOptions = new();
+    private bool isLoading = true;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    
+    // Filter fields
+    private string selectedStatus = "";
+    private string filterUserId = "";
+    private string filterBatchNumber = "";
+    private string filterBranch = "";
+    
+    // Modal fields
+    private bool showBatchModal = false;
+    private AccTransactionsBatchSummaryView selectedBatch = null;
+    
+    // Statistics
+    private int approvedBatches = 0;
+    private int pendingBatches = 0;
+    private int uniqueUsers = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureBatchTable();
+        await LoadBatchSummary();
+    }
+
+    private void ConfigureBatchTable()
+    {
+        batchColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "BATCH NUMBER",
+                PropertyName = nameof(AccTransactionsBatchSummaryView.BatchNumber),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var batch = ((AccTransactionsBatchSummaryView)item).BatchNumber;
+                    return string.IsNullOrEmpty(batch)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{batch}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "VOUCHER NUMBER",
+                PropertyName = nameof(AccTransactionsBatchSummaryView.VoucherNumber),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var voucher = ((AccTransactionsBatchSummaryView)item).VoucherNumber;
+                    return string.IsNullOrEmpty(voucher)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code>{voucher}</code>";
+                }
+            },
+            new()
+            {
+                Header = "TRANSACTION DATE",
+                PropertyName = nameof(AccTransactionsBatchSummaryView.TransactionDate),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var date = ((AccTransactionsBatchSummaryView)item).TransactionDate;
+                    return $"<small>{date:dd MMM yyyy HH:mm}</small>";
+                }
+            },
+            new()
+            {
+                Header = "USER ID",
+                PropertyName = nameof(AccTransactionsBatchSummaryView.UserID),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var user = ((AccTransactionsBatchSummaryView)item).UserID;
+                    return string.IsNullOrEmpty(user)
+                        ? "<span class='text-muted'>System</span>"
+                        : $"<code>{user}</code>";
+                }
+            },
+            new()
+            {
+                Header = "APPROVED BY",
+                PropertyName = nameof(AccTransactionsBatchSummaryView.UserApproved),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var approvedBy = ((AccTransactionsBatchSummaryView)item).UserApproved;
+                    return string.IsNullOrEmpty(approvedBy)
+                        ? "<span class='text-muted'>Not approved</span>"
+                        : $"<code class='text-success'>{approvedBy}</code>";
+                }
+            },
+            new()
+            {
+                Header = "STATUS",
+                PropertyName = nameof(AccTransactionsBatchSummaryView.Status),
+                Width = 100,
+                CustomRenderer = (item) =>
+                {
+                    var status = ((AccTransactionsBatchSummaryView)item).Status;
+                    return $"<span class='badge {GetStatusBadgeClass(status)}'>{status}</span>";
+                }
+            },
+            new()
+            {
+                Header = "BRANCH CODE",
+                PropertyName = nameof(AccTransactionsBatchSummaryView.BranchCode),
+                Width = 100,
+                CustomRenderer = (item) =>
+                {
+                    var branch = ((AccTransactionsBatchSummaryView)item).BranchCode;
+                    return string.IsNullOrEmpty(branch)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code>{branch}</code>";
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var batch = (AccTransactionsBatchSummaryView)item;
+                    return $@"
+                        <div class='btn-group btn-group-sm' role='group'>
+                            <button type='button' class='btn btn-info btn-xs' onclick='viewBatchDetails({batch.Id})' title='View Details'>
+                                <i class='fa fa-eye'></i>
+                            </button>
+                            <button type='button' class='btn btn-success btn-xs' onclick='viewBatchTransactions({batch.Id})' title='View Transactions'>
+                                <i class='fa fa-list'></i>
+                            </button>
+                        </div>";
+                }
+            }
+        };
+
+        batchOptions = new DataTableOptions
+        {
+            PageLength = 20,
+            LengthMenu = new[] { 20, 50, 100 },
+            LengthMenuLabels = new[] { "20", "50", "100" },
+            SearchPlaceholder = "Search batches...",
+            TableId = "batchSummaryTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-steel font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 2, "desc" } }, // Default sort by transaction date (newest first)
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search batches:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ batches",
+                    ["infoEmpty"] = "No batches found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total batches)",
+                    ["emptyTable"] = "No batch data available",
+                    ["zeroRecords"] = "No matching batches found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadBatchSummary()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading batch summaries...");
+
+            var result = await ApiClient.GetAccountTransactionsBatchSummaryAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                batchSummaries = result.Payload.ToList();
+                ApplyFilters(); // Apply initial filters
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {batchSummaries.Count} batch summary records");
+            }
+            else
+            {
+                batchSummaries = new List<AccTransactionsBatchSummaryView>();
+                filteredBatches = new List<AccTransactionsBatchSummaryView>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No batch summary records found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load batch summaries.";
+            Console.WriteLine($"❌ API Error loading batch summaries: {apiEx.Message}");
+            batchSummaries = new List<AccTransactionsBatchSummaryView>();
+            filteredBatches = new List<AccTransactionsBatchSummaryView>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            batchSummaries = new List<AccTransactionsBatchSummaryView>();
+            filteredBatches = new List<AccTransactionsBatchSummaryView>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load batch summaries. Please check your connection.";
+            Console.WriteLine($"❌ Error loading batch summaries: {ex.Message}");
+            batchSummaries = new List<AccTransactionsBatchSummaryView>();
+            filteredBatches = new List<AccTransactionsBatchSummaryView>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        filteredBatches = batchSummaries;
+
+        if (!string.IsNullOrEmpty(selectedStatus))
+        {
+            filteredBatches = filteredBatches.Where(b => 
+                b.Status?.Equals(selectedStatus, StringComparison.OrdinalIgnoreCase) == true).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(filterUserId))
+        {
+            filteredBatches = filteredBatches.Where(b => 
+                b.UserID?.Contains(filterUserId, StringComparison.OrdinalIgnoreCase) == true).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(filterBatchNumber))
+        {
+            filteredBatches = filteredBatches.Where(b => 
+                b.BatchNumber?.Contains(filterBatchNumber, StringComparison.OrdinalIgnoreCase) == true).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(filterBranch))
+        {
+            filteredBatches = filteredBatches.Where(b => 
+                b.BranchCode?.Contains(filterBranch, StringComparison.OrdinalIgnoreCase) == true).ToList();
+        }
+
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        selectedStatus = "";
+        filterUserId = "";
+        filterBatchNumber = "";
+        filterBranch = "";
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        approvedBatches = batchSummaries.Count(b => 
+            b.Status?.Equals("Approved", StringComparison.OrdinalIgnoreCase) == true);
+        pendingBatches = batchSummaries.Count(b => 
+            b.Status?.Equals("Pending", StringComparison.OrdinalIgnoreCase) == true);
+        uniqueUsers = batchSummaries.Select(b => b.UserID).Distinct().Count();
+    }
+
+    private void ResetStatistics()
+    {
+        approvedBatches = 0;
+        pendingBatches = 0;
+        uniqueUsers = 0;
+    }
+
+    private string GetStatusBadgeClass(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "approved" => "bg-success",
+            "pending" => "bg-warning",
+            "rejected" => "bg-danger",
+            "processing" => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+
+    [JSInvokable]
+    public async Task ViewBatchDetails(long batchId)
+    {
+        selectedBatch = batchSummaries.FirstOrDefault(b => b.Id == batchId);
+        if (selectedBatch != null)
+        {
+            showBatchModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void ViewBatchTransactions(long batchId)
+    {
+        // Navigate to batch transactions page or open modal
+        Console.WriteLine($"View transactions for batch: {batchId}");
+        // You can implement navigation to a transactions page filtered by batch
+    }
+
+    private void CloseBatchModal()
+    {
+        showBatchModal = false;
+        selectedBatch = null;
+        StateHasChanged();
+    }
+
+    private async Task ApproveBatch()
+    {
+        if (selectedBatch == null) return;
+
+        try
+        {
+            // TODO: Implement actual batch approval API call
+            // For now, we'll just simulate success
+            await Task.Delay(1000); // Simulate API call
+            
+            // Update the batch status
+            selectedBatch.Status = "Approved";
+            selectedBatch.UserApproved = "CurrentUser"; // Replace with actual user
+            
+            // Recalculate statistics
+            CalculateStatistics();
+            ApplyFilters();
+            
+            CloseBatchModal();
+            
+            Console.WriteLine($"✅ Approved batch: {selectedBatch.BatchNumber}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to approve batch. Please try again.";
+            Console.WriteLine($"❌ Error approving batch: {ex.Message}");
+        }
+    }
+
+    private void ViewBatchTransactions()
+    {
+        if (selectedBatch == null) return;
+        
+        // Navigate to transactions page filtered by this batch
+        // NavigationManager.NavigateTo($"/transactions?batch={selectedBatch.BatchNumber}");
+        Console.WriteLine($"Navigate to transactions for batch: {selectedBatch.BatchNumber}");
+    }
+
+    private async Task ExportBatchDetails()
+    {
+        if (selectedBatch == null) return;
+
+        try
+        {
+            var csvContent = $"Batch Details for {selectedBatch.BatchNumber}\n";
+            csvContent += $"Batch Number,{selectedBatch.BatchNumber}\n";
+            csvContent += $"Voucher Number,{selectedBatch.VoucherNumber}\n";
+            csvContent += $"Transaction Date,{selectedBatch.TransactionDate:yyyy-MM-dd HH:mm}\n";
+            csvContent += $"User ID,{selectedBatch.UserID}\n";
+            csvContent += $"Approved By,{selectedBatch.UserApproved}\n";
+            csvContent += $"Status,{selectedBatch.Status}\n";
+            csvContent += $"Branch Code,{selectedBatch.BranchCode}\n";
+            csvContent += $"Batch ID,{selectedBatch.Id}\n";
+
+            var fileName = $"BatchDetails_{selectedBatch.BatchNumber}_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export batch details.";
+            Console.WriteLine($"❌ Error exporting batch details: {ex.Message}");
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnBatchRowClick(AccTransactionsBatchSummaryView batch)
+    {
+        Console.WriteLine($"Batch row clicked: {batch.BatchNumber} - {batch.Status}");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .detail-group {
+        margin-bottom: 1rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #555;
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .detail-value {
+        color: #333;
+        font-size: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.viewBatchDetails = function(batchId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ViewBatchDetails', batchId)
+                .catch(err => {
+                    console.error('Error calling ViewBatchDetails:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.viewBatchTransactions = function(batchId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ViewBatchTransactions', batchId)
+                .catch(err => {
+                    console.error('Error calling ViewBatchTransactions:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

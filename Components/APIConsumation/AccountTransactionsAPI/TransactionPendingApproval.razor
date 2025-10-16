@@ -1,0 +1,700 @@
+@page "/transactions-pending-approval"
+@using Microsoft.AspNetCore.Authorization
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Transactions Pending Approval
+        <small>Review and approve pending transactions</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-hourglass font-dark"></i>
+                <span class="caption-subject bold uppercase">Pending Transactions</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadPendingTransactions" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@pendingTransactions.Count</h4>
+                                    <small>Total Pending</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-clock-o fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">GHC@totalPendingAmount.ToString("N2")</h4>
+                                    <small>Total Amount</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-money fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@uniqueAccounts</h4>
+                                    <small>Unique Accounts</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-users fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@uniqueUsers</h4>
+                                    <small>Initiated By</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-user fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-success" @onclick="ApproveSelected" disabled="@(!selectedTransactions.Any() || isProcessing)">
+                            <i class="fa fa-check"></i> Approve Selected (@selectedTransactions.Count)
+                        </button>
+                        <button type="button" class="btn btn-danger" @onclick="RejectSelected" disabled="@(!selectedTransactions.Any() || isProcessing)">
+                            <i class="fa fa-times"></i> Reject Selected
+                        </button>
+                        <button type="button" class="btn btn-info" @onclick="SelectAll" disabled="@(!pendingTransactions.Any())">
+                            <i class="fa fa-check-square"></i> Select All
+                        </button>
+                        <button type="button" class="btn btn-secondary" @onclick="ClearSelection" disabled="@(!selectedTransactions.Any())">
+                            <i class="fa fa-square-o"></i> Clear Selection
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Overlay -->
+            @if (isProcessing)
+            {
+                <div class="alert alert-info text-center">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    Processing... Please wait
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (pendingTransactions?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-warning text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-list-alt me-2"></i>
+                                    Pending Transactions
+                                    <span class="badge bg-light text-dark ms-2">@pendingTransactions.Count records</span>
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="AccountTransactionViewModel"
+                                                 Data="@pendingTransactions"
+                                                 Columns="@transactionColumns"
+                                                 Options="@transactionOptions"
+                                                 OnRowClick="@OnTransactionRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success text-center">
+                            <i class="fa fa-check-circle fa-2x mb-3"></i>
+                            <h5>No Pending Transactions</h5>
+                            <p class="mb-0">All transactions have been processed. Great job!</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<AccountTransactionViewModel> pendingTransactions = new();
+    private List<DataTableColumn> transactionColumns = new();
+    private DataTableOptions transactionOptions = new();
+    private HashSet<int> selectedTransactions = new();
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    
+    // Summary fields
+    private double totalPendingAmount = 0;
+    private int uniqueAccounts = 0;
+    private int uniqueUsers = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureTransactionTable();
+        await LoadPendingTransactions();
+    }
+
+    private void ConfigureTransactionTable()
+    {
+        transactionColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "SELECT",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 50,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var transaction = (AccountTransactionViewModel)item;
+                    var isChecked = selectedTransactions.Contains(transaction.Id);
+                    return $"<input type='checkbox' class='form-check-input' {(isChecked ? "checked" : "")} onchange='toggleTransactionSelection({transaction.Id}, this.checked)'>";
+                }
+            },
+            new()
+            {
+                Header = "TRANSACTION DATE",
+                PropertyName = nameof(AccountTransactionViewModel.TransactionDate),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var date = ((AccountTransactionViewModel)item).TransactionDate;
+                    return $"<small>{date:dd MMM yyyy HH:mm}</small>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT NUMBER",
+                PropertyName = nameof(AccountTransactionViewModel.AccountNumber),
+                Width = 130,
+                CustomRenderer = (item) =>
+                {
+                    var account = ((AccountTransactionViewModel)item).AccountNumber;
+                    return string.IsNullOrEmpty(account)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code>{account}</code>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT NAME",
+                PropertyName = nameof(AccountTransactionViewModel.AccountName),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var name = ((AccountTransactionViewModel)item).AccountName;
+                    return string.IsNullOrEmpty(name)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong>{name}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT TYPE",
+                PropertyName = nameof(AccountTransactionViewModel.AccountType),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var type = ((AccountTransactionViewModel)item).AccountType;
+                    return string.IsNullOrEmpty(type)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge bg-info'>{type}</span>";
+                }
+            },
+            new()
+            {
+                Header = "TRANSACTION TYPE",
+                PropertyName = nameof(AccountTransactionViewModel.TransType),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var type = ((AccountTransactionViewModel)item).TransType;
+                    var badgeClass = type?.ToLower() switch
+                    {
+                        "deposit" or "credit" => "bg-success",
+                        "withdrawal" or "debit" => "bg-danger",
+                        "transfer" => "bg-info",
+                        "payment" => "bg-primary",
+                        "fee" => "bg-warning",
+                        _ => "bg-secondary"
+                    };
+                    return string.IsNullOrEmpty(type)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge {badgeClass}'>{type}</span>";
+                }
+            },
+            new()
+            {
+                Header = "AMOUNT",
+                PropertyName = nameof(AccountTransactionViewModel.TransAmount),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var amount = ((AccountTransactionViewModel)item).TransAmount;
+                    var amountClass = amount >= 0 ? "text-success" : "text-danger";
+                    var symbol = amount >= 0 ? "" : "-";
+                    return $"<span class='{amountClass} fw-bold'>{symbol}${Math.Abs(amount):N2}</span>";
+                }
+            },
+            new()
+            {
+                Header = "DESCRIPTION",
+                PropertyName = nameof(AccountTransactionViewModel.TransNarration),
+                CustomRenderer = (item) =>
+                {
+                    var narration = ((AccountTransactionViewModel)item).TransNarration;
+                    return string.IsNullOrEmpty(narration)
+                        ? "<span class='text-muted'>No description</span>"
+                        : $"<div class='text-truncate' style='max-width: 200px;' title='{narration}'>{narration}</div>";
+                }
+            },
+            new()
+            {
+                Header = "REFERENCE",
+                PropertyName = nameof(AccountTransactionViewModel.TransRef),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var reference = ((AccountTransactionViewModel)item).TransRef;
+                    return string.IsNullOrEmpty(reference)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code class='small'>{reference}</code>";
+                }
+            },
+            new()
+            {
+                Header = "VOUCHER #",
+                PropertyName = nameof(AccountTransactionViewModel.VoucherNumber),
+                Width = 100,
+                CustomRenderer = (item) =>
+                {
+                    var voucher = ((AccountTransactionViewModel)item).VoucherNumber;
+                    return string.IsNullOrEmpty(voucher)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<small>{voucher}</small>";
+                }
+            },
+            new()
+            {
+                Header = "INITIATED BY",
+                PropertyName = nameof(AccountTransactionViewModel.UserID),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var user = ((AccountTransactionViewModel)item).UserID;
+                    return string.IsNullOrEmpty(user)
+                        ? "<span class='text-muted'>System</span>"
+                        : $"<code>{user}</code>";
+                }
+            },
+            new()
+            {
+                Header = "CURRENCY",
+                PropertyName = nameof(AccountTransactionViewModel.Currency),
+                Width = 80,
+                CustomRenderer = (item) =>
+                {
+                    var currency = ((AccountTransactionViewModel)item).Currency;
+                    return string.IsNullOrEmpty(currency)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge bg-secondary'>{currency}</span>";
+                }
+            }
+        };
+
+        transactionOptions = new DataTableOptions
+        {
+            PageLength = 20,
+            LengthMenu = new[] { 20, 50, 100 },
+            LengthMenuLabels = new[] { "20", "50", "100" },
+            SearchPlaceholder = "Search pending transactions...",
+            TableId = "pendingTransactionsTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-yellow-gold font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "desc" } }, // Default sort by transaction date (newest first)
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search pending transactions:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ pending transactions",
+                    ["infoEmpty"] = "No pending transactions found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total records)",
+                    ["emptyTable"] = "No pending transaction data available",
+                    ["zeroRecords"] = "No matching pending transactions found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadPendingTransactions()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading pending transactions...");
+
+            var result = await ApiClient.GetAccountTransactionsPendingApprovalQueryAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                pendingTransactions = result.Payload.ToList();
+                CalculateSummary();
+                Console.WriteLine($"✅ Found {pendingTransactions.Count} pending transaction records");
+            }
+            else
+            {
+                pendingTransactions = new List<AccountTransactionViewModel>();
+                ResetSummary();
+                Console.WriteLine($"ℹ️ No pending transaction records found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load pending transactions.";
+            Console.WriteLine($"❌ API Error loading pending transactions: {apiEx.Message}");
+            pendingTransactions = new List<AccountTransactionViewModel>();
+            ResetSummary();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            pendingTransactions = new List<AccountTransactionViewModel>();
+            ResetSummary();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load pending transactions. Please check your connection.";
+            Console.WriteLine($"❌ Error loading pending transactions: {ex.Message}");
+            pendingTransactions = new List<AccountTransactionViewModel>();
+            ResetSummary();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CalculateSummary()
+    {
+        totalPendingAmount = pendingTransactions.Sum(t => t.TransAmount);
+        uniqueAccounts = pendingTransactions.Select(t => t.AccountNumber).Distinct().Count();
+        uniqueUsers = pendingTransactions.Select(t => t.UserID).Distinct().Count();
+    }
+
+    private void ResetSummary()
+    {
+        totalPendingAmount = 0;
+        uniqueAccounts = 0;
+        uniqueUsers = 0;
+    }
+
+    private void SelectAll()
+    {
+        selectedTransactions = pendingTransactions.Select(t => t.Id).ToHashSet();
+        StateHasChanged();
+    }
+
+    private void ClearSelection()
+    {
+        selectedTransactions.Clear();
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void ToggleTransactionSelection(int transactionId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            selectedTransactions.Add(transactionId);
+        }
+        else
+        {
+            selectedTransactions.Remove(transactionId);
+        }
+        StateHasChanged();
+    }
+
+    private async Task ApproveSelected()
+    {
+        if (!selectedTransactions.Any()) return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+
+            // TODO: Implement actual approval API call
+            // For now, we'll just simulate success
+            await Task.Delay(1000); // Simulate API call
+            
+            // Remove approved transactions from the list
+            pendingTransactions = pendingTransactions.Where(t => !selectedTransactions.Contains(t.Id)).ToList();
+            
+            successMessage = $"Successfully approved {selectedTransactions.Count} transaction(s)";
+            selectedTransactions.Clear();
+            CalculateSummary();
+            
+            Console.WriteLine($"✅ Approved {selectedTransactions.Count} transactions");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to approve transactions. Please try again.";
+            Console.WriteLine($"❌ Error approving transactions: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RejectSelected()
+    {
+        if (!selectedTransactions.Any()) return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+
+            // TODO: Implement actual rejection API call
+            // For now, we'll just simulate success
+            await Task.Delay(1000); // Simulate API call
+            
+            // Remove rejected transactions from the list
+            pendingTransactions = pendingTransactions.Where(t => !selectedTransactions.Contains(t.Id)).ToList();
+            
+            successMessage = $"Successfully rejected {selectedTransactions.Count} transaction(s)";
+            selectedTransactions.Clear();
+            CalculateSummary();
+            
+            Console.WriteLine($"✅ Rejected {selectedTransactions.Count} transactions");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to reject transactions. Please try again.";
+            Console.WriteLine($"❌ Error rejecting transactions: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnTransactionRowClick(AccountTransactionViewModel transaction)
+    {
+        Console.WriteLine($"Transaction row clicked: {transaction.TransType} - {transaction.AccountNumber} - ${transaction.TransAmount:N2}");
+        // add additional functionality here, like opening a details modal
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .form-check-input {
+        margin: 0;
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.toggleTransactionSelection = function(transactionId, isSelected) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ToggleTransactionSelection', transactionId, isSelected)
+                .catch(err => {
+                    console.error('Error calling ToggleTransactionSelection:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

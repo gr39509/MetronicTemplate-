@@ -1,0 +1,876 @@
+@page "/account-types"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Account Types
+        <small>Manage and view all account types</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-briefcase font-dark"></i>
+                <span class="caption-subject bold uppercase">Account Types Management</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadAccountTypes" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Account Type">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@accountTypes.Count</h4>
+                                    <small>Total Account Types</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-list-alt fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@uniqueSortCodes</h4>
+                                    <small>Unique Sort Codes</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-sort-numeric-asc fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@highestSortCode</h4>
+                                    <small>Highest Sort Code</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-sort-amount-desc fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Section -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fa fa-search me-2"></i>
+                                Search & Filter
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Search Account Types</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                            <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by account type ID or name..." />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Sort By</label>
+                                        <select class="form-select" @bind="sortBy">
+                                            <option value="name">Account Type Name</option>
+                                            <option value="id">Account Type ID</option>
+                                            <option value="sortcode">Sort Code</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Sort Order</label>
+                                        <select class="form-select" @bind="sortOrder">
+                                            <option value="asc">Ascending</option>
+                                            <option value="desc">Descending</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <button class="btn btn-secondary" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear Search
+                                    </button>
+                                    <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredAccountTypes.Any())">
+                                        <i class="fa fa-download"></i> Export to Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredAccountTypes?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-list-alt me-2"></i>
+                                    Account Types
+                                    <span class="badge bg-light text-dark ms-2">@filteredAccountTypes.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="AccountTypeViewModel"
+                                                 Data="@filteredAccountTypes"
+                                                 Columns="@accountTypeColumns"
+                                                 Options="@accountTypeOptions"
+                                                 OnRowClick="@OnAccountTypeRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Account Types Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <text>No account types found matching your search criteria.</text>
+                                }
+                                else
+                                {
+                                    <text>No account types have been configured yet.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Search
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading account types...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Account Type Modal -->
+@if (showAccountTypeModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit Account Type" : "Add New Account Type")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAccountTypeModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Account Type ID *</label>
+                        <input type="text" class="form-control" @bind="currentAccountType.AccountTypeID" 
+                               disabled="@isEditing" placeholder="Enter unique account type ID" />
+                        <small class="form-text text-muted">Unique identifier for the account type</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Account Type Name *</label>
+                        <input type="text" class="form-control" @bind="currentAccountType.AccountTypeName" 
+                               placeholder="Enter account type name" />
+                        <small class="form-text text-muted">Descriptive name for the account type</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Sort Code *</label>
+                        <input type="number" class="form-control" @bind="currentAccountType.SortCode" 
+                               placeholder="Enter sort code" />
+                        <small class="form-text text-muted">Numeric code for sorting account types</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAccountTypeModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveAccountType" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") Account Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && accountTypeToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following account type?</p>
+                    <div class="alert alert-warning">
+                        <strong>@accountTypeToDelete.AccountTypeID</strong> - @accountTypeToDelete.AccountTypeName
+                        <br />
+                        <small>Sort Code: @accountTypeToDelete.SortCode</small>
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone!
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete Account Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<AccountTypeViewModel> accountTypes = new();
+    private List<AccountTypeViewModel> filteredAccountTypes = new();
+    private List<DataTableColumn> accountTypeColumns = new();
+    private DataTableOptions accountTypeOptions = new();
+    private bool isLoading = true;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string sortBy = "name";
+    private string sortOrder = "asc";
+    
+    // Modal fields
+    private bool showAccountTypeModal = false;
+    private bool showDeleteModal = false;
+    private bool isEditing = false;
+    private AccountTypeViewModel currentAccountType = new();
+    private AccountTypeViewModel accountTypeToDelete = null;
+    
+    // Statistics
+    private int uniqueSortCodes = 0;
+    private int highestSortCode = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureAccountTypeTable();
+        await LoadAccountTypes();
+    }
+
+    private void ConfigureAccountTypeTable()
+    {
+        accountTypeColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "ACCOUNT TYPE ID",
+                PropertyName = nameof(AccountTypeViewModel.AccountTypeID),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var typeId = ((AccountTypeViewModel)item).AccountTypeID;
+                    return string.IsNullOrEmpty(typeId)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code class='fw-bold'>{typeId}</code>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT TYPE NAME",
+                PropertyName = nameof(AccountTypeViewModel.AccountTypeName),
+                CustomRenderer = (item) =>
+                {
+                    var typeName = ((AccountTypeViewModel)item).AccountTypeName;
+                    return string.IsNullOrEmpty(typeName)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{typeName}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "SORT CODE",
+                PropertyName = nameof(AccountTypeViewModel.SortCode),
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var sortCode = ((AccountTypeViewModel)item).SortCode;
+                    return $"<span class='badge bg-info'>{sortCode}</span>";
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var accountType = (AccountTypeViewModel)item;
+                    return $@"
+                        <div class='btn-group btn-group-sm' role='group'>
+                            <button type='button' class='btn btn-warning btn-xs' onclick='editAccountType(""{accountType.AccountTypeID}"")' title='Edit'>
+                                <i class='fa fa-edit'></i>
+                            </button>
+                            <button type='button' class='btn btn-danger btn-xs' onclick='deleteAccountType(""{accountType.AccountTypeID}"")' title='Delete'>
+                                <i class='fa fa-trash'></i>
+                            </button>
+                        </div>";
+                }
+            }
+        };
+
+        accountTypeOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search account types...",
+            TableId = "accountTypesTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "asc" } }, // Default sort by account type name
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search account types:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ account types",
+                    ["infoEmpty"] = "No account types found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total account types)",
+                    ["emptyTable"] = "No account type data available",
+                    ["zeroRecords"] = "No matching account types found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadAccountTypes()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading account types...");
+
+            var result = await ApiClient.GetAccountTypesAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                accountTypes = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {accountTypes.Count} account type records");
+            }
+            else
+            {
+                accountTypes = new List<AccountTypeViewModel>();
+                filteredAccountTypes = new List<AccountTypeViewModel>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No account type records found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load account types.";
+            Console.WriteLine($"❌ API Error loading account types: {apiEx.Message}");
+            accountTypes = new List<AccountTypeViewModel>();
+            filteredAccountTypes = new List<AccountTypeViewModel>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            accountTypes = new List<AccountTypeViewModel>();
+            filteredAccountTypes = new List<AccountTypeViewModel>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load account types. Please check your connection.";
+            Console.WriteLine($"❌ Error loading account types: {ex.Message}");
+            accountTypes = new List<AccountTypeViewModel>();
+            filteredAccountTypes = new List<AccountTypeViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = accountTypes.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(at =>
+                (at.AccountTypeID?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true) ||
+                (at.AccountTypeName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true)
+            );
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "id" => sortOrder == "asc" 
+                ? query.OrderBy(at => at.AccountTypeID)
+                : query.OrderByDescending(at => at.AccountTypeID),
+            "sortcode" => sortOrder == "asc" 
+                ? query.OrderBy(at => at.SortCode)
+                : query.OrderByDescending(at => at.SortCode),
+            _ => sortOrder == "asc" 
+                ? query.OrderBy(at => at.AccountTypeName)
+                : query.OrderByDescending(at => at.AccountTypeName)
+        };
+
+        filteredAccountTypes = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        uniqueSortCodes = accountTypes.Select(at => at.SortCode).Distinct().Count();
+        highestSortCode = accountTypes.Any() ? accountTypes.Max(at => at.SortCode) : 0;
+    }
+
+    private void ResetStatistics()
+    {
+        uniqueSortCodes = 0;
+        highestSortCode = 0;
+    }
+
+    private void ShowAddModal()
+    {
+        currentAccountType = new AccountTypeViewModel();
+        isEditing = false;
+        showAccountTypeModal = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditAccountType(string accountTypeId)
+    {
+        var accountType = accountTypes.FirstOrDefault(at => at.AccountTypeID == accountTypeId);
+        if (accountType != null)
+        {
+            currentAccountType = new AccountTypeViewModel
+            {
+                AccountTypeID = accountType.AccountTypeID,
+                AccountTypeName = accountType.AccountTypeName,
+                SortCode = accountType.SortCode
+            };
+            isEditing = true;
+            showAccountTypeModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteAccountType(string accountTypeId)
+    {
+        accountTypeToDelete = accountTypes.FirstOrDefault(at => at.AccountTypeID == accountTypeId);
+        if (accountTypeToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveAccountType()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(currentAccountType.AccountTypeID) || 
+                string.IsNullOrEmpty(currentAccountType.AccountTypeName))
+            {
+                errorMessage = "Account Type ID and Name are required.";
+                return;
+            }
+
+            // TODO: Implement actual API call to save account type
+            // For now, we'll simulate the save operation
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing account type
+                var existing = accountTypes.FirstOrDefault(at => at.AccountTypeID == currentAccountType.AccountTypeID);
+                if (existing != null)
+                {
+                    existing.AccountTypeName = currentAccountType.AccountTypeName;
+                    existing.SortCode = currentAccountType.SortCode;
+                }
+                successMessage = "Account type updated successfully!";
+            }
+            else
+            {
+                // Add new account type
+                if (accountTypes.Any(at => at.AccountTypeID == currentAccountType.AccountTypeID))
+                {
+                    errorMessage = "An account type with this ID already exists.";
+                    return;
+                }
+                accountTypes.Add(new AccountTypeViewModel
+                {
+                    AccountTypeID = currentAccountType.AccountTypeID,
+                    AccountTypeName = currentAccountType.AccountTypeName,
+                    SortCode = currentAccountType.SortCode
+                });
+                successMessage = "Account type created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseAccountTypeModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} account type: {currentAccountType.AccountTypeID}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} account type. Please try again.";
+            Console.WriteLine($"❌ Error saving account type: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (accountTypeToDelete == null) return;
+
+            // TODO: Implement actual API call to delete account type
+            await Task.Delay(500);
+
+            accountTypes.RemoveAll(at => at.AccountTypeID == accountTypeToDelete.AccountTypeID);
+            successMessage = "Account type deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted account type: {accountTypeToDelete.AccountTypeID}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete account type. Please try again.";
+            Console.WriteLine($"❌ Error deleting account type: {ex.Message}");
+        }
+    }
+
+    private void CloseAccountTypeModal()
+    {
+        showAccountTypeModal = false;
+        currentAccountType = new AccountTypeViewModel();
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        accountTypeToDelete = null;
+        StateHasChanged();
+    }
+
+    private bool IsSaveDisabled => 
+        string.IsNullOrEmpty(currentAccountType.AccountTypeID) || 
+        string.IsNullOrEmpty(currentAccountType.AccountTypeName);
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "Account Type ID,Account Type Name,Sort Code\n";
+            
+            foreach (var accountType in filteredAccountTypes)
+            {
+                csvContent += $"\"{accountType.AccountTypeID}\",";
+                csvContent += $"\"{accountType.AccountTypeName}\",";
+                csvContent += $"\"{accountType.SortCode}\"\n";
+            }
+
+            var fileName = $"AccountTypes_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnAccountTypeRowClick(AccountTypeViewModel accountType)
+    {
+        Console.WriteLine($"Account type row clicked: {accountType.AccountTypeName} ({accountType.AccountTypeID})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editAccountType = function(accountTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditAccountType', accountTypeId)
+                .catch(err => {
+                    console.error('Error calling EditAccountType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteAccountType = function(accountTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteAccountType', accountTypeId)
+                .catch(err => {
+                    console.error('Error calling DeleteAccountType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

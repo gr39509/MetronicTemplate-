@@ -1,0 +1,497 @@
+@page "/get-transactions-per-batch"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Get Transactions Per Batch
+        <small>Search account transactions by batch number</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-wallet font-dark"></i>
+                <span class="caption-subject bold uppercase">Search Batch Transactions</span>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="form-horizontal">
+                        <div class="form-group row mb-4">
+                            <label class="col-md-3 col-form-label text-md-right">Batch Number</label>
+                            <div class="col-md-9">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa fa-list-ol"></i></span>
+                                    <input type="text" class="form-control" @bind="batchNumber" placeholder="Enter batch number" required />
+                                </div>
+                                <small class="form-text text-muted">Enter the batch number to search for transactions</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group row">
+                            <div class="col-md-3"></div>
+                            <div class="col-md-9">
+                                <button type="button" class="btn btn-info text-white" @onclick="SearchBatchTransactions" disabled="@isLoading">
+                                    <i class="fa fa-search"></i>
+                                    @if (isLoading)
+                                    {
+                                        <span>Searching...</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="padding-left: 10px;">Search Transactions</span>
+                                    }
+                                </button>
+                                @if (transactions?.Any() == true)
+                                {
+                                    <button type="button" class="btn btn-secondary ms-2" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-8">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (transactions?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-exchange-alt me-2"></i>
+                                    Transactions for Batch: @batchNumber
+                                    <span class="badge bg-light text-dark ms-2">@transactions.Count transactions found</span>
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="AccountTransactionViewModel"
+                                                 Data="@transactions"
+                                                 Columns="@transactionColumns"
+                                                 Options="@transactionOptions"
+                                                 OnRowClick="@OnTransactionRowClick" />
+                            </div>
+                            
+                            <!-- Summary Section -->
+                            <div class="card-footer">
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Total Transactions</small>
+                                        <h5 class="mb-0">@transactions.Count</h5>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Total Amount</small>
+                                        <h5 class="mb-0 text-primary">@transactions.Sum(x => x.TransAmount).ToString("C2")</h5>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Unique Accounts</small>
+                                        <h5 class="mb-0 text-info">@transactions.Select(x => x.AccountNumber).Distinct().Count()</h5>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Transaction Types</small>
+                                        <h5 class="mb-0 text-warning">@transactions.Select(x => x.TransType).Distinct().Count()</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasSearched && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-8">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Transactions Found</h5>
+                            <p class="mb-0">No transactions found for batch number: <strong>@batchNumber</strong></p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string batchNumber = string.Empty;
+    private List<AccountTransactionViewModel> transactions = new();
+    private List<DataTableColumn> transactionColumns = new();
+    private DataTableOptions transactionOptions = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private bool hasSearched = false;
+
+    protected override void OnInitialized()
+    {
+        ConfigureTransactionTable();
+    }
+
+    private void ConfigureTransactionTable()
+    {
+        transactionColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "TRANSACTION DATE",
+                PropertyName = nameof(AccountTransactionViewModel.TransactionDate),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var date = ((AccountTransactionViewModel)item).TransactionDate;
+                    return $"<small>{date:dd MMM yyyy HH:mm}</small>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT NUMBER",
+                PropertyName = nameof(AccountTransactionViewModel.AccountNumber),
+                Width = 140,
+                CustomRenderer = (item) =>
+                {
+                    var account = ((AccountTransactionViewModel)item).AccountNumber;
+                    return string.IsNullOrEmpty(account)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{account}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT NAME",
+                PropertyName = nameof(AccountTransactionViewModel.AccountName),
+                CustomRenderer = (item) =>
+                {
+                    var name = ((AccountTransactionViewModel)item).AccountName;
+                    return string.IsNullOrEmpty(name)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : name;
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT TYPE",
+                PropertyName = nameof(AccountTransactionViewModel.AccountType),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var type = ((AccountTransactionViewModel)item).AccountType;
+                    return string.IsNullOrEmpty(type)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge bg-secondary'>{type}</span>";
+                }
+            },
+            new()
+            {
+                Header = "TRANSACTION TYPE",
+                PropertyName = nameof(AccountTransactionViewModel.TransType),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var transType = ((AccountTransactionViewModel)item).TransType;
+                    var badgeClass = transType?.ToLower() switch
+                    {
+                        "credit" or "deposit" => "bg-success",
+                        "debit" or "withdrawal" => "bg-danger",
+                        "transfer" => "bg-info",
+                        "payment" => "bg-warning",
+                        "fee" => "bg-secondary",
+                        _ => "bg-dark"
+                    };
+                    return string.IsNullOrEmpty(transType)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge {badgeClass}'>{transType}</span>";
+                }
+            },
+            new()
+            {
+                Header = "AMOUNT",
+                PropertyName = nameof(AccountTransactionViewModel.TransAmount),
+                DataType = "num",
+                CssClass = "text-right",
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var amount = ((AccountTransactionViewModel)item).TransAmount;
+                    var transType = ((AccountTransactionViewModel)item).TransType?.ToLower();
+                    var isCredit = transType == "credit" || transType == "deposit";
+                    var cssClass = isCredit ? "text-success" : "text-danger";
+                    
+                    return $"<span class='{cssClass}'><strong>{amount:C2}</strong></span>";
+                }
+            },
+            new()
+            {
+                Header = "CURRENCY",
+                PropertyName = nameof(AccountTransactionViewModel.Currency),
+                Width = 100,
+                CustomRenderer = (item) =>
+                {
+                    var currency = ((AccountTransactionViewModel)item).Currency;
+                    return string.IsNullOrEmpty(currency)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge bg-info'>{currency}</span>";
+                }
+            },
+            new()
+            {
+                Header = "REFERENCE",
+                PropertyName = nameof(AccountTransactionViewModel.TransRef),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var reference = ((AccountTransactionViewModel)item).TransRef;
+                    return string.IsNullOrEmpty(reference)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code>{reference}</code>";
+                }
+            },
+            new()
+            {
+                Header = "VOUCHER",
+                PropertyName = nameof(AccountTransactionViewModel.VoucherNumber),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var voucher = ((AccountTransactionViewModel)item).VoucherNumber;
+                    return string.IsNullOrEmpty(voucher)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong>{voucher}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "NARRATION",
+                PropertyName = nameof(AccountTransactionViewModel.TransNarration),
+                CustomRenderer = (item) =>
+                {
+                    var narration = ((AccountTransactionViewModel)item).TransNarration;
+                    return string.IsNullOrEmpty(narration)
+                        ? "<span class='text-muted'>No narration</span>"
+                        : $"<div class='text-truncate' style='max-width: 200px;' title='{narration}'>{narration}</div>";
+                }
+            },
+            new()
+            {
+                Header = "USER",
+                PropertyName = nameof(AccountTransactionViewModel.UserID),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var user = ((AccountTransactionViewModel)item).UserID;
+                    return string.IsNullOrEmpty(user)
+                        ? "<span class='text-muted'>System</span>"
+                        : user;
+                }
+            },
+            new()
+            {
+                Header = "STATUS",
+                PropertyName = nameof(AccountTransactionViewModel.Status),
+                Width = 100,
+                CustomRenderer = (item) =>
+                {
+                    var status = ((AccountTransactionViewModel)item).Status;
+                    var badgeClass = status?.ToLower() switch
+                    {
+                        "completed" or "success" => "bg-success",
+                        "pending" => "bg-warning",
+                        "failed" or "rejected" => "bg-danger",
+                        "approved" => "bg-info",
+                        _ => "bg-secondary"
+                    };
+                    return string.IsNullOrEmpty(status)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge {badgeClass}'>{status}</span>";
+                }
+            }
+        };
+
+        transactionOptions = new DataTableOptions
+        {
+            PageLength = 20,
+            LengthMenu = new[] { 20, 50, 100, 200 },
+            LengthMenuLabels = new[] { "20", "50", "100", "200" },
+            SearchPlaceholder = "Search transactions...",
+            TableId = "transactionsTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 0, "desc" } }, // Default sort by transaction date (newest first)
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search transactions:",
+                    ["lengthMenu"] = "Show _MENU_ transactions per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ transactions",
+                    ["infoEmpty"] = "No transactions found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total transactions)",
+                    ["emptyTable"] = "No transaction data available",
+                    ["zeroRecords"] = "No matching transactions found"
+                }
+            }
+        };
+    }
+
+    private async Task SearchBatchTransactions()
+    {
+        // Validate inputs
+        if (string.IsNullOrWhiteSpace(batchNumber))
+        {
+            errorMessage = "Please enter a valid batch number.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            hasSearched = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Searching transactions for batch: {batchNumber}");
+
+            var result = await ApiClient.GetAccountTransactionsPerBatchAsync(
+                batchNumber: batchNumber.Trim(),
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                transactions = result.Payload.ToList();
+                Console.WriteLine($"✅ Found {transactions.Count} transactions for batch: {batchNumber}");
+            }
+            else
+            {
+                transactions = new List<AccountTransactionViewModel>();
+                Console.WriteLine($"ℹ️ No transactions found for batch: {batchNumber}");
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to search batch transactions.";
+            Console.WriteLine($"❌ API Error searching batch transactions: {apiEx.Message}");
+            transactions = new List<AccountTransactionViewModel>();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            transactions = new List<AccountTransactionViewModel>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to search batch transactions. Please check your connection.";
+            Console.WriteLine($"❌ Error searching batch transactions: {ex.Message}");
+            transactions = new List<AccountTransactionViewModel>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        batchNumber = string.Empty;
+        transactions = new List<AccountTransactionViewModel>();
+        hasSearched = false;
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnTransactionRowClick(AccountTransactionViewModel transaction)
+    {
+        Console.WriteLine($"Transaction row clicked: {transaction.TransRef} - {transaction.AccountNumber}");
+        // You can add additional functionality here, like opening a transaction details modal
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ddd;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .card-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+</style>

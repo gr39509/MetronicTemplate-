@@ -1,0 +1,915 @@
+@page "/working-statuses"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Working Statuses
+        <small>Manage and view all employment working statuses</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-badge font-dark"></i>
+                <span class="caption-subject bold uppercase">Working Statuses Management</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadWorkingStatuses" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Working Status">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@workingStatuses.Count</h4>
+                                    <small>Total Working Statuses</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-briefcase fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@highestWorkingStatusId</h4>
+                                    <small>Highest Status ID</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-sort-numeric-desc fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Section -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fa fa-search me-2"></i>
+                                Search & Filter
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Search Working Statuses</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                            <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by working status description..." />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Sort By</label>
+                                        <select class="form-select" @bind="sortBy">
+                                            <option value="description">Status Description</option>
+                                            <option value="id">Working Status ID</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Sort Order</label>
+                                        <select class="form-select" @bind="sortOrder">
+                                            <option value="asc">Ascending</option>
+                                            <option value="desc">Descending</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <button class="btn btn-secondary" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear Search
+                                    </button>
+                                    <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredWorkingStatuses.Any())">
+                                        <i class="fa fa-download"></i> Export to Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredWorkingStatuses?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-briefcase me-2"></i>
+                                    Working Statuses
+                                    <span class="badge bg-light text-dark ms-2">@filteredWorkingStatuses.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="WorkingStatusViewModel"
+                                                 Data="@filteredWorkingStatuses"
+                                                 Columns="@workingStatusColumns"
+                                                 Options="@workingStatusOptions"
+                                                 OnRowClick="@OnWorkingStatusRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Working Statuses Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <text>No working statuses found matching your search criteria.</text>
+                                }
+                                else
+                                {
+                                    <text>No working statuses have been configured yet.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Search
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success mt-2" @onclick="ShowAddModal">
+                                    <i class="fa fa-plus"></i> Add First Working Status
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading working statuses...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Working Status Modal -->
+@if (showWorkingStatusModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit Working Status" : "Add New Working Status")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseWorkingStatusModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isEditing)
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Working Status ID</label>
+                            <input type="text" class="form-control" value="@currentWorkingStatus.WorkingStatusID" disabled />
+                            <small class="form-text text-muted">Working Status ID cannot be changed</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Working Status ID *</label>
+                            <input type="number" class="form-control" @bind="newWorkingStatusId" 
+                                   placeholder="Enter unique working status ID" min="1" />
+                            <small class="form-text text-muted">Unique numeric identifier for the working status</small>
+                        </div>
+                    }
+                    <div class="form-group mb-3">
+                        <label class="form-label">Working Status Description *</label>
+                        <input type="text" class="form-control" @bind="currentWorkingStatus.WorkingStatusDesc" 
+                               placeholder="Enter working status description" maxlength="100" />
+                        <small class="form-text text-muted">Descriptive name for the employment status (e.g., Employed, Unemployed, Self-Employed, Retired)</small>
+                    </div>
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> @validationMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseWorkingStatusModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveWorkingStatus" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") Working Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && workingStatusToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following working status?</p>
+                    <div class="alert alert-warning">
+                        <strong>ID: @workingStatusToDelete.WorkingStatusID</strong> - @workingStatusToDelete.WorkingStatusDesc
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone! This may affect client records that reference this working status.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete Working Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<WorkingStatusViewModel> workingStatuses = new();
+    private List<WorkingStatusViewModel> filteredWorkingStatuses = new();
+    private List<DataTableColumn> workingStatusColumns = new();
+    private DataTableOptions workingStatusOptions = new();
+    private bool isLoading = true;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string validationMessage = string.Empty;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string sortBy = "description";
+    private string sortOrder = "asc";
+    
+    // Modal fields
+    private bool showWorkingStatusModal = false;
+    private bool showDeleteModal = false;
+    private bool isEditing = false;
+    private WorkingStatusViewModel currentWorkingStatus = new();
+    private WorkingStatusViewModel workingStatusToDelete = null;
+    private int newWorkingStatusId = 0;
+    
+    // Statistics
+    private int highestWorkingStatusId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureWorkingStatusTable();
+        await LoadWorkingStatuses();
+    }
+
+    private void ConfigureWorkingStatusTable()
+    {
+        workingStatusColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "WORKING STATUS ID",
+                PropertyName = nameof(WorkingStatusViewModel.WorkingStatusID),
+                Width = 150,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var statusId = ((WorkingStatusViewModel)item).WorkingStatusID;
+                    var badgeClass = GetStatusBadgeClass(statusId);
+                    return $"<span class='badge {badgeClass}'>{statusId}</span>";
+                }
+            },
+            new()
+            {
+                Header = "WORKING STATUS DESCRIPTION",
+                PropertyName = nameof(WorkingStatusViewModel.WorkingStatusDesc),
+                CustomRenderer = (item) =>
+                {
+                    var statusDesc = ((WorkingStatusViewModel)item).WorkingStatusDesc;
+                    return string.IsNullOrEmpty(statusDesc)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{statusDesc}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var workingStatus = (WorkingStatusViewModel)item;
+                    return $@"
+                        <div class='btn-group btn-group-sm' role='group'>
+                            <button type='button' class='btn btn-warning btn-xs' onclick='editWorkingStatus({workingStatus.WorkingStatusID})' title='Edit'>
+                                <i class='fa fa-edit'></i>
+                            </button>
+                            <button type='button' class='btn btn-danger btn-xs' onclick='deleteWorkingStatus({workingStatus.WorkingStatusID})' title='Delete'>
+                                <i class='fa fa-trash'></i>
+                            </button>
+                        </div>";
+                }
+            }
+        };
+
+        workingStatusOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search working statuses...",
+            TableId = "workingStatusesTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-purple-studio font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "asc" } }, // Default sort by description
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search working statuses:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ working statuses",
+                    ["infoEmpty"] = "No working statuses found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total working statuses)",
+                    ["emptyTable"] = "No working status data available",
+                    ["zeroRecords"] = "No matching working statuses found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadWorkingStatuses()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            validationMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading working statuses...");
+
+            var result = await ApiClient.GetWorkingStatusesAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                workingStatuses = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {workingStatuses.Count} working status records");
+            }
+            else
+            {
+                workingStatuses = new List<WorkingStatusViewModel>();
+                filteredWorkingStatuses = new List<WorkingStatusViewModel>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No working status records found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load working statuses.";
+            Console.WriteLine($"❌ API Error loading working statuses: {apiEx.Message}");
+            workingStatuses = new List<WorkingStatusViewModel>();
+            filteredWorkingStatuses = new List<WorkingStatusViewModel>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            workingStatuses = new List<WorkingStatusViewModel>();
+            filteredWorkingStatuses = new List<WorkingStatusViewModel>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load working statuses. Please check your connection.";
+            Console.WriteLine($"❌ Error loading working statuses: {ex.Message}");
+            workingStatuses = new List<WorkingStatusViewModel>();
+            filteredWorkingStatuses = new List<WorkingStatusViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = workingStatuses.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(ws =>
+                (ws.WorkingStatusDesc?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true) ||
+                ws.WorkingStatusID.ToString().Contains(searchTerm)
+            );
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "id" => sortOrder == "asc" 
+                ? query.OrderBy(ws => ws.WorkingStatusID)
+                : query.OrderByDescending(ws => ws.WorkingStatusID),
+            _ => sortOrder == "asc" 
+                ? query.OrderBy(ws => ws.WorkingStatusDesc)
+                : query.OrderByDescending(ws => ws.WorkingStatusDesc)
+        };
+
+        filteredWorkingStatuses = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        highestWorkingStatusId = workingStatuses.Any() ? workingStatuses.Max(ws => ws.WorkingStatusID) : 0;
+    }
+
+    private void ResetStatistics()
+    {
+        highestWorkingStatusId = 0;
+    }
+
+    private string GetStatusBadgeClass(int statusId)
+    {
+        return statusId switch
+        {
+            1 => "bg-success",    // Employed
+            2 => "bg-warning",    // Unemployed
+            3 => "bg-info",       // Self-Employed
+            4 => "bg-secondary",  // Retired
+            5 => "bg-primary",    // Student
+            _ => "bg-dark"        // Other statuses
+        };
+    }
+
+    private void ShowAddModal()
+    {
+        currentWorkingStatus = new WorkingStatusViewModel();
+        newWorkingStatusId = highestWorkingStatusId + 1; // Suggest next available ID
+        isEditing = false;
+        validationMessage = string.Empty;
+        showWorkingStatusModal = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditWorkingStatus(int workingStatusId)
+    {
+        var workingStatus = workingStatuses.FirstOrDefault(ws => ws.WorkingStatusID == workingStatusId);
+        if (workingStatus != null)
+        {
+            currentWorkingStatus = new WorkingStatusViewModel
+            {
+                WorkingStatusID = workingStatus.WorkingStatusID,
+                WorkingStatusDesc = workingStatus.WorkingStatusDesc
+            };
+            isEditing = true;
+            validationMessage = string.Empty;
+            showWorkingStatusModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteWorkingStatus(int workingStatusId)
+    {
+        workingStatusToDelete = workingStatuses.FirstOrDefault(ws => ws.WorkingStatusID == workingStatusId);
+        if (workingStatusToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveWorkingStatus()
+    {
+        try
+        {
+            validationMessage = string.Empty;
+
+            if (isEditing)
+            {
+                if (string.IsNullOrEmpty(currentWorkingStatus.WorkingStatusDesc?.Trim()))
+                {
+                    validationMessage = "Working Status Description is required.";
+                    return;
+                }
+            }
+            else
+            {
+                if (newWorkingStatusId <= 0)
+                {
+                    validationMessage = "Please enter a valid Working Status ID (must be greater than 0).";
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(currentWorkingStatus.WorkingStatusDesc?.Trim()))
+                {
+                    validationMessage = "Working Status Description is required.";
+                    return;
+                }
+
+                if (workingStatuses.Any(ws => ws.WorkingStatusID == newWorkingStatusId))
+                {
+                    validationMessage = "A working status with this ID already exists.";
+                    return;
+                }
+
+                if (workingStatuses.Any(ws => ws.WorkingStatusDesc?.Equals(currentWorkingStatus.WorkingStatusDesc, StringComparison.OrdinalIgnoreCase) == true))
+                {
+                    validationMessage = "A working status with this description already exists.";
+                    return;
+                }
+            }
+
+            // TODO: Implement actual API call to save working status
+            // For now, we'll simulate the save operation
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing working status
+                var existing = workingStatuses.FirstOrDefault(ws => ws.WorkingStatusID == currentWorkingStatus.WorkingStatusID);
+                if (existing != null)
+                {
+                    existing.WorkingStatusDesc = currentWorkingStatus.WorkingStatusDesc.Trim();
+                }
+                successMessage = "Working status updated successfully!";
+            }
+            else
+            {
+                // Add new working status
+                workingStatuses.Add(new WorkingStatusViewModel
+                {
+                    WorkingStatusID = newWorkingStatusId,
+                    WorkingStatusDesc = currentWorkingStatus.WorkingStatusDesc.Trim()
+                });
+                successMessage = "Working status created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseWorkingStatusModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} working status: {currentWorkingStatus.WorkingStatusDesc}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} working status. Please try again.";
+            Console.WriteLine($"❌ Error saving working status: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (workingStatusToDelete == null) return;
+
+            // TODO: Implement actual API call to delete working status
+            await Task.Delay(500);
+
+            workingStatuses.RemoveAll(ws => ws.WorkingStatusID == workingStatusToDelete.WorkingStatusID);
+            successMessage = "Working status deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted working status: {workingStatusToDelete.WorkingStatusDesc}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete working status. Please try again.";
+            Console.WriteLine($"❌ Error deleting working status: {ex.Message}");
+        }
+    }
+
+    private void CloseWorkingStatusModal()
+    {
+        showWorkingStatusModal = false;
+        currentWorkingStatus = new WorkingStatusViewModel();
+        newWorkingStatusId = 0;
+        validationMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        workingStatusToDelete = null;
+        StateHasChanged();
+    }
+
+    private bool IsSaveDisabled
+    {
+        get
+        {
+            if (isEditing)
+            {
+                return string.IsNullOrEmpty(currentWorkingStatus.WorkingStatusDesc?.Trim());
+            }
+            else
+            {
+                return newWorkingStatusId <= 0 || string.IsNullOrEmpty(currentWorkingStatus.WorkingStatusDesc?.Trim());
+            }
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "Working Status ID,Working Status Description\n";
+            
+            foreach (var workingStatus in filteredWorkingStatuses)
+            {
+                csvContent += $"\"{workingStatus.WorkingStatusID}\",";
+                csvContent += $"\"{workingStatus.WorkingStatusDesc}\"\n";
+            }
+
+            var fileName = $"WorkingStatuses_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnWorkingStatusRowClick(WorkingStatusViewModel workingStatus)
+    {
+        Console.WriteLine($"Working status row clicked: {workingStatus.WorkingStatusDesc} (ID: {workingStatus.WorkingStatusID})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editWorkingStatus = function(workingStatusId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditWorkingStatus', workingStatusId)
+                .catch(err => {
+                    console.error('Error calling EditWorkingStatus:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteWorkingStatus = function(workingStatusId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteWorkingStatus', workingStatusId)
+                .catch(err => {
+                    console.error('Error calling DeleteWorkingStatus:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

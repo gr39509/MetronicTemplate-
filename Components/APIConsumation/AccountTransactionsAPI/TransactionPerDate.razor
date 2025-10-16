@@ -1,0 +1,822 @@
+@page "/transactions-by-date"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Transactions By Date
+        <small>Search all transactions by date range</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-wallet font-dark"></i>
+                <span class="caption-subject bold uppercase">Search Transactions By Date Range</span>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <div class="row justify-content-center">
+                <div class="col-md-10">
+                    <div class="form-horizontal">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Start Date</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-calendar"></i></span>
+                                        <input type="date" class="form-control" @bind="startDate" @bind:format="yyyy-MM-dd" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">End Date</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-calendar"></i></span>
+                                        <input type="date" class="form-control" @bind="endDate" @bind:format="yyyy-MM-dd" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group row mb-4">
+                            <label class="col-md-3 col-form-label text-md-right">Date Range</label>
+                            <div class="col-md-9">
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-outline-info @(selectedRange == "today" ? "active" : "")" @onclick="SetTodayRange">
+                                        Today
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info @(selectedRange == "week" ? "active" : "")" @onclick="SetWeekRange">
+                                        Last 7 Days
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info @(selectedRange == "month" ? "active" : "")" @onclick="SetMonthRange">
+                                        This Month
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info @(selectedRange == "quarter" ? "active" : "")" @onclick="SetQuarterRange">
+                                        Last 3 Months
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">Select a predefined date range or choose custom dates above</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group row">
+                            <div class="col-md-3"></div>
+                            <div class="col-md-9">
+                                <button type="button" class="btn btn-info text-white" @onclick="SearchTransactions" disabled="@isLoading">
+                                    <i class="fa fa-search"></i>
+                                    @if (isLoading)
+                                    {
+                                        <span>Searching...</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="padding-left: 10px;">Search Transactions</span>
+                                    }
+                                </button>
+                                @if (transactions?.Any() == true)
+                                {
+                                    <button type="button" class="btn btn-secondary ms-2" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear
+                                    </button>
+                                    <button type="button" class="btn btn-success ms-2" @onclick="ExportToExcel">
+                                        <i class="fa fa-download"></i> Export Excel
+                                    </button>
+                                    <button type="button" class="btn btn-warning ms-2" @onclick="ShowSummary">
+                                        <i class="fa fa-chart-bar"></i> Summary
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Validation Warning -->
+            @if (hasDateValidationError)
+            {
+                <div class="row justify-content-center mt-3">
+                    <div class="col-md-10">
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            <strong>Date Range Warning:</strong> End date should be greater than or equal to start date.
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Date Range Warning -->
+            @if (hasLargeDateRange)
+            {
+                <div class="row justify-content-center mt-3">
+                    <div class="col-md-10">
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i>
+                            <strong>Large Date Range:</strong> You are searching across @dateRangeDays days. This may take longer to load.
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-10">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (transactions?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-list-alt me-2"></i>
+                                    All Transactions
+                                    <span class="badge bg-light text-dark ms-2">@transactions.Count records found</span>
+                                    <small class="ms-3">
+                                        Period: @startDate.ToString("dd MMM yyyy") - @endDate.ToString("dd MMM yyyy")
+                                    </small>
+                                    @if (dateRangeDays > 0)
+                                    {
+                                        <small class="ms-3">(@dateRangeDays days)</small>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="TransactionsView"
+                                                 Data="@transactions"
+                                                 Columns="@transactionColumns"
+                                                 Options="@transactionOptions"
+                                                 OnRowClick="@OnTransactionRowClick" />
+                            </div>
+                            
+                            <!-- Summary Section -->
+                            <div class="card-footer">
+                                <div class="row text-center">
+                                    <div class="col-md-2">
+                                        <small class="text-muted">Total Records</small>
+                                        <h5 class="mb-0">@transactions.Count</h5>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small class="text-muted">Total Amount</small>
+                                        <h5 class="mb-0 text-primary">@totalAmount.ToString("N2")</h5>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small class="text-muted">Credit Amount</small>
+                                        <h5 class="mb-0 text-success">@creditAmount.ToString("N2")</h5>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small class="text-muted">Debit Amount</small>
+                                        <h5 class="mb-0 text-danger">@debitAmount.ToString("N2")</h5>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small class="text-muted">Unique Cashiers</small>
+                                        <h5 class="mb-0 text-warning">@uniqueCashiers</h5>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <small class="text-muted">Transaction Types</small>
+                                        <h5 class="mb-0 text-info">@uniqueTransactionTypes</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Modal -->
+                @if (showSummaryModal)
+                {
+                    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fa fa-chart-bar me-2"></i>
+                                        Transactions Summary
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" @onclick="CloseSummary"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-header bg-info text-white">
+                                                    <h6 class="mb-0">Transaction Types</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    @foreach (var type in transactionTypeSummary)
+                                                    {
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <span>@type.Key</span>
+                                                            <span class="badge bg-primary">@type.Value.Count</span>
+                                                            <span class="text-success fw-bold">$@type.Value.Sum(t => t.TransAmount).ToString("N2")</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card">
+                                                <div class="card-header bg-success text-white">
+                                                    <h6 class="mb-0">Top Cashiers</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    @foreach (var cashier in topCashiers)
+                                                    {
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <code>@cashier.Key</code>
+                                                            <span class="badge bg-success">@cashier.Value</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="card">
+                                                <div class="card-header bg-warning text-dark">
+                                                    <h6 class="mb-0">Daily Summary</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div style="max-height: 300px; overflow-y: auto;">
+                                                        @foreach (var day in dailySummary)
+                                                        {
+                                                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
+                                                                <strong>@day.Key.ToString("dd MMM yyyy")</strong>
+                                                                <span class="badge bg-info">@day.Value.Count transactions</span>
+                                                                <span class="text-primary fw-bold">$@day.Value.Sum(t => t.TransAmount).ToString("N2")</span>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" @onclick="CloseSummary">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else if (hasSearched && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-10">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Transactions Found</h5>
+                            <p class="mb-0">
+                                No transactions found for the selected period:
+                                <br />
+                                <strong>@startDate.ToString("dd MMM yyyy") - @endDate.ToString("dd MMM yyyy")</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private DateTime startDate = DateTime.Today.AddDays(-7); // Default to last 7 days
+    private DateTime endDate = DateTime.Today;
+    private List<TransactionsView> transactions = new();
+    private List<DataTableColumn> transactionColumns = new();
+    private DataTableOptions transactionOptions = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private bool hasSearched = false;
+    private bool hasDateValidationError = false;
+    private bool hasLargeDateRange = false;
+    private int dateRangeDays = 0;
+    private string selectedRange = "week";
+    private bool showSummaryModal = false;
+
+    // Summary fields
+    private double totalAmount = 0;
+    private double creditAmount = 0;
+    private double debitAmount = 0;
+    private int uniqueCashiers = 0;
+    private int uniqueTransactionTypes = 0;
+    private Dictionary<string, List<TransactionsView>> transactionTypeSummary = new();
+    private Dictionary<string, int> topCashiers = new();
+    private Dictionary<DateTime, List<TransactionsView>> dailySummary = new();
+
+    protected override void OnInitialized()
+    {
+        ConfigureTransactionTable();
+        CalculateDateRangeDays();
+    }
+
+    private void ConfigureTransactionTable()
+    {
+        transactionColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "TRANSACTION DATE",
+                PropertyName = nameof(TransactionsView.TransactionDate),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var date = ((TransactionsView)item).TransactionDate;
+                    return $"<small>{date:dd MMM yyyy HH:mm}</small>";
+                }
+            },
+            new()
+            {
+                Header = "CASHIER ID",
+                PropertyName = nameof(TransactionsView.CashierID),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var cashier = ((TransactionsView)item).CashierID;
+                    return string.IsNullOrEmpty(cashier)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code>{cashier}</code>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT NUMBER",
+                PropertyName = nameof(TransactionsView.AccountNumber),
+                Width = 130,
+                CustomRenderer = (item) =>
+                {
+                    var account = ((TransactionsView)item).AccountNumber;
+                    return string.IsNullOrEmpty(account)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code>{account}</code>";
+                }
+            },
+            new()
+            {
+                Header = "ACCOUNT NAME",
+                PropertyName = nameof(TransactionsView.AccountName),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var name = ((TransactionsView)item).AccountName;
+                    return string.IsNullOrEmpty(name)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong>{name}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "TYPE",
+                PropertyName = nameof(TransactionsView.TransactionType),
+                Width = 100,
+                CustomRenderer = (item) =>
+                {
+                    var type = ((TransactionsView)item).TransactionType;
+                    var badgeClass = type?.ToLower() switch
+                    {
+                        "deposit" or "credit" => "bg-success",
+                        "withdrawal" or "debit" => "bg-danger",
+                        "transfer" => "bg-info",
+                        "payment" => "bg-primary",
+                        "fee" => "bg-warning",
+                        _ => "bg-secondary"
+                    };
+                    return string.IsNullOrEmpty(type)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge {badgeClass}'>{type}</span>";
+                }
+            },
+            new()
+            {
+                Header = "AMOUNT",
+                PropertyName = nameof(TransactionsView.TransAmount),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var amount = ((TransactionsView)item).TransAmount;
+                    var amountClass = amount >= 0 ? "text-success" : "text-danger";
+                    var symbol = amount >= 0 ? "" : "-";
+                    return $"<span class='{amountClass} fw-bold'>{symbol}${Math.Abs(amount):N2}</span>";
+                }
+            },
+            new()
+            {
+                Header = "DESCRIPTION",
+                PropertyName = nameof(TransactionsView.TransNarration),
+                CustomRenderer = (item) =>
+                {
+                    var narration = ((TransactionsView)item).TransNarration;
+                    return string.IsNullOrEmpty(narration)
+                        ? "<span class='text-muted'>No description</span>"
+                        : $"<div class='text-truncate' style='max-width: 200px;' title='{narration}'>{narration}</div>";
+                }
+            },
+            new()
+            {
+                Header = "REFERENCE",
+                PropertyName = nameof(TransactionsView.TransRef),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var reference = ((TransactionsView)item).TransRef;
+                    return string.IsNullOrEmpty(reference)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code class='small'>{reference}</code>";
+                }
+            },
+            new()
+            {
+                Header = "STATUS",
+                PropertyName = nameof(TransactionsView.Status),
+                Width = 100,
+                CustomRenderer = (item) =>
+                {
+                    var status = ((TransactionsView)item).Status;
+                    var badgeClass = status?.ToLower() switch
+                    {
+                        "completed" or "success" => "bg-success",
+                        "pending" => "bg-warning",
+                        "failed" or "rejected" => "bg-danger",
+                        "processing" => "bg-info",
+                        _ => "bg-secondary"
+                    };
+                    return string.IsNullOrEmpty(status)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='badge {badgeClass}'>{status}</span>";
+                }
+            },
+            new()
+            {
+                Header = "BRANCH",
+                PropertyName = nameof(TransactionsView.BranchCode),
+                Width = 100,
+                CustomRenderer = (item) =>
+                {
+                    var branch = ((TransactionsView)item).BranchCode;
+                    return string.IsNullOrEmpty(branch)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code>{branch}</code>";
+                }
+            }
+        };
+
+        transactionOptions = new DataTableOptions
+        {
+            PageLength = 20,
+            LengthMenu = new[] { 20, 50, 100, 200 },
+            LengthMenuLabels = new[] { "20", "50", "100", "200" },
+            SearchPlaceholder = "Search transactions...",
+            TableId = "transactionsTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-steel font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 0, "desc" } }, // Default sort by transaction date (newest first)
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search transactions:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ transactions",
+                    ["infoEmpty"] = "No transactions found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total records)",
+                    ["emptyTable"] = "No transaction data available",
+                    ["zeroRecords"] = "No matching transactions found"
+                }
+            }
+        };
+    }
+
+    private async Task SearchTransactions()
+    {
+        // Validate inputs
+        if (endDate < startDate)
+        {
+            hasDateValidationError = true;
+            errorMessage = "End date cannot be earlier than start date.";
+            return;
+        }
+
+        hasDateValidationError = false;
+        CalculateDateRangeDays();
+
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            hasSearched = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Searching transactions by date - Date Range: {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}");
+
+            var result = await ApiClient.GetAccountTransactionsPerDateAsync(
+                startDate: startDate,
+                endDate: endDate,
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                transactions = result.Payload.ToList();
+                CalculateSummary();
+                Console.WriteLine($"✅ Found {transactions.Count} transaction records");
+            }
+            else
+            {
+                transactions = new List<TransactionsView>();
+                ResetSummary();
+                Console.WriteLine($"ℹ️ No transaction records found");
+            }
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to search transactions.";
+            Console.WriteLine($"❌ API Error searching transactions: {apiEx.Message}");
+            transactions = new List<TransactionsView>();
+            ResetSummary();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            transactions = new List<TransactionsView>();
+            ResetSummary();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to search transactions. Please check your connection.";
+            Console.WriteLine($"❌ Error searching transactions: {ex.Message}");
+            transactions = new List<TransactionsView>();
+            ResetSummary();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CalculateDateRangeDays()
+    {
+        dateRangeDays = (endDate - startDate).Days + 1;
+        hasLargeDateRange = dateRangeDays > 30; // Warn if searching more than 30 days
+    }
+
+    private void CalculateSummary()
+    {
+        totalAmount = transactions.Sum(t => t.TransAmount);
+        creditAmount = transactions.Where(t => t.TransAmount >= 0).Sum(t => t.TransAmount);
+        debitAmount = Math.Abs(transactions.Where(t => t.TransAmount < 0).Sum(t => t.TransAmount));
+        uniqueCashiers = transactions.Select(t => t.CashierID).Distinct().Count();
+        uniqueTransactionTypes = transactions.Select(t => t.TransactionType).Distinct().Count();
+
+        // Prepare summary data for modal
+        transactionTypeSummary = transactions
+            .GroupBy(t => t.TransactionType ?? "Unknown")
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        topCashiers = transactions
+            .Where(t => !string.IsNullOrEmpty(t.CashierID))
+            .GroupBy(t => t.CashierID)
+            .OrderByDescending(g => g.Count())
+            .Take(10)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        dailySummary = transactions
+            .GroupBy(t => t.TransactionDate.Date)
+            .OrderByDescending(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private void ResetSummary()
+    {
+        totalAmount = 0;
+        creditAmount = 0;
+        debitAmount = 0;
+        uniqueCashiers = 0;
+        uniqueTransactionTypes = 0;
+        transactionTypeSummary.Clear();
+        topCashiers.Clear();
+        dailySummary.Clear();
+    }
+
+    // Individual methods for each date range button
+    private void SetTodayRange()
+    {
+        selectedRange = "today";
+        startDate = DateTime.Today;
+        endDate = DateTime.Today;
+        CalculateDateRangeDays();
+        StateHasChanged();
+    }
+
+    private void SetWeekRange()
+    {
+        selectedRange = "week";
+        startDate = DateTime.Today.AddDays(-6);
+        endDate = DateTime.Today;
+        CalculateDateRangeDays();
+        StateHasChanged();
+    }
+
+    private void SetMonthRange()
+    {
+        selectedRange = "month";
+        startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        endDate = DateTime.Today;
+        CalculateDateRangeDays();
+        StateHasChanged();
+    }
+
+    private void SetQuarterRange()
+    {
+        selectedRange = "quarter";
+        startDate = DateTime.Today.AddMonths(-3);
+        endDate = DateTime.Today;
+        CalculateDateRangeDays();
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        startDate = DateTime.Today.AddDays(-7);
+        endDate = DateTime.Today;
+        selectedRange = "week";
+        transactions = new List<TransactionsView>();
+        hasSearched = false;
+        errorMessage = string.Empty;
+        hasDateValidationError = false;
+        hasLargeDateRange = false;
+        showSummaryModal = false;
+        ResetSummary();
+        CalculateDateRangeDays();
+        StateHasChanged();
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            // Simple CSV export implementation
+            var csvContent = "Transaction Date,Cashier ID,Account Number,Account Name,Type,Amount,Description,Reference,Status,Branch\n";
+            
+            foreach (var transaction in transactions.OrderByDescending(t => t.TransactionDate))
+            {
+                csvContent += $"\"{transaction.TransactionDate:yyyy-MM-dd HH:mm}\",";
+                csvContent += $"\"{transaction.CashierID}\",";
+                csvContent += $"\"{transaction.AccountNumber}\",";
+                csvContent += $"\"{transaction.AccountName}\",";
+                csvContent += $"\"{transaction.TransactionType}\",";
+                csvContent += $"\"{transaction.TransAmount:N2}\",";
+                csvContent += $"\"{transaction.TransNarration}\",";
+                csvContent += $"\"{transaction.TransRef}\",";
+                csvContent += $"\"{transaction.Status}\",";
+                csvContent += $"\"{transaction.BranchCode}\"\n";
+            }
+
+            var fileName = $"Transactions_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowSummary()
+    {
+        showSummaryModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseSummary()
+    {
+        showSummaryModal = false;
+        StateHasChanged();
+    }
+
+    private void OnTransactionRowClick(TransactionsView transaction)
+    {
+        Console.WriteLine($"Transaction row clicked: {transaction.TransactionType} - {transaction.AccountNumber} - ${transaction.TransAmount:N2}");
+        // You can add additional functionality here, like opening a details modal
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-color: #ddd;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .card-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .btn-group .btn.active {
+        background-color: #17a2b8;
+        border-color: #17a2b8;
+        color: white;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+</style>
+
+<script>
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>

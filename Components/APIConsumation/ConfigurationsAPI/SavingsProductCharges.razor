@@ -1,0 +1,1138 @@
+@page "/savings-product-charges"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Savings Product Charges
+        <small>Manage and view charges for savings products</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-credit-card font-dark"></i>
+                <span class="caption-subject bold uppercase">Savings Product Charges Management</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadSavingsProductCharges" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Charge">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Product Selection -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fa fa-filter me-2"></i>
+                                Select Savings Product
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Savings Product ID *</label>
+                                        <input type="number" class="form-control" @bind="savingsProductID" 
+                                               placeholder="Enter savings product ID" min="1" />
+                                        <small class="form-text text-muted">Enter the ID of the savings product to view its charges</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">&nbsp;</label>
+                                        <div>
+                                            <button class="btn btn-primary" @onclick="LoadChargesByProduct" disabled="@(savingsProductID <= 0)">
+                                                <i class="fa fa-search"></i> Load Charges
+                                            </button>
+                                            <button class="btn btn-secondary ms-2" @onclick="ClearProductSelection">
+                                                <i class="fa fa-times"></i> Clear
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(selectedProductName))
+                            {
+                                <div class="alert alert-info mt-2">
+                                    <i class="fa fa-info-circle"></i> Viewing charges for: <strong>@selectedProductName</strong> (Product ID: @savingsProductID)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            @if (savingsProductCharges.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@savingsProductCharges.Count</h4>
+                                        <small>Total Charges</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-list fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">GHC @totalFeeAmount.ToString("N2")</h4>
+                                        <small>Total Fee Amount</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-money fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@proRataCharges</h4>
+                                        <small>Pro-Rata Charges</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-percent fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@uniqueFrequencies</h4>
+                                        <small>Posting Frequencies</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-clock-o fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Search and Filter Section -->
+            @if (savingsProductCharges.Any())
+            {
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fa fa-search me-2"></i>
+                                    Search & Filter
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Search Charges</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                                <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by fee name..." />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Pro-Rata Basis</label>
+                                            <select class="form-select" @bind="filterProRata">
+                                                <option value="">All</option>
+                                                <option value="true">Pro-Rata Only</option>
+                                                <option value="false">Non Pro-Rata Only</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort By</label>
+                                            <select class="form-select" @bind="sortBy">
+                                                <option value="name">Fee Name</option>
+                                                <option value="amount">Fee Amount</option>
+                                                <option value="frequency">Posting Frequency</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort Order</label>
+                                            <select class="form-select" @bind="sortOrder">
+                                                <option value="asc">Ascending</option>
+                                                <option value="desc">Descending</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <button class="btn btn-secondary" @onclick="ClearSearch">
+                                            <i class="fa fa-times"></i> Clear Search
+                                        </button>
+                                        <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredCharges.Any())">
+                                            <i class="fa fa-download"></i> Export to Excel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredCharges?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-credit-card me-2"></i>
+                                    Savings Product Charges
+                                    <span class="badge bg-light text-dark ms-2">@filteredCharges.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(filterProRata))
+                                    {
+                                        <span class="badge bg-info ms-2">Pro-Rata: @(filterProRata == "true" ? "Yes" : "No")</span>
+                                    }
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="SavingsProductSavingsFeesViewModel"
+                                                 Data="@filteredCharges"
+                                                 Columns="@chargesColumns"
+                                                 Options="@chargesOptions"
+                                                 OnRowClick="@OnChargeRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading && savingsProductID > 0)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Charges Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <text>No charges found matching your search criteria for product ID: @savingsProductID.</text>
+                                }
+                                else
+                                {
+                                    <text>No charges have been configured for savings product ID: @savingsProductID.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Search
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success mt-2" @onclick="ShowAddModal">
+                                    <i class="fa fa-plus"></i> Add First Charge
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading && savingsProductID <= 0)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-warning text-center">
+                            <i class="fa fa-exclamation-triangle fa-2x mb-3"></i>
+                            <h5>Select a Savings Product</h5>
+                            <p class="mb-0">Please enter a Savings Product ID above to view and manage its charges.</p>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading savings product charges...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Charge Modal -->
+@if (showChargeModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit Charge" : "Add New Charge")
+                        @if (savingsProductID > 0)
+                        {
+                            <small class="ms-2">Product ID: @savingsProductID</small>
+                        }
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseChargeModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Fee Name *</label>
+                                <input type="text" class="form-control" @bind="currentCharge.FeeName" 
+                                       placeholder="Enter fee name" maxlength="100" />
+                                <small class="form-text text-muted">Descriptive name for the charge</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Fee Amount *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">GHC</span>
+                                    <input type="number" class="form-control" @bind="currentCharge.FeeAmount" 
+                                           placeholder="0.00" step="0.01" min="0" />
+                                </div>
+                                <small class="form-text text-muted">Amount to be charged</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Pro-Rata Basis</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" @bind="currentCharge.Pro_RataBasis" />
+                                    <label class="form-check-label">Calculate on pro-rata basis</label>
+                                </div>
+                                <small class="form-text text-muted">Whether the fee should be calculated proportionally</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Posting Frequency</label>
+                                <select class="form-select" @bind="currentCharge.FeePostingFrequency">
+                                    <option value="">Select Frequency</option>
+                                    <option value="1">Daily</option>
+                                    <option value="7">Weekly</option>
+                                    <option value="30">Monthly</option>
+                                    <option value="90">Quarterly</option>
+                                    <option value="365">Annually</option>
+                                </select>
+                                <small class="form-text text-muted">How often this fee should be posted</small>
+                            </div>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> @validationMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseChargeModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveCharge" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") Charge
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && chargeToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following charge?</p>
+                    <div class="alert alert-warning">
+                        <strong>@chargeToDelete.FeeName</strong>
+                        <br />
+                        <small>Amount: $@chargeToDelete.FeeAmount.ToString("N2")</small>
+                        <br />
+                        <small>Pro-Rata: @(chargeToDelete.Pro_RataBasis ? "Yes" : "No")</small>
+                        @if (!string.IsNullOrEmpty(chargeToDelete.FeePostingFrequencyName))
+                        {
+                            <br />
+                            <small>Frequency: @chargeToDelete.FeePostingFrequencyName</small>
+                        }
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone! This may affect savings accounts using this product.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete Charge
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<SavingsProductSavingsFeesViewModel> savingsProductCharges = new();
+    private List<SavingsProductSavingsFeesViewModel> filteredCharges = new();
+    private List<DataTableColumn> chargesColumns = new();
+    private DataTableOptions chargesOptions = new();
+    private bool isLoading = false;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string validationMessage = string.Empty;
+    private string selectedProductName = string.Empty;
+    
+    // Product selection
+    private int savingsProductID = 0;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string filterProRata = "";
+    private string sortBy = "name";
+    private string sortOrder = "asc";
+    
+    // Modal fields
+    private bool showChargeModal = false;
+    private bool showDeleteModal = false;
+    private bool isEditing = false;
+    private SavingsProductSavingsFeesViewModel currentCharge = new();
+    private SavingsProductSavingsFeesViewModel chargeToDelete = null;
+    
+    // Statistics
+    private double totalFeeAmount = 0;
+    private int proRataCharges = 0;
+    private int uniqueFrequencies = 0;
+
+    protected override void OnInitialized()
+    {
+        ConfigureChargesTable();
+    }
+
+    private void ConfigureChargesTable()
+    {
+        chargesColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "FEE NAME",
+                PropertyName = nameof(SavingsProductSavingsFeesViewModel.FeeName),
+                CustomRenderer = (item) =>
+                {
+                    var feeName = ((SavingsProductSavingsFeesViewModel)item).FeeName;
+                    return string.IsNullOrEmpty(feeName)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{feeName}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "FEE AMOUNT",
+                PropertyName = nameof(SavingsProductSavingsFeesViewModel.FeeAmount),
+                Width = 120,
+                CssClass = "text-right",
+                CustomRenderer = (item) =>
+                {
+                    var amount = ((SavingsProductSavingsFeesViewModel)item).FeeAmount;
+                    return $"<span class='fw-bold text-success'>${amount:N2}</span>";
+                }
+            },
+            new()
+            {
+                Header = "PRO-RATA",
+                PropertyName = nameof(SavingsProductSavingsFeesViewModel.Pro_RataBasis),
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var isProRata = ((SavingsProductSavingsFeesViewModel)item).Pro_RataBasis;
+                    var badgeClass = isProRata ? "bg-info" : "bg-secondary";
+                    var text = isProRata ? "Yes" : "No";
+                    return $"<span class='badge {badgeClass}'>{text}</span>";
+                }
+            },
+            new()
+            {
+                Header = "POSTING FREQUENCY",
+                PropertyName = nameof(SavingsProductSavingsFeesViewModel.FeePostingFrequencyName),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var frequency = ((SavingsProductSavingsFeesViewModel)item).FeePostingFrequencyName;
+                    return string.IsNullOrEmpty(frequency)
+                        ? "<span class='text-muted'>Not set</span>"
+                        : $"<span class='badge bg-warning'>{frequency}</span>";
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var charge = (SavingsProductSavingsFeesViewModel)item;
+                    return $@"
+                        <div class='btn-group btn-group-sm' role='group'>
+                            <button type='button' class='btn btn-warning btn-xs' onclick='editCharge({charge.SavingsFeesSettingID})' title='Edit'>
+                                <i class='fa fa-edit'></i>
+                            </button>
+                            <button type='button' class='btn btn-danger btn-xs' onclick='deleteCharge({charge.SavingsFeesSettingID})' title='Delete'>
+                                <i class='fa fa-trash'></i>
+                            </button>
+                        </div>";
+                }
+            }
+        };
+
+        chargesOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search charges...",
+            TableId = "chargesTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-madison font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 0, "asc" } }, // Default sort by fee name
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search charges:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ charges",
+                    ["infoEmpty"] = "No charges found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total charges)",
+                    ["emptyTable"] = "No charge data available",
+                    ["zeroRecords"] = "No matching charges found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadChargesByProduct()
+    {
+        if (savingsProductID <= 0)
+        {
+            errorMessage = "Please enter a valid Savings Product ID.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            validationMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading charges for savings product ID: {savingsProductID}");
+
+            var result = await ApiClient.GetSavingsProductChargesAsync(
+                savingsProductID: savingsProductID,
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                savingsProductCharges = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                
+                // Get product name from first record if available
+                selectedProductName = savingsProductCharges.FirstOrDefault()?.Product ?? string.Empty;
+                
+                Console.WriteLine($"✅ Found {savingsProductCharges.Count} charges for product ID: {savingsProductID}");
+            }
+            else
+            {
+                savingsProductCharges = new List<SavingsProductSavingsFeesViewModel>();
+                filteredCharges = new List<SavingsProductSavingsFeesViewModel>();
+                selectedProductName = string.Empty;
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No charges found for product ID: {savingsProductID}");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load savings product charges.";
+            Console.WriteLine($"❌ API Error loading charges: {apiEx.Message}");
+            savingsProductCharges = new List<SavingsProductSavingsFeesViewModel>();
+            filteredCharges = new List<SavingsProductSavingsFeesViewModel>();
+            selectedProductName = string.Empty;
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            savingsProductCharges = new List<SavingsProductSavingsFeesViewModel>();
+            filteredCharges = new List<SavingsProductSavingsFeesViewModel>();
+            selectedProductName = string.Empty;
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load savings product charges. Please check your connection.";
+            Console.WriteLine($"❌ Error loading charges: {ex.Message}");
+            savingsProductCharges = new List<SavingsProductSavingsFeesViewModel>();
+            filteredCharges = new List<SavingsProductSavingsFeesViewModel>();
+            selectedProductName = string.Empty;
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadSavingsProductCharges()
+    {
+        await LoadChargesByProduct();
+    }
+
+    private void ApplyFilters()
+    {
+        var query = savingsProductCharges.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(c =>
+                (c.FeeName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true)
+            );
+        }
+
+        // Apply pro-rata filter
+        if (!string.IsNullOrEmpty(filterProRata))
+        {
+            bool proRataFilter = filterProRata == "true";
+            query = query.Where(c => c.Pro_RataBasis == proRataFilter);
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "amount" => sortOrder == "asc" 
+                ? query.OrderBy(c => c.FeeAmount)
+                : query.OrderByDescending(c => c.FeeAmount),
+            "frequency" => sortOrder == "asc" 
+                ? query.OrderBy(c => c.FeePostingFrequencyName)
+                : query.OrderByDescending(c => c.FeePostingFrequencyName),
+            _ => sortOrder == "asc" 
+                ? query.OrderBy(c => c.FeeName)
+                : query.OrderByDescending(c => c.FeeName)
+        };
+
+        filteredCharges = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        filterProRata = "";
+        ApplyFilters();
+    }
+
+    private void ClearProductSelection()
+    {
+        savingsProductID = 0;
+        selectedProductName = string.Empty;
+        savingsProductCharges = new List<SavingsProductSavingsFeesViewModel>();
+        filteredCharges = new List<SavingsProductSavingsFeesViewModel>();
+        ResetStatistics();
+        StateHasChanged();
+    }
+
+    private void CalculateStatistics()
+    {
+        totalFeeAmount = savingsProductCharges.Sum(c => c.FeeAmount);
+        proRataCharges = savingsProductCharges.Count(c => c.Pro_RataBasis);
+        uniqueFrequencies = savingsProductCharges.Select(c => c.FeePostingFrequencyName).Distinct().Count();
+    }
+
+    private void ResetStatistics()
+    {
+        totalFeeAmount = 0;
+        proRataCharges = 0;
+        uniqueFrequencies = 0;
+    }
+
+    private void ShowAddModal()
+    {
+        if (savingsProductID <= 0)
+        {
+            errorMessage = "Please select a savings product first.";
+            return;
+        }
+
+        currentCharge = new SavingsProductSavingsFeesViewModel
+        {
+            ProductID = savingsProductID
+        };
+        isEditing = false;
+        validationMessage = string.Empty;
+        showChargeModal = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditCharge(int savingsFeesSettingID)
+    {
+        var charge = savingsProductCharges.FirstOrDefault(c => c.SavingsFeesSettingID == savingsFeesSettingID);
+        if (charge != null)
+        {
+            currentCharge = new SavingsProductSavingsFeesViewModel
+            {
+                SavingsFeesSettingID = charge.SavingsFeesSettingID,
+                FeeName = charge.FeeName,
+                FeeAmount = charge.FeeAmount,
+                Pro_RataBasis = charge.Pro_RataBasis,
+                FeePostingFrequency = charge.FeePostingFrequency,
+                FeePostingFrequencyName = charge.FeePostingFrequencyName,
+                Id = charge.Id,
+                ProductID = charge.ProductID,
+                Product = charge.Product
+            };
+            isEditing = true;
+            validationMessage = string.Empty;
+            showChargeModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteCharge(int savingsFeesSettingID)
+    {
+        chargeToDelete = savingsProductCharges.FirstOrDefault(c => c.SavingsFeesSettingID == savingsFeesSettingID);
+        if (chargeToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveCharge()
+    {
+        try
+        {
+            validationMessage = string.Empty;
+
+            if (string.IsNullOrEmpty(currentCharge.FeeName?.Trim()))
+            {
+                validationMessage = "Fee Name is required.";
+                return;
+            }
+
+            if (currentCharge.FeeAmount < 0)
+            {
+                validationMessage = "Fee Amount must be greater than or equal to 0.";
+                return;
+            }
+
+            // TODO: Implement actual API call to save charge
+            // For now, we'll simulate the save operation
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing charge
+                var existing = savingsProductCharges.FirstOrDefault(c => c.SavingsFeesSettingID == currentCharge.SavingsFeesSettingID);
+                if (existing != null)
+                {
+                    existing.FeeName = currentCharge.FeeName.Trim();
+                    existing.FeeAmount = currentCharge.FeeAmount;
+                    existing.Pro_RataBasis = currentCharge.Pro_RataBasis;
+                    existing.FeePostingFrequency = currentCharge.FeePostingFrequency;
+                    // Update frequency name based on selected value
+                    existing.FeePostingFrequencyName = GetFrequencyName(currentCharge.FeePostingFrequency);
+                }
+                successMessage = "Charge updated successfully!";
+            }
+            else
+            {
+                // Add new charge
+                var newCharge = new SavingsProductSavingsFeesViewModel
+                {
+                    SavingsFeesSettingID = savingsProductCharges.Any() ? savingsProductCharges.Max(c => c.SavingsFeesSettingID) + 1 : 1,
+                    FeeName = currentCharge.FeeName.Trim(),
+                    FeeAmount = currentCharge.FeeAmount,
+                    Pro_RataBasis = currentCharge.Pro_RataBasis,
+                    FeePostingFrequency = currentCharge.FeePostingFrequency,
+                    FeePostingFrequencyName = GetFrequencyName(currentCharge.FeePostingFrequency),
+                    Id = savingsProductCharges.Any() ? savingsProductCharges.Max(c => c.Id) + 1 : 1,
+                    ProductID = savingsProductID,
+                    Product = selectedProductName
+                };
+                savingsProductCharges.Add(newCharge);
+                successMessage = "Charge created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseChargeModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} charge: {currentCharge.FeeName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} charge. Please try again.";
+            Console.WriteLine($"❌ Error saving charge: {ex.Message}");
+        }
+    }
+
+    private string GetFrequencyName(int? frequency)
+    {
+        return frequency switch
+        {
+            1 => "Daily",
+            7 => "Weekly", 
+            30 => "Monthly",
+            90 => "Quarterly",
+            365 => "Annually",
+            _ => "Not set"
+        };
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (chargeToDelete == null) return;
+
+            // TODO: Implement actual API call to delete charge
+            await Task.Delay(500);
+
+            savingsProductCharges.RemoveAll(c => c.SavingsFeesSettingID == chargeToDelete.SavingsFeesSettingID);
+            successMessage = "Charge deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted charge: {chargeToDelete.FeeName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete charge. Please try again.";
+            Console.WriteLine($"❌ Error deleting charge: {ex.Message}");
+        }
+    }
+
+    private void CloseChargeModal()
+    {
+        showChargeModal = false;
+        currentCharge = new SavingsProductSavingsFeesViewModel();
+        validationMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        chargeToDelete = null;
+        StateHasChanged();
+    }
+
+    private bool IsSaveDisabled => 
+        string.IsNullOrEmpty(currentCharge.FeeName?.Trim()) || currentCharge.FeeAmount < 0;
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "Fee Name,Fee Amount,Pro-Rata Basis,Posting Frequency,Product\n";
+            
+            foreach (var charge in filteredCharges)
+            {
+                csvContent += $"\"{charge.FeeName}\",";
+                csvContent += $"\"{charge.FeeAmount:N2}\",";
+                csvContent += $"\"{(charge.Pro_RataBasis ? "Yes" : "No")}\",";
+                csvContent += $"\"{charge.FeePostingFrequencyName}\",";
+                csvContent += $"\"{charge.Product}\"\n";
+            }
+
+            var fileName = $"SavingsProductCharges_Product{savingsProductID}_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnChargeRowClick(SavingsProductSavingsFeesViewModel charge)
+    {
+        Console.WriteLine($"Charge row clicked: {charge.FeeName} - ${charge.FeeAmount:N2}");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .text-right {
+        text-align: right !important;
+    }
+
+    .form-check-input:checked {
+        background-color: #1bc5bd;
+        border-color: #1bc5bd;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editCharge = function(savingsFeesSettingID) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditCharge', savingsFeesSettingID)
+                .catch(err => {
+                    console.error('Error calling EditCharge:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteCharge = function(savingsFeesSettingID) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteCharge', savingsFeesSettingID)
+                .catch(err => {
+                    console.error('Error calling DeleteCharge:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>
