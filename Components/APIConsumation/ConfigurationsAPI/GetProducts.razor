@@ -1,0 +1,1003 @@
+@page "/products"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Products Management
+        <small>Manage and view all financial products</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-basket font-dark"></i>
+                <span class="caption-subject bold uppercase">Products Management</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadProducts" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Product">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@products.Count</h4>
+                                    <small>Total Products</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-cubes fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@susuProducts</h4>
+                                    <small>Susu Products</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-money fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@fixedDepositProducts</h4>
+                                    <small>Fixed Deposits</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-lock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@productsWithTaxes</h4>
+                                    <small>With Taxes</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-percent fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Section -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fa fa-search me-2"></i>
+                                Search & Filter
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">Search Products</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                            <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by product name or ID..." />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Product Type</label>
+                                        <select class="form-select" @bind="filterProductType">
+                                            <option value="">All Types</option>
+                                            <option value="susu">Susu Products</option>
+                                            <option value="fixed">Fixed Deposits</option>
+                                            <option value="other">Other Products</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Sort By</label>
+                                        <select class="form-select" @bind="sortBy">
+                                            <option value="name">Product Name</option>
+                                            <option value="id">Product ID</option>
+                                            <option value="type">Product Type</option>
+                                            <option value="date">Date Created</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label class="form-label">Sort Order</label>
+                                        <select class="form-select" @bind="sortOrder">
+                                            <option value="asc">Ascending</option>
+                                            <option value="desc">Descending</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <button class="btn btn-secondary" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear Search
+                                    </button>
+                                    <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredProducts.Any())">
+                                        <i class="fa fa-download"></i> Export to Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-12">
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" @onclick="ClearErrorMessage">
+                            <span>&times;</span>
+                        </button>
+                        <strong>Error!</strong> @errorMessage
+                    </div>
+                </div>
+            </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-12">
+                    <div class="alert alert-success alert-dismissible">
+                        <button type="button" class="close" @onclick="ClearSuccessMessage">
+                            <span>&times;</span>
+                        </button>
+                        <strong>Success!</strong> @successMessage
+                    </div>
+                </div>
+            </div>
+            }
+
+            @if (filteredProducts?.Any() == true)
+            {
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fa fa-list-alt me-2"></i>
+                                Products
+                                <span class="badge bg-light text-dark ms-2">@filteredProducts.Count records</span>
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                }
+                                @if (!string.IsNullOrEmpty(filterProductType))
+                                {
+                                    <span class="badge bg-info ms-2">Type: @filterProductType</span>
+                                }
+                            </h5>
+                        </div>
+                        <br/>
+                        <div class="card-body p-0">
+                            <ReusableDataTable TItem="ProductViewModel"
+                                               Data="@filteredProducts"
+                                               Columns="@productColumns"
+                                               Options="@productOptions"
+                                               OnRowClick="@OnProductRowClick" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fa fa-info-circle fa-2x mb-3"></i>
+                        <h5>No Products Found</h5>
+                        <p class="mb-0">
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                            <text>No products found matching your search criteria.</text>
+                            }
+                            else
+                            {
+                            <text>No products have been configured yet.</text>
+                            }
+                        </p>
+                        @if (!string.IsNullOrEmpty(searchTerm))
+                        {
+                        <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                            <i class="fa fa-times"></i> Clear Search
+                        </button>
+                        }
+                        else
+                        {
+                        <button class="btn btn-success mt-2" @onclick="ShowAddModal">
+                            <i class="fa fa-plus"></i> Add First Product
+                        </button>
+                        }
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info text-center">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        Loading products...
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Product Details Modal -->
+@if (showProductModal && selectedProduct != null)
+{
+<div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fa fa-info-circle me-2"></i>
+                    Product Details - @selectedProduct.ProductName
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="CloseProductModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="detail-group">
+                            <span class="detail-label">Product ID</span>
+                            <span class="detail-value"><code>@selectedProduct.ProductID</code></span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">Product Name</span>
+                            <span class="detail-value"><strong>@selectedProduct.ProductName</strong></span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">Product Type</span>
+                            <span class="detail-value">
+                                    <span class="badge @GetProductTypeBadgeClass(selectedProduct)">@selectedProduct.ProductTypeName</span>
+                                </span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">GL Code</span>
+                            <span class="detail-value">@selectedProduct.GlCode</span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">GL Name</span>
+                            <span class="detail-value">@selectedProduct.GlName</span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">Income GL</span>
+                            <span class="detail-value">@selectedProduct.IncomeGL (@selectedProduct.IncomeGLName)</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-group">
+                            <span class="detail-label">Intermediary GL</span>
+                            <span class="detail-value">@selectedProduct.IntermediaryGL (@selectedProduct.IntermediaryGLName)</span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">Discount GL</span>
+                            <span class="detail-value">@selectedProduct.DiscountGL (@selectedProduct.DiscountGLName)</span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">Client Holding GL</span>
+                            <span class="detail-value">@selectedProduct.ClientHoldingGL (@selectedProduct.ClientHoldingGLName)</span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">Date Created</span>
+                            <span class="detail-value">@selectedProduct.DateCreated.ToString("dd MMM yyyy HH:mm")</span>
+                        </div>
+                        <div class="detail-group">
+                            <span class="detail-label">Created By</span>
+                            <span class="detail-value">@selectedProduct.UserCreated</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Features -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">Product Features</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" checked="@selectedProduct.IsForAll" disabled>
+                                            <label class="form-check-label">
+                                                Available to All
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" checked="@selectedProduct.PassInclusiveTax" disabled>
+                                            <label class="form-check-label">
+                                                Pass Inclusive Tax
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" checked="@selectedProduct.IsSusu" disabled>
+                                            <label class="form-check-label">
+                                                Susu Product
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" checked="@selectedProduct.IsFixedDeposit" disabled>
+                                            <label class="form-check-label">
+                                                Fixed Deposit
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Taxes Information -->
+                @if (selectedProduct.HasTaxes && selectedProduct.Taxes?.Any() == true)
+                {
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">Associated Taxes</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead>
+                                        <tr>
+                                            <th>Tax Name</th>
+                                            <th>Rate</th>
+                                            <th>Type</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach (var tax in selectedProduct.Taxes)
+                                        {
+                                        <tr>
+                                            <td>@tax.TaxName</td>
+                                            <td>@tax.Rate.ToString("P2")</td>
+                                            <td><span class="badge bg-info">@tax.TaxType</span></td>
+                                        </tr>
+                                        }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                }
+
+                <!-- Branch Information -->
+                @if (!string.IsNullOrEmpty(selectedProduct.BranchNames))
+                {
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">Available Branches</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-0">@selectedProduct.BranchNames</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseProductModal">Close</button>
+                @* <button type="button" class="btn btn-warning" @onclick="EditProduct"> *@
+                @*     <i class="fa fa-edit"></i> Edit Product *@
+                @* </button> *@
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+@code {
+    private List<ProductViewModel> products = new();
+    private List<ProductViewModel> filteredProducts = new();
+    private List<DataTableColumn> productColumns = new();
+    private DataTableOptions productOptions = new();
+    private bool isLoading = true;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    // Search and filter fields
+    private string searchTerm = "";
+    private string filterProductType = "";
+    private string sortBy = "name";
+    private string sortOrder = "asc";
+
+    // Modal fields
+    private bool showProductModal = false;
+    private ProductViewModel selectedProduct = null;
+
+    // Statistics
+    private int susuProducts = 0;
+    private int fixedDepositProducts = 0;
+    private int productsWithTaxes = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureProductTable();
+        await LoadProducts();
+    }
+
+    private void ConfigureProductTable()
+    {
+        productColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "PRODUCT ID",
+                PropertyName = nameof(ProductViewModel.ProductID),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var productId = ((ProductViewModel)item).ProductID;
+                    return string.IsNullOrEmpty(productId)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<code class='fw-bold'>{productId}</code>";
+                }
+            },
+            new()
+            {
+                Header = "PRODUCT NAME",
+                PropertyName = nameof(ProductViewModel.ProductName),
+                CustomRenderer = (item) =>
+                {
+                    var productName = ((ProductViewModel)item).ProductName;
+                    return string.IsNullOrEmpty(productName)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{productName}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "PRODUCT TYPE",
+                PropertyName = nameof(ProductViewModel.ProductTypeName),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var product = (ProductViewModel)item;
+                    return $"<span class='badge {GetProductTypeBadgeClass(product)}'>{product.ProductTypeName}</span>";
+                }
+            },
+            new()
+            {
+                Header = "GL CODE",
+                PropertyName = nameof(ProductViewModel.GlCode),
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var glCode = ((ProductViewModel)item).GlCode;
+                    return $"<span class='badge bg-info'>{glCode}</span>";
+                }
+            },
+            new()
+            {
+                Header = "FEATURES",
+                PropertyName = "",
+                Width = 200,
+                CustomRenderer = (item) =>
+                {
+                    var product = (ProductViewModel)item;
+                    var features = new List<string>();
+
+                    if (product.IsSusu) features.Add("<span class='badge bg-success'>Susu</span>");
+                    if (product.IsFixedDeposit) features.Add("<span class='badge bg-warning'>Fixed Deposit</span>");
+                    if (product.HasTaxes) features.Add("<span class='badge bg-danger'>Taxable</span>");
+                    if (product.IsForAll) features.Add("<span class='badge bg-primary'>All Branches</span>");
+
+                    return string.Join(" ", features);
+                }
+            },
+            new()
+            {
+                Header = "CREATED BY",
+                PropertyName = nameof(ProductViewModel.UserCreated),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var user = ((ProductViewModel)item).UserCreated;
+                    return string.IsNullOrEmpty(user)
+                        ? "<span class='text-muted'>System</span>"
+                        : $"<code>{user}</code>";
+                }
+            },
+            new()
+            {
+                Header = "DATE CREATED",
+                PropertyName = nameof(ProductViewModel.DateCreated),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var date = ((ProductViewModel)item).DateCreated;
+                    return $"<small>{date:dd MMM yyyy}</small>";
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var product = (ProductViewModel)item;
+                    return $@"
+                        <div class='btn-group btn-group-sm' role='group'>
+                            <button type='button' class='btn btn-info btn-xs' onclick='viewProductDetails({product.Id})' title='View Details'>
+                                <i class='fa fa-eye'></i>
+                            </button>
+                        </div>";
+                }
+            }
+        };
+
+        productOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search products...",
+            TableId = "productsTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-green-meadow font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "asc" } },
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search products:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ products",
+                    ["infoEmpty"] = "No products found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total products)",
+                    ["emptyTable"] = "No product data available",
+                    ["zeroRecords"] = "No matching products found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading products...");
+
+            var result = await ApiClient.GetProductsAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                products = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {products.Count} product records");
+            }
+            else
+            {
+                products = new List<ProductViewModel>();
+                filteredProducts = new List<ProductViewModel>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No product records found");
+            }
+
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load products.";
+            Console.WriteLine($"❌ API Error loading products: {apiEx.Message}");
+            products = new List<ProductViewModel>();
+            filteredProducts = new List<ProductViewModel>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            products = new List<ProductViewModel>();
+            filteredProducts = new List<ProductViewModel>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load products. Please check your connection.";
+            Console.WriteLine($"❌ Error loading products: {ex.Message}");
+            products = new List<ProductViewModel>();
+            filteredProducts = new List<ProductViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = products.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(p =>
+                (p.ProductName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true) ||
+                (p.ProductID?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true) ||
+                (p.ProductTypeName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true)
+            );
+        }
+
+        // Apply product type filter
+        if (!string.IsNullOrEmpty(filterProductType))
+        {
+            query = filterProductType switch
+            {
+                "susu" => query.Where(p => p.IsSusu),
+                "fixed" => query.Where(p => p.IsFixedDeposit),
+                "other" => query.Where(p => !p.IsSusu && !p.IsFixedDeposit),
+                _ => query
+            };
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "id" => sortOrder == "asc"
+                ? query.OrderBy(p => p.ProductID)
+                : query.OrderByDescending(p => p.ProductID),
+            "type" => sortOrder == "asc"
+                ? query.OrderBy(p => p.ProductTypeName)
+                : query.OrderByDescending(p => p.ProductTypeName),
+            "date" => sortOrder == "asc"
+                ? query.OrderBy(p => p.DateCreated)
+                : query.OrderByDescending(p => p.DateCreated),
+            _ => sortOrder == "asc"
+                ? query.OrderBy(p => p.ProductName)
+                : query.OrderByDescending(p => p.ProductName)
+        };
+
+        filteredProducts = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        filterProductType = "";
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        susuProducts = products.Count(p => p.IsSusu);
+        fixedDepositProducts = products.Count(p => p.IsFixedDeposit);
+        productsWithTaxes = products.Count(p => p.HasTaxes);
+    }
+
+    private void ResetStatistics()
+    {
+        susuProducts = 0;
+        fixedDepositProducts = 0;
+        productsWithTaxes = 0;
+    }
+
+    private string GetProductTypeBadgeClass(ProductViewModel product)
+    {
+        if (product.IsSusu) return "bg-success";
+        if (product.IsFixedDeposit) return "bg-warning";
+        return "bg-info";
+    }
+
+    private void ShowAddModal()
+    {
+        // TODO: Implement add product modal
+        Console.WriteLine("Add product modal would open here");
+    }
+
+    [JSInvokable]
+    public async Task ViewProductDetails(int productId)
+    {
+        selectedProduct = products.FirstOrDefault(p => p.Id == productId);
+        if (selectedProduct != null)
+        {
+            showProductModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task EditProduct(int productId)
+    {
+        // TODO: Implement edit product functionality
+        Console.WriteLine($"Edit product: {productId}");
+    }
+
+    private void CloseProductModal()
+    {
+        showProductModal = false;
+        selectedProduct = null;
+        StateHasChanged();
+    }
+
+    private void EditProduct()
+    {
+        if (selectedProduct != null)
+        {
+            // TODO: Implement edit product functionality
+            Console.WriteLine($"Editing product: {selectedProduct.ProductName}");
+            CloseProductModal();
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "Product ID,Product Name,Product Type,GL Code,GL Name,Income GL,Intermediary GL,Is Susu,Is Fixed Deposit,Has Taxes,Date Created,Created By\n";
+
+            foreach (var product in filteredProducts)
+            {
+                csvContent += $"\"{product.ProductID}\",";
+                csvContent += $"\"{product.ProductName}\",";
+                csvContent += $"\"{product.ProductTypeName}\",";
+                csvContent += $"\"{product.GlCode}\",";
+                csvContent += $"\"{product.GlName}\",";
+                csvContent += $"\"{product.IncomeGL}\",";
+                csvContent += $"\"{product.IntermediaryGL}\",";
+                csvContent += $"\"{(product.IsSusu ? "Yes" : "No")}\",";
+                csvContent += $"\"{(product.IsFixedDeposit ? "Yes" : "No")}\",";
+                csvContent += $"\"{(product.HasTaxes ? "Yes" : "No")}\",";
+                csvContent += $"\"{product.DateCreated:yyyy-MM-dd}\",";
+                csvContent += $"\"{product.UserCreated}\"\n";
+            }
+
+            var fileName = $"Products_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnProductRowClick(ProductViewModel product)
+    {
+        Console.WriteLine($"Product row clicked: {product.ProductName} ({product.ProductID})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference",
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+
+<style>
+  
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .detail-group {
+        margin-bottom: 1rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #555;
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .detail-value {
+        color: #333;
+        font-size: 1rem;
+    }
+
+    .form-check-input:checked {
+        background-color: #1bc5bd;
+        border-color: #1bc5bd;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.viewProductDetails = function(productId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ViewProductDetails', productId)
+                .catch(err => {
+                    console.error('Error calling ViewProductDetails:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.editProduct = function(productId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditProduct', productId)
+                .catch(err => {
+                    console.error('Error calling EditProduct:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

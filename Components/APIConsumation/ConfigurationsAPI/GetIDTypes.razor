@@ -1,0 +1,1473 @@
+@page "/id-types"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        ID Types Management
+        <small>Manage identification document types for client verification</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-badge font-dark"></i>
+                <span class="caption-subject bold uppercase">Identification Types</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadIDTypes" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New ID Type">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            @if (idTypes.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@idTypes.Count</h4>
+                                        <small>Total ID Types</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-id-card fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@commonIDTypes</h4>
+                                        <small>Common Types</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-star fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@highestTypeId</h4>
+                                        <small>Highest Type ID</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-hashtag fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@recentlyAdded</h4>
+                                        <small>Recently Added</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-clock fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Quick Actions -->
+            @if (idTypes.Any())
+            {
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fa fa-bolt me-2"></i>
+                                    Quick Actions
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        @* <button class="btn btn-outline-primary me-2" @onclick="AddCommonIDTypes"> *@
+                                        @*     <i class="fa fa-magic me-1"></i> Add Common ID Types *@
+                                        @* </button> *@
+                                        @* <button class="btn btn-outline-info me-2" @onclick="ShowBulkActionsModal"> *@
+                                        @*     <i class="fa fa-upload me-1"></i> Bulk Import *@
+                                        @* </button> *@
+                                        <button class="btn btn-outline-success" @onclick="ExportToExcel" disabled="@(!filteredIDTypes.Any())">
+                                            <i class="fa fa-download me-1"></i> Export to Excel
+                                        </button>
+                                        <button class="btn btn-outline-warning float-end" @onclick="ShowUsageGuide">
+                                            <i class="fa fa-question-circle me-1"></i> Usage Guide
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Search and Filter Section -->
+            @if (idTypes.Any())
+            {
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fa fa-search me-2"></i>
+                                    Search & Filter
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Search ID Types</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                                <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by ID type name..." />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort By</label>
+                                            <select class="form-select" @bind="sortBy">
+                                                <option value="name">ID Type Name</option>
+                                                <option value="id">ID Type ID</option>
+                                                <option value="length">Name Length</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort Order</label>
+                                            <select class="form-select" @bind="sortOrder">
+                                                <option value="asc">Ascending</option>
+                                                <option value="desc">Descending</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <button class="btn btn-secondary" @onclick="ClearSearch">
+                                            <i class="fa fa-times"></i> Clear Search
+                                        </button>
+                                        <span class="badge bg-info ms-2">
+                                            <i class="fa fa-filter"></i> Showing @filteredIDTypes.Count of @idTypes.Count types
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredIDTypes?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-id-card me-2"></i>
+                                    Identification Types
+                                    <span class="badge bg-light text-dark ms-2">@filteredIDTypes.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="IDTypeViewModel"
+                                                 Data="@filteredIDTypes"
+                                                 Columns="@idTypeColumns"
+                                                 Options="@idTypeOptions"
+                                                 OnRowClick="@OnIDTypeRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No ID Types Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <text>No ID types found matching your search criteria.</text>
+                                }
+                                else
+                                {
+                                    <text>No identification types have been configured in the system.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Search
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="mt-3">
+                                    <button class="btn btn-success me-2" @onclick="ShowAddModal">
+                                        <i class="fa fa-plus"></i> Add First ID Type
+                                    </button>
+                                    <button class="btn btn-outline-primary" @onclick="AddCommonIDTypes">
+                                        <i class="fa fa-magic"></i> Add Common ID Types
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading ID types...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit ID Type Modal -->
+@if (showIDTypeModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit ID Type" : "Add New ID Type")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseIDTypeModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isEditing)
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">ID Type ID</label>
+                            <input type="text" class="form-control" value="@currentIDType.Id" disabled />
+                            <small class="form-text text-muted">ID Type ID cannot be changed</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">ID Type ID *</label>
+                            <input type="number" class="form-control" @bind="newIDTypeId" 
+                                   placeholder="Enter unique ID type ID" min="1" />
+                            <small class="form-text text-muted">Unique numeric identifier for the ID type</small>
+                        </div>
+                    }
+                    <div class="form-group mb-3">
+                        <label class="form-label">Identification Type Name *</label>
+                        <input type="text" class="form-control" @bind="currentIDType.IdentificationTypeName" 
+                               placeholder="Enter identification type name" maxlength="100" />
+                        <small class="form-text text-muted">Name of the identification document type (e.g., Passport, Driver's License, National ID)</small>
+                    </div>
+                    
+                    <!-- Common ID Types Suggestions -->
+                    @if (!isEditing)
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Quick Suggestions</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var suggestion in commonTypeSuggestions)
+                                {
+                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UseSuggestion(suggestion)">
+                                        @suggestion
+                                    </button>
+                                }
+                            </div>
+                            <small class="form-text text-muted">Click to quickly use common ID type names</small>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> @validationMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseIDTypeModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveIDType" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") ID Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && idTypeToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following ID type?</p>
+                    <div class="alert alert-warning">
+                        <strong>ID: @idTypeToDelete.Id</strong> - @idTypeToDelete.IdentificationTypeName
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone! This may affect client verification processes that use this ID type.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete ID Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Bulk Actions Modal -->
+@if (showBulkActionsModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-upload me-2"></i>
+                        Bulk ID Types Import
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseBulkActionsModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i> 
+                        You can add multiple ID types at once. Enter one ID type per line in the format: <code>ID,Name</code>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Bulk ID Types Data</label>
+                        <textarea class="form-control" @bind="bulkIDTypesData" rows="10" 
+                                  placeholder="Example:&#10;1,Passport&#10;2,National ID&#10;3,Driver's License&#10;4,Birth Certificate&#10;5,Social Security Card"></textarea>
+                        <small class="form-text text-muted">
+                            Format: <strong>ID,Name</strong> (one per line). IDs must be unique numeric values.
+                        </small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label">Quick Templates</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="LoadInternationalTemplate">
+                                International Documents
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm" @onclick="LoadGovernmentTemplate">
+                                Government IDs
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" @onclick="LoadBusinessTemplate">
+                                Business Documents
+                            </button>
+                        </div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(bulkActionsMessage))
+                    {
+                        <div class="alert @(bulkActionsMessage.Contains("Error") ? "alert-danger" : "alert-success")">
+                            @bulkActionsMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseBulkActionsModal">Cancel</button>
+                    <button type="button" class="btn btn-info" @onclick="ValidateBulkData">
+                        <i class="fa fa-check"></i> Validate Data
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="ImportBulkIDTypes" disabled="@string.IsNullOrEmpty(bulkIDTypesData)">
+                        <i class="fa fa-upload"></i> Import ID Types
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Usage Guide Modal -->
+@if (showUsageGuideModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-question-circle me-2"></i>
+                        ID Types Usage Guide
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseUsageGuideModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fa fa-lightbulb text-warning me-2"></i>Best Practices</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fa fa-check text-success me-2"></i>Use clear, descriptive names</li>
+                                <li><i class="fa fa-check text-success me-2"></i>Include country-specific ID types</li>
+                                <li><i class="fa fa-check text-success me-2"></i>Group similar document types</li>
+                                <li><i class="fa fa-check text-success me-2"></i>Keep names consistent</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fa fa-list text-info me-2"></i>Common Types</h6>
+                            <ul class="list-unstyled">
+                                <li>• Passport</li>
+                                <li>• National ID</li>
+                                <li>• Driver's License</li>
+                                <li>• Birth Certificate</li>
+                                <li>• Social Security Card</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <strong>Note:</strong> ID types are used for client verification and KYC compliance. Ensure all types are properly configured for your regulatory requirements.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="CloseUsageGuideModal">
+                        <i class="fa fa-check"></i> Got It
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<IDTypeViewModel> idTypes = new();
+    private List<IDTypeViewModel> filteredIDTypes = new();
+    private List<DataTableColumn> idTypeColumns = new();
+    private DataTableOptions idTypeOptions = new();
+    private bool isLoading = false;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string validationMessage = string.Empty;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string sortBy = "name";
+    private string sortOrder = "asc";
+    
+    // Modal fields
+    private bool showIDTypeModal = false;
+    private bool showDeleteModal = false;
+    private bool showBulkActionsModal = false;
+    private bool showUsageGuideModal = false;
+    private bool isEditing = false;
+    private IDTypeViewModel currentIDType = new();
+    private IDTypeViewModel idTypeToDelete = null;
+    private int newIDTypeId = 0;
+    
+    // Bulk actions
+    private string bulkIDTypesData = "";
+    private string bulkActionsMessage = "";
+    
+    // Statistics
+    private int highestTypeId = 0;
+    private int commonIDTypes = 0;
+    private int recentlyAdded = 0;
+
+    // Common suggestions
+    private readonly List<string> commonTypeSuggestions = new()
+    {
+        "Passport",
+        "National ID",
+        "Driver's License",
+        "Birth Certificate",
+        "Social Security Card",
+        "Voter ID",
+        "Tax ID",
+        "Residence Permit",
+        "Work Permit",
+        "Student ID"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureIDTypeTable();
+        await LoadIDTypes();
+    }
+
+    private void ConfigureIDTypeTable()
+    {
+        idTypeColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "ID TYPE ID",
+                PropertyName = nameof(IDTypeViewModel.Id),
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var typeId = ((IDTypeViewModel)item).Id;
+                    var badgeClass = GetIDTypeBadgeClass(typeId);
+                    return $"<span class='badge {badgeClass}'>{typeId}</span>";
+                }
+            },
+            new()
+            {
+                Header = "IDENTIFICATION TYPE",
+                PropertyName = nameof(IDTypeViewModel.IdentificationTypeName),
+                CustomRenderer = (item) =>
+                {
+                    var idType = (IDTypeViewModel)item;
+                    var name = idType.IdentificationTypeName;
+                    
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        return "<span class='text-muted'><i>Unnamed ID Type</i></span>";
+                    }
+                    
+                    var icon = GetIDTypeIcon(name);
+                    var typeCategory = GetIDTypeCategory(name);
+                    var categoryBadge = $"<span class='badge {GetCategoryBadgeClass(typeCategory)} ms-2'>{typeCategory}</span>";
+                    
+                    return $@"
+                        <div class='d-flex align-items-center'>
+                            <div class='id-type-icon me-3'>
+                                <i class='fa {icon} text-primary'></i>
+                            </div>
+                            <div>
+                                <strong class='text-primary'>{name}</strong>
+                                <br/>
+                                <small class='text-muted'>Identification Document Type</small>
+                            </div>
+                            {categoryBadge}
+                        </div>";
+                }
+            },
+            new()
+            {
+                Header = "NAME LENGTH",
+                PropertyName = nameof(IDTypeViewModel.IdentificationTypeName),
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var name = ((IDTypeViewModel)item).IdentificationTypeName;
+                    var length = string.IsNullOrEmpty(name) ? 0 : name.Length;
+                    var badgeClass = length < 10 ? "bg-success" : length < 20 ? "bg-info" : "bg-warning";
+                    return $"<span class='badge {badgeClass}'>{length} chars</span>";
+                }
+            }
+            // new()
+            // {
+            //     Header = "ACTIONS",
+            //     PropertyName = "",
+            //     Sortable = false,
+            //     Searchable = false,
+            //     Width = 120,
+            //     CssClass = "text-center",
+            //     CustomRenderer = (item) => 
+            //     {
+            //         var idType = (IDTypeViewModel)item;
+            //         return $@"
+            //             <div class='btn-group btn-group-sm' role='group'>
+            //                 <button type='button' class='btn btn-warning btn-xs' onclick='editIDType({idType.Id})' title='Edit'>
+            //                     <i class='fa fa-edit'></i>
+            //                 </button>
+            //                 <button type='button' class='btn btn-danger btn-xs' onclick='deleteIDType({idType.Id})' title='Delete'>
+            //                     <i class='fa fa-trash'></i>
+            //                 </button>
+            //             </div>";
+            //     }
+            // }
+        };
+
+        idTypeOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search ID types...",
+            TableId = "idTypesTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-madison font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "asc" } }, // Default sort by ID type name
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search ID types:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ ID types",
+                    ["infoEmpty"] = "No ID types found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total ID types)",
+                    ["emptyTable"] = "No ID type data available",
+                    ["zeroRecords"] = "No matching ID types found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadIDTypes()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            validationMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading ID types...");
+
+            var result = await ApiClient.GetIDTypesAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                idTypes = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {idTypes.Count} ID types");
+            }
+            else
+            {
+                idTypes = new List<IDTypeViewModel>();
+                filteredIDTypes = new List<IDTypeViewModel>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No ID types found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load ID types.";
+            Console.WriteLine($"❌ API Error loading ID types: {apiEx.Message}");
+            idTypes = new List<IDTypeViewModel>();
+            filteredIDTypes = new List<IDTypeViewModel>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            idTypes = new List<IDTypeViewModel>();
+            filteredIDTypes = new List<IDTypeViewModel>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load ID types. Please check your connection.";
+            Console.WriteLine($"❌ Error loading ID types: {ex.Message}");
+            idTypes = new List<IDTypeViewModel>();
+            filteredIDTypes = new List<IDTypeViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = idTypes.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(it =>
+                it.IdentificationTypeName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
+            );
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "id" => sortOrder == "asc" 
+                ? query.OrderBy(it => it.Id)
+                : query.OrderByDescending(it => it.Id),
+            "length" => sortOrder == "asc" 
+                ? query.OrderBy(it => it.IdentificationTypeName?.Length ?? 0)
+                : query.OrderByDescending(it => it.IdentificationTypeName?.Length ?? 0),
+            _ => sortOrder == "asc" 
+                ? query.OrderBy(it => it.IdentificationTypeName)
+                : query.OrderByDescending(it => it.IdentificationTypeName)
+        };
+
+        filteredIDTypes = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        highestTypeId = idTypes.Any() ? idTypes.Max(it => it.Id) : 0;
+        commonIDTypes = idTypes.Count(it => 
+            commonTypeSuggestions.Contains(it.IdentificationTypeName, StringComparer.OrdinalIgnoreCase));
+        recentlyAdded = idTypes.Count(it => it.Id > highestTypeId - 5); // Last 5 added
+    }
+
+    private void ResetStatistics()
+    {
+        highestTypeId = 0;
+        commonIDTypes = 0;
+        recentlyAdded = 0;
+    }
+
+    private string GetIDTypeBadgeClass(int typeId)
+    {
+        return typeId switch
+        {
+            <= 5 => "bg-primary",    // Primary ID types
+            <= 10 => "bg-success",   // Secondary ID types
+            <= 15 => "bg-info",      // Tertiary ID types
+            <= 20 => "bg-warning",   // Additional ID types
+            _ => "bg-secondary"      // Other ID types
+        };
+    }
+
+    private string GetIDTypeIcon(string typeName)
+    {
+        if (string.IsNullOrEmpty(typeName)) return "fa-id-card";
+        
+        var lowerName = typeName.ToLower();
+        return lowerName switch
+        {
+            var n when n.Contains("passport") => "fa-passport",
+            var n when n.Contains("driver") => "fa-car",
+            var n when n.Contains("license") => "fa-id-card-alt",
+            var n when n.Contains("birth") => "fa-birthday-cake",
+            var n when n.Contains("social") => "fa-shield-alt",
+            var n when n.Contains("voter") => "fa-vote-yea",
+            var n when n.Contains("tax") => "fa-receipt",
+            var n when n.Contains("resident") => "fa-home",
+            var n when n.Contains("work") => "fa-briefcase",
+            var n when n.Contains("student") => "fa-graduation-cap",
+            _ => "fa-id-card"
+        };
+    }
+
+    private string GetIDTypeCategory(string typeName)
+    {
+        if (string.IsNullOrEmpty(typeName)) return "General";
+        
+        var lowerName = typeName.ToLower();
+        return lowerName switch
+        {
+            var n when n.Contains("passport") || n.Contains("visa") => "International",
+            var n when n.Contains("national") || n.Contains("federal") => "Government",
+            var n when n.Contains("driver") || n.Contains("license") => "License",
+            var n when n.Contains("birth") || n.Contains("certificate") => "Certificate",
+            var n when n.Contains("social") || n.Contains("security") => "Social",
+            var n when n.Contains("student") || n.Contains("school") => "Education",
+            var n when n.Contains("work") || n.Contains("business") => "Employment",
+            _ => "General"
+        };
+    }
+
+    private string GetCategoryBadgeClass(string category)
+    {
+        return category switch
+        {
+            "International" => "bg-primary",
+            "Government" => "bg-success",
+            "License" => "bg-info",
+            "Certificate" => "bg-warning",
+            "Social" => "bg-purple",
+            "Education" => "bg-teal",
+            "Employment" => "bg-orange",
+            _ => "bg-secondary"
+        };
+    }
+
+    private void ShowAddModal()
+    {
+        currentIDType = new IDTypeViewModel();
+        newIDTypeId = highestTypeId + 1; // Suggest next available ID
+        isEditing = false;
+        validationMessage = string.Empty;
+        showIDTypeModal = true;
+        StateHasChanged();
+    }
+
+    private void ShowBulkActionsModal()
+    {
+        showBulkActionsModal = true;
+        bulkActionsMessage = "";
+        StateHasChanged();
+    }
+
+    private void ShowUsageGuide()
+    {
+        showUsageGuideModal = true;
+        StateHasChanged();
+    }
+
+    private void UseSuggestion(string suggestion)
+    {
+        currentIDType.IdentificationTypeName = suggestion;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditIDType(int idTypeId)
+    {
+        var idType = idTypes.FirstOrDefault(it => it.Id == idTypeId);
+        if (idType != null)
+        {
+            currentIDType = new IDTypeViewModel
+            {
+                Id = idType.Id,
+                IdentificationTypeName = idType.IdentificationTypeName
+            };
+            isEditing = true;
+            validationMessage = string.Empty;
+            showIDTypeModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteIDType(int idTypeId)
+    {
+        idTypeToDelete = idTypes.FirstOrDefault(it => it.Id == idTypeId);
+        if (idTypeToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveIDType()
+    {
+        try
+        {
+            validationMessage = string.Empty;
+
+            if (string.IsNullOrEmpty(currentIDType.IdentificationTypeName?.Trim()))
+            {
+                validationMessage = "Identification Type Name is required.";
+                return;
+            }
+
+            // TODO: Implement actual API call to save ID type
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing ID type
+                var existing = idTypes.FirstOrDefault(it => it.Id == currentIDType.Id);
+                if (existing != null)
+                {
+                    existing.IdentificationTypeName = currentIDType.IdentificationTypeName.Trim();
+                }
+                successMessage = "ID type updated successfully!";
+            }
+            else
+            {
+                // Check if ID already exists
+                if (idTypes.Any(it => it.Id == newIDTypeId))
+                {
+                    validationMessage = $"An ID type with ID {newIDTypeId} already exists.";
+                    return;
+                }
+
+                // Check if name already exists
+                if (idTypes.Any(it => 
+                    it.IdentificationTypeName?.Equals(currentIDType.IdentificationTypeName.Trim(), StringComparison.OrdinalIgnoreCase) == true))
+                {
+                    validationMessage = $"An ID type with name '{currentIDType.IdentificationTypeName.Trim()}' already exists.";
+                    return;
+                }
+
+                // Add new ID type
+                idTypes.Add(new IDTypeViewModel
+                {
+                    Id = newIDTypeId,
+                    IdentificationTypeName = currentIDType.IdentificationTypeName.Trim()
+                });
+                successMessage = "ID type created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseIDTypeModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} ID type: {currentIDType.IdentificationTypeName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} ID type. Please try again.";
+            Console.WriteLine($"❌ Error saving ID type: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (idTypeToDelete == null) return;
+
+            // TODO: Implement actual API call to delete ID type
+            await Task.Delay(500);
+
+            idTypes.RemoveAll(it => it.Id == idTypeToDelete.Id);
+            successMessage = "ID type deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted ID type: {idTypeToDelete.IdentificationTypeName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete ID type. Please try again.";
+            Console.WriteLine($"❌ Error deleting ID type: {ex.Message}");
+        }
+    }
+
+    private async Task AddCommonIDTypes()
+    {
+        try
+        {
+            var commonTypes = new List<IDTypeViewModel>
+            {
+                new() { Id = 1, IdentificationTypeName = "Passport" },
+                new() { Id = 2, IdentificationTypeName = "National ID" },
+                new() { Id = 3, IdentificationTypeName = "Driver's License" },
+                new() { Id = 4, IdentificationTypeName = "Birth Certificate" },
+                new() { Id = 5, IdentificationTypeName = "Social Security Card" }
+            };
+
+            var addedCount = 0;
+            foreach (var type in commonTypes)
+            {
+                if (!idTypes.Any(it => it.Id == type.Id || 
+                    it.IdentificationTypeName?.Equals(type.IdentificationTypeName, StringComparison.OrdinalIgnoreCase) == true))
+                {
+                    idTypes.Add(type);
+                    addedCount++;
+                }
+            }
+
+            if (addedCount > 0)
+            {
+                ApplyFilters();
+                CalculateStatistics();
+                successMessage = $"Added {addedCount} common ID types successfully!";
+            }
+            else
+            {
+                successMessage = "All common ID types already exist in the system.";
+            }
+            
+            Console.WriteLine($"✅ Added {addedCount} common ID types");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to add common ID types: " + ex.Message;
+            Console.WriteLine($"❌ Error adding common ID types: {ex.Message}");
+        }
+    }
+
+    private void LoadInternationalTemplate()
+    {
+        bulkIDTypesData = "1,Passport\n2,International Passport\n3,Visa\n4,Residence Permit\n5,Work Permit";
+        StateHasChanged();
+    }
+
+    private void LoadGovernmentTemplate()
+    {
+        bulkIDTypesData = "1,National ID\n2,Social Security Card\n3,Driver's License\n4,Voter ID\n5,Tax ID";
+        StateHasChanged();
+    }
+
+    private void LoadBusinessTemplate()
+    {
+        bulkIDTypesData = "1,Business License\n2,Tax Certificate\n3,Professional ID\n4,Work ID\n5,Company ID";
+        StateHasChanged();
+    }
+
+    private async Task ValidateBulkData()
+    {
+        if (string.IsNullOrEmpty(bulkIDTypesData))
+        {
+            bulkActionsMessage = "Error: Please enter data to validate.";
+            return;
+        }
+
+        try
+        {
+            var lines = bulkIDTypesData.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var validEntries = new List<string>();
+            var errors = new List<string>();
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i].Trim();
+                if (string.IsNullOrEmpty(line)) continue;
+
+                var parts = line.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length != 2)
+                {
+                    errors.Add($"Line {i + 1}: Invalid format. Expected 'ID,Name'");
+                    continue;
+                }
+
+                if (!int.TryParse(parts[0].Trim(), out int id) || id <= 0)
+                {
+                    errors.Add($"Line {i + 1}: Invalid ID '{parts[0]}'. Must be a positive number.");
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(parts[1].Trim()))
+                {
+                    errors.Add($"Line {i + 1}: ID type name cannot be empty.");
+                    continue;
+                }
+
+                if (idTypes.Any(it => it.Id == id))
+                {
+                    errors.Add($"Line {i + 1}: ID Type ID {id} already exists.");
+                    continue;
+                }
+
+                if (idTypes.Any(it => 
+                    it.IdentificationTypeName?.Equals(parts[1].Trim(), StringComparison.OrdinalIgnoreCase) == true))
+                {
+                    errors.Add($"Line {i + 1}: ID Type name '{parts[1].Trim()}' already exists.");
+                    continue;
+                }
+
+                validEntries.Add($"ID: {id}, Name: {parts[1].Trim()}");
+            }
+
+            if (errors.Any())
+            {
+                bulkActionsMessage = $"Validation failed with {errors.Count} error(s):\n" + string.Join("\n", errors.Take(5));
+                if (errors.Count > 5)
+                {
+                    bulkActionsMessage += $"\n... and {errors.Count - 5} more error(s)";
+                }
+            }
+            else
+            {
+                bulkActionsMessage = $"✅ Validation successful! Found {validEntries.Count} valid ID type(s) ready for import.";
+            }
+        }
+        catch (Exception ex)
+        {
+            bulkActionsMessage = $"Error during validation: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ImportBulkIDTypes()
+    {
+        try
+        {
+            var lines = bulkIDTypesData.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var importedCount = 0;
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+                if (string.IsNullOrEmpty(trimmedLine)) continue;
+
+                var parts = trimmedLine.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int id) && id > 0)
+                {
+                    var name = parts[1].Trim();
+                    if (!string.IsNullOrEmpty(name) && 
+                        !idTypes.Any(it => it.Id == id) &&
+                        !idTypes.Any(it => it.IdentificationTypeName?.Equals(name, StringComparison.OrdinalIgnoreCase) == true))
+                    {
+                        idTypes.Add(new IDTypeViewModel
+                        {
+                            Id = id,
+                            IdentificationTypeName = name
+                        });
+                        importedCount++;
+                    }
+                }
+            }
+
+            if (importedCount > 0)
+            {
+                ApplyFilters();
+                CalculateStatistics();
+                successMessage = $"Successfully imported {importedCount} ID type(s)!";
+                CloseBulkActionsModal();
+            }
+            else
+            {
+                bulkActionsMessage = "No valid ID types were imported. Please check your data.";
+            }
+        }
+        catch (Exception ex)
+        {
+            bulkActionsMessage = $"Error during import: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private void CloseIDTypeModal()
+    {
+        showIDTypeModal = false;
+        currentIDType = new IDTypeViewModel();
+        newIDTypeId = 0;
+        validationMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        idTypeToDelete = null;
+        StateHasChanged();
+    }
+
+    private void CloseBulkActionsModal()
+    {
+        showBulkActionsModal = false;
+        bulkIDTypesData = "";
+        bulkActionsMessage = "";
+        StateHasChanged();
+    }
+
+    private void CloseUsageGuideModal()
+    {
+        showUsageGuideModal = false;
+        StateHasChanged();
+    }
+
+    private bool IsSaveDisabled
+    {
+        get
+        {
+            if (isEditing)
+            {
+                return string.IsNullOrEmpty(currentIDType.IdentificationTypeName?.Trim());
+            }
+            else
+            {
+                return newIDTypeId <= 0 || string.IsNullOrEmpty(currentIDType.IdentificationTypeName?.Trim());
+            }
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "ID Type ID,Identification Type Name,Category\n";
+            
+            foreach (var idType in filteredIDTypes)
+            {
+                csvContent += $"\"{idType.Id}\",";
+                csvContent += $"\"{idType.IdentificationTypeName}\",";
+                csvContent += $"\"{GetIDTypeCategory(idType.IdentificationTypeName)}\"\n";
+            }
+
+            var fileName = $"IDTypes_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnIDTypeRowClick(IDTypeViewModel idType)
+    {
+        Console.WriteLine($"ID type row clicked: {idType.IdentificationTypeName} (ID: {idType.Id})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    /*.page-title {*/
+    /*    margin: 20px 0;*/
+    /*    font-size: 28px;*/
+    /*    font-weight: 300;*/
+    /*}*/
+    
+    /*.page-title small {*/
+    /*    color: #888;*/
+    /*    font-size: 14px;*/
+    /*    margin-left: 10px;*/
+    /*}*/
+    
+    /*.portlet.light.bordered {*/
+    /*    background-color: #fff;*/
+    /*    border: 1px solid #e7ecf1;*/
+    /*    margin-bottom: 20px;*/
+    /*}*/
+    
+    /*.portlet > .portlet-title {*/
+    /*    border-bottom: 1px solid #eee;*/
+    /*    padding: 15px 20px;*/
+    /*    margin-bottom: 0;*/
+    /*}*/
+    
+    /*.portlet > .portlet-body {*/
+    /*    padding: 20px;*/
+    /*}*/
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .id-type-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+
+    .bg-teal {
+        background-color: #20c997 !important;
+    }
+
+    .bg-orange {
+        background-color: #fd7e14 !important;
+    }
+
+    .form-check-input:checked {
+        background-color: #198754;
+        border-color: #198754;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editIDType = function(idTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditIDType', idTypeId)
+                .catch(err => {
+                    console.error('Error calling EditIDType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteIDType = function(idTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteIDType', idTypeId)
+                .catch(err => {
+                    console.error('Error calling DeleteIDType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

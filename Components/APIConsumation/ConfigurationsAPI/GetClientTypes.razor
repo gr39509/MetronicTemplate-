@@ -1,0 +1,1003 @@
+@page "/client-types"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Client Types Management
+        <small>Manage different types of clients in the system</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-users font-dark"></i>
+                <span class="caption-subject bold uppercase">Client Types</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadClientTypes" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Client Type">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            @if (clientTypes.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@clientTypes.Count</h4>
+                                        <small>Total Client Types</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-list fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@businessClientTypes</h4>
+                                        <small>Business Types</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-building fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@individualClientTypes</h4>
+                                        <small>Individual Types</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-user fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@highestClientTypeId</h4>
+                                        <small>Highest Type ID</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-hashtag fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Search and Filter Section -->
+            @if (clientTypes.Any())
+            {
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fa fa-search me-2"></i>
+                                    Search & Filter
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Search Client Types</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                                <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by client type name..." />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Client Type</label>
+                                            <select class="form-select" @bind="clientTypeFilter">
+                                                <option value="all">All Types</option>
+                                                <option value="business">Business Only</option>
+                                                <option value="individual">Individual Only</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort By</label>
+                                            <select class="form-select" @bind="sortBy">
+                                                <option value="name">Client Type Name</option>
+                                                <option value="id">Client Type ID</option>
+                                                <option value="type">Client Type</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort Order</label>
+                                            <select class="form-select" @bind="sortOrder">
+                                                <option value="asc">Ascending</option>
+                                                <option value="desc">Descending</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <button class="btn btn-secondary" @onclick="ClearSearch">
+                                            <i class="fa fa-times"></i> Clear Search
+                                        </button>
+                                        <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredClientTypes.Any())">
+                                            <i class="fa fa-download"></i> Export to Excel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredClientTypes?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-users me-2"></i>
+                                    Client Types
+                                    <span class="badge bg-light text-dark ms-2">@filteredClientTypes.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                    @if (clientTypeFilter != "all")
+                                    {
+                                        <span class="badge bg-warning ms-2">Filter: @clientTypeFilter</span>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="ClientTypeViewModel"
+                                                 Data="@filteredClientTypes"
+                                                 Columns="@clientTypeColumns"
+                                                 Options="@clientTypeOptions"
+                                                 OnRowClick="@OnClientTypeRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Client Types Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm) || clientTypeFilter != "all")
+                                {
+                                    <text>No client types found matching your search criteria.</text>
+                                }
+                                else
+                                {
+                                    <text>No client types have been configured in the system.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm) || clientTypeFilter != "all")
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Search
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success mt-2" @onclick="ShowAddModal">
+                                    <i class="fa fa-plus"></i> Add First Client Type
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading client types...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Client Type Modal -->
+@if (showClientTypeModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit Client Type" : "Add New Client Type")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseClientTypeModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isEditing)
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Client Type ID</label>
+                            <input type="text" class="form-control" value="@currentClientType.Id" disabled />
+                            <small class="form-text text-muted">Client Type ID cannot be changed</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Client Type ID *</label>
+                            <input type="number" class="form-control" @bind="newClientTypeId" 
+                                   placeholder="Enter unique client type ID" min="1" />
+                            <small class="form-text text-muted">Unique numeric identifier for the client type</small>
+                        </div>
+                    }
+                    <div class="form-group mb-3">
+                        <label class="form-label">Client Type Name *</label>
+                        <input type="text" class="form-control" @bind="currentClientType.ClientTypeName" 
+                               placeholder="Enter client type name" maxlength="100" />
+                        <small class="form-text text-muted">Descriptive name for the client type (e.g., Individual, Corporate, SME, Government)</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="currentClientType.IsBusiness" />
+                            <label class="form-check-label">
+                                <strong>Business Client Type</strong>
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">
+                            @if (currentClientType.IsBusiness)
+                            {
+                                <text>This client type represents business/organization clients</text>
+                            }
+                            else
+                            {
+                                <text>This client type represents individual/personal clients</text>
+                            }
+                        </small>
+                    </div>
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> @validationMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseClientTypeModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveClientType" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") Client Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && clientTypeToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following client type?</p>
+                    <div class="alert alert-warning">
+                        <strong>ID: @clientTypeToDelete.Id</strong> - @clientTypeToDelete.ClientTypeName
+                        <br />
+                        <span class="badge @(clientTypeToDelete.IsBusiness ? "bg-success" : "bg-info")">
+                            @(clientTypeToDelete.IsBusiness ? "Business" : "Individual")
+                        </span>
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone! This may affect clients that are assigned to this type.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete Client Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ClientTypeViewModel> clientTypes = new();
+    private List<ClientTypeViewModel> filteredClientTypes = new();
+    private List<DataTableColumn> clientTypeColumns = new();
+    private DataTableOptions clientTypeOptions = new();
+    private bool isLoading = false;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string validationMessage = string.Empty;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string clientTypeFilter = "all";
+    private string sortBy = "name";
+    private string sortOrder = "asc";
+    
+    // Modal fields
+    private bool showClientTypeModal = false;
+    private bool showDeleteModal = false;
+    private bool isEditing = false;
+    private ClientTypeViewModel currentClientType = new();
+    private ClientTypeViewModel clientTypeToDelete = null;
+    private int newClientTypeId = 0;
+    
+    // Statistics
+    private int highestClientTypeId = 0;
+    private int businessClientTypes = 0;
+    private int individualClientTypes = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureClientTypeTable();
+        await LoadClientTypes();
+    }
+
+    private void ConfigureClientTypeTable()
+    {
+        clientTypeColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "CLIENT TYPE ID",
+                PropertyName = nameof(ClientTypeViewModel.Id),
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var typeId = ((ClientTypeViewModel)item).Id;
+                    var badgeClass = GetClientTypeBadgeClass(typeId);
+                    return $"<span class='badge {badgeClass}'>{typeId}</span>";
+                }
+            },
+            new()
+            {
+                Header = "CLIENT TYPE NAME",
+                PropertyName = nameof(ClientTypeViewModel.ClientTypeName),
+                CustomRenderer = (item) =>
+                {
+                    var clientType = (ClientTypeViewModel)item;
+                    var typeName = clientType.ClientTypeName;
+                    var typeBadge = clientType.IsBusiness 
+                        ? "<span class='badge bg-success ms-2'>Business</span>" 
+                        : "<span class='badge bg-info ms-2'>Individual</span>";
+                    
+                    return string.IsNullOrEmpty(typeName)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{typeName}</strong> {typeBadge}";
+                }
+            },
+            new()
+            {
+                Header = "CLIENT TYPE",
+                PropertyName = nameof(ClientTypeViewModel.IsBusiness),
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var isBusiness = ((ClientTypeViewModel)item).IsBusiness;
+                    var badgeClass = isBusiness ? "bg-success" : "bg-info";
+                    var text = isBusiness ? "Business" : "Individual";
+                    return $"<span class='badge {badgeClass}'>{text}</span>";
+                }
+            }
+            // new()
+            // {
+            //     Header = "ACTIONS",
+            //     PropertyName = "",
+            //     Sortable = false,
+            //     Searchable = false,
+            //     Width = 120,
+            //     CssClass = "text-center",
+            //     CustomRenderer = (item) => 
+            //     {
+            //         var clientType = (ClientTypeViewModel)item;
+            //         return $@"
+            //             <div class='btn-group btn-group-sm' role='group'>
+            //                 <button type='button' class='btn btn-warning btn-xs' onclick='editClientType({clientType.Id})' title='Edit'>
+            //                     <i class='fa fa-edit'></i>
+            //                 </button>
+            //                 <button type='button' class='btn btn-danger btn-xs' onclick='deleteClientType({clientType.Id})' title='Delete'>
+            //                     <i class='fa fa-trash'></i>
+            //                 </button>
+            //             </div>";
+            //     }
+            // }
+        };
+
+        clientTypeOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search client types...",
+            TableId = "clientTypesTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-madison font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "asc" } }, // Default sort by client type name
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search client types:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ client types",
+                    ["infoEmpty"] = "No client types found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total client types)",
+                    ["emptyTable"] = "No client type data available",
+                    ["zeroRecords"] = "No matching client types found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadClientTypes()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            validationMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading client types...");
+
+            var result = await ApiClient.GetClientTypesAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                clientTypes = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {clientTypes.Count} client types");
+            }
+            else
+            {
+                clientTypes = new List<ClientTypeViewModel>();
+                filteredClientTypes = new List<ClientTypeViewModel>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No client types found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load client types.";
+            Console.WriteLine($"❌ API Error loading client types: {apiEx.Message}");
+            clientTypes = new List<ClientTypeViewModel>();
+            filteredClientTypes = new List<ClientTypeViewModel>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            clientTypes = new List<ClientTypeViewModel>();
+            filteredClientTypes = new List<ClientTypeViewModel>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load client types. Please check your connection.";
+            Console.WriteLine($"❌ Error loading client types: {ex.Message}");
+            clientTypes = new List<ClientTypeViewModel>();
+            filteredClientTypes = new List<ClientTypeViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = clientTypes.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(ct =>
+                ct.ClientTypeName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
+            );
+        }
+
+        // Apply client type filter
+        if (clientTypeFilter != "all")
+        {
+            var isBusiness = clientTypeFilter == "business";
+            query = query.Where(ct => ct.IsBusiness == isBusiness);
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "id" => sortOrder == "asc" 
+                ? query.OrderBy(ct => ct.Id)
+                : query.OrderByDescending(ct => ct.Id),
+            "type" => sortOrder == "asc" 
+                ? query.OrderBy(ct => ct.IsBusiness).ThenBy(ct => ct.ClientTypeName)
+                : query.OrderByDescending(ct => ct.IsBusiness).ThenBy(ct => ct.ClientTypeName),
+            _ => sortOrder == "asc" 
+                ? query.OrderBy(ct => ct.ClientTypeName)
+                : query.OrderByDescending(ct => ct.ClientTypeName)
+        };
+
+        filteredClientTypes = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        clientTypeFilter = "all";
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        highestClientTypeId = clientTypes.Any() ? clientTypes.Max(ct => ct.Id) : 0;
+        businessClientTypes = clientTypes.Count(ct => ct.IsBusiness);
+        individualClientTypes = clientTypes.Count(ct => !ct.IsBusiness);
+    }
+
+    private void ResetStatistics()
+    {
+        highestClientTypeId = 0;
+        businessClientTypes = 0;
+        individualClientTypes = 0;
+    }
+
+    private string GetClientTypeBadgeClass(int clientTypeId)
+    {
+        return clientTypeId switch
+        {
+            1 => "bg-primary",    // Individual
+            2 => "bg-success",    // Corporate
+            3 => "bg-info",       // SME
+            4 => "bg-warning",    // Government
+            _ => "bg-secondary"   // Other types
+        };
+    }
+
+    private void ShowAddModal()
+    {
+        currentClientType = new ClientTypeViewModel();
+        newClientTypeId = highestClientTypeId + 1; // Suggest next available ID
+        isEditing = false;
+        validationMessage = string.Empty;
+        showClientTypeModal = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditClientType(int clientTypeId)
+    {
+        var clientType = clientTypes.FirstOrDefault(ct => ct.Id == clientTypeId);
+        if (clientType != null)
+        {
+            currentClientType = new ClientTypeViewModel
+            {
+                Id = clientType.Id,
+                ClientTypeName = clientType.ClientTypeName,
+                IsBusiness = clientType.IsBusiness
+            };
+            isEditing = true;
+            validationMessage = string.Empty;
+            showClientTypeModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteClientType(int clientTypeId)
+    {
+        clientTypeToDelete = clientTypes.FirstOrDefault(ct => ct.Id == clientTypeId);
+        if (clientTypeToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveClientType()
+    {
+        try
+        {
+            validationMessage = string.Empty;
+
+            if (string.IsNullOrEmpty(currentClientType.ClientTypeName?.Trim()))
+            {
+                validationMessage = "Client Type Name is required.";
+                return;
+            }
+
+            // TODO: Implement actual API call to save client type
+            // For now, we'll simulate the save operation
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing client type
+                var existing = clientTypes.FirstOrDefault(ct => ct.Id == currentClientType.Id);
+                if (existing != null)
+                {
+                    existing.ClientTypeName = currentClientType.ClientTypeName.Trim();
+                    existing.IsBusiness = currentClientType.IsBusiness;
+                }
+                successMessage = "Client type updated successfully!";
+            }
+            else
+            {
+                // Add new client type
+                clientTypes.Add(new ClientTypeViewModel
+                {
+                    Id = newClientTypeId,
+                    ClientTypeName = currentClientType.ClientTypeName.Trim(),
+                    IsBusiness = currentClientType.IsBusiness
+                });
+                successMessage = "Client type created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseClientTypeModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} client type: {currentClientType.ClientTypeName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} client type. Please try again.";
+            Console.WriteLine($"❌ Error saving client type: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (clientTypeToDelete == null) return;
+
+            // TODO: Implement actual API call to delete client type
+            await Task.Delay(500);
+
+            clientTypes.RemoveAll(ct => ct.Id == clientTypeToDelete.Id);
+            successMessage = "Client type deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted client type: {clientTypeToDelete.ClientTypeName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete client type. Please try again.";
+            Console.WriteLine($"❌ Error deleting client type: {ex.Message}");
+        }
+    }
+
+    private void CloseClientTypeModal()
+    {
+        showClientTypeModal = false;
+        currentClientType = new ClientTypeViewModel();
+        newClientTypeId = 0;
+        validationMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        clientTypeToDelete = null;
+        StateHasChanged();
+    }
+
+    private bool IsSaveDisabled
+    {
+        get
+        {
+            if (isEditing)
+            {
+                return string.IsNullOrEmpty(currentClientType.ClientTypeName?.Trim());
+            }
+            else
+            {
+                return newClientTypeId <= 0 || string.IsNullOrEmpty(currentClientType.ClientTypeName?.Trim());
+            }
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "Client Type ID,Client Type Name,Is Business\n";
+            
+            foreach (var clientType in filteredClientTypes)
+            {
+                csvContent += $"\"{clientType.Id}\",";
+                csvContent += $"\"{clientType.ClientTypeName}\",";
+                csvContent += $"\"{(clientType.IsBusiness ? "Yes" : "No")}\"\n";
+            }
+
+            var fileName = $"ClientTypes_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnClientTypeRowClick(ClientTypeViewModel clientType)
+    {
+        Console.WriteLine($"Client type row clicked: {clientType.ClientTypeName} (ID: {clientType.Id}, Business: {clientType.IsBusiness})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .form-check-input:checked {
+        background-color: #198754;
+        border-color: #198754;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editClientType = function(clientTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditClientType', clientTypeId)
+                .catch(err => {
+                    console.error('Error calling EditClientType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteClientType = function(clientTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteClientType', clientTypeId)
+                .catch(err => {
+                    console.error('Error calling DeleteClientType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

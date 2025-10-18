@@ -1,0 +1,1017 @@
+@page "/withdrawal-types-per-cashier-payment"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Withdrawal Types Per Cashier Payment
+        <small>Manage withdrawal types for cashier payment methods</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-credit-card font-dark"></i>
+                <span class="caption-subject bold uppercase">Withdrawal Types Per Cashier Payment</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadWithdrawalTypes" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Withdrawal Type">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Cashier Payment Type Selection -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fa fa-filter me-2"></i>
+                                Select Cashier Payment Type
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Cashier Payment Type ID *</label>
+                                        <input type="number" class="form-control" @bind="cashierPaymentTypeID" 
+                                               placeholder="Enter cashier payment type ID" min="1" />
+                                        <small class="form-text text-muted">Enter the ID of the cashier payment type to view its withdrawal types</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">&nbsp;</label>
+                                        <div>
+                                            <button class="btn btn-primary" @onclick="LoadWithdrawalTypesByCashierPayment" disabled="@(cashierPaymentTypeID <= 0)">
+                                                <i class="fa fa-search"></i> Load Withdrawal Types
+                                            </button>
+                                            <button class="btn btn-secondary ms-2" @onclick="ClearCashierPaymentSelection">
+                                                <i class="fa fa-times"></i> Clear
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(selectedCashierPaymentType))
+                            {
+                                <div class="alert alert-info mt-2">
+                                    <i class="fa fa-info-circle"></i> Viewing withdrawal types for: <strong>@selectedCashierPaymentType</strong> (Payment Type ID: @cashierPaymentTypeID)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            @if (withdrawalTypes.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@withdrawalTypes.Count</h4>
+                                        <small>Total Withdrawal Types</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-list fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@highestWithdrawalTypeId</h4>
+                                        <small>Highest Type ID</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-hashtag fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@commonWithdrawalTypes</h4>
+                                        <small>Common Types</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-money fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Search and Filter Section -->
+            @if (withdrawalTypes.Any())
+            {
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fa fa-search me-2"></i>
+                                    Search & Filter
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Search Withdrawal Types</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                                <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by withdrawal type name..." />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort By</label>
+                                            <select class="form-select" @bind="sortBy">
+                                                <option value="name">Withdrawal Type Name</option>
+                                                <option value="id">Withdrawal Type ID</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort Order</label>
+                                            <select class="form-select" @bind="sortOrder">
+                                                <option value="asc">Ascending</option>
+                                                <option value="desc">Descending</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <button class="btn btn-secondary" @onclick="ClearSearch">
+                                            <i class="fa fa-times"></i> Clear Search
+                                        </button>
+                                        <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredWithdrawalTypes.Any())">
+                                            <i class="fa fa-download"></i> Export to Excel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredWithdrawalTypes?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-credit-card me-2"></i>
+                                    Withdrawal Types for Cashier Payment
+                                    <span class="badge bg-light text-dark ms-2">@filteredWithdrawalTypes.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="WithdrawalTypeViewModel"
+                                                 Data="@filteredWithdrawalTypes"
+                                                 Columns="@withdrawalTypeColumns"
+                                                 Options="@withdrawalTypeOptions"
+                                                 OnRowClick="@OnWithdrawalTypeRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading && cashierPaymentTypeID > 0)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Withdrawal Types Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <text>No withdrawal types found matching your search criteria for cashier payment type ID: @cashierPaymentTypeID.</text>
+                                }
+                                else
+                                {
+                                    <text>No withdrawal types have been configured for cashier payment type ID: @cashierPaymentTypeID.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Search
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success mt-2" @onclick="ShowAddModal">
+                                    <i class="fa fa-plus"></i> Add First Withdrawal Type
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading && cashierPaymentTypeID <= 0)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-warning text-center">
+                            <i class="fa fa-exclamation-triangle fa-2x mb-3"></i>
+                            <h5>Select a Cashier Payment Type</h5>
+                            <p class="mb-0">Please enter a Cashier Payment Type ID above to view and manage its withdrawal types.</p>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading withdrawal types...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Withdrawal Type Modal -->
+@if (showWithdrawalTypeModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit Withdrawal Type" : "Add New Withdrawal Type")
+                        @if (cashierPaymentTypeID > 0)
+                        {
+                            <small class="ms-2">Cashier Payment Type ID: @cashierPaymentTypeID</small>
+                        }
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseWithdrawalTypeModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isEditing)
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Withdrawal Type ID</label>
+                            <input type="text" class="form-control" value="@currentWithdrawalType.WithdrawalTypeID" disabled />
+                            <small class="form-text text-muted">Withdrawal Type ID cannot be changed</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Withdrawal Type ID *</label>
+                            <input type="number" class="form-control" @bind="newWithdrawalTypeId" 
+                                   placeholder="Enter unique withdrawal type ID" min="1" />
+                            <small class="form-text text-muted">Unique numeric identifier for the withdrawal type</small>
+                        </div>
+                    }
+                    <div class="form-group mb-3">
+                        <label class="form-label">Withdrawal Type Name *</label>
+                        <input type="text" class="form-control" @bind="currentWithdrawalType.WithdrawalTypeName" 
+                               placeholder="Enter withdrawal type name" maxlength="100" />
+                        <small class="form-text text-muted">Descriptive name for the withdrawal type (e.g., Cash, Transfer, Cheque, ATM, Mobile Money)</small>
+                    </div>
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> @validationMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseWithdrawalTypeModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveWithdrawalType" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") Withdrawal Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && withdrawalTypeToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following withdrawal type?</p>
+                    <div class="alert alert-warning">
+                        <strong>ID: @withdrawalTypeToDelete.WithdrawalTypeID</strong> - @withdrawalTypeToDelete.WithdrawalTypeName
+                        <br />
+                        <small>Cashier Payment Type ID: @cashierPaymentTypeID</small>
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone! This may affect cashier transactions that use this withdrawal type.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete Withdrawal Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<WithdrawalTypeViewModel> withdrawalTypes = new();
+    private List<WithdrawalTypeViewModel> filteredWithdrawalTypes = new();
+    private List<DataTableColumn> withdrawalTypeColumns = new();
+    private DataTableOptions withdrawalTypeOptions = new();
+    private bool isLoading = false;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string validationMessage = string.Empty;
+    private string selectedCashierPaymentType = string.Empty;
+    
+    // Cashier payment type selection
+    private int cashierPaymentTypeID = 0;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string sortBy = "name";
+    private string sortOrder = "asc";
+    
+    // Modal fields
+    private bool showWithdrawalTypeModal = false;
+    private bool showDeleteModal = false;
+    private bool isEditing = false;
+    private WithdrawalTypeViewModel currentWithdrawalType = new();
+    private WithdrawalTypeViewModel withdrawalTypeToDelete = null;
+    private int newWithdrawalTypeId = 0;
+    
+    // Statistics
+    private int highestWithdrawalTypeId = 0;
+    private int commonWithdrawalTypes = 0;
+
+    protected override void OnInitialized()
+    {
+        ConfigureWithdrawalTypeTable();
+    }
+
+    private void ConfigureWithdrawalTypeTable()
+    {
+        withdrawalTypeColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "WITHDRAWAL TYPE ID",
+                PropertyName = nameof(WithdrawalTypeViewModel.WithdrawalTypeID),
+                Width = 150,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var typeId = ((WithdrawalTypeViewModel)item).WithdrawalTypeID;
+                    var badgeClass = GetWithdrawalTypeBadgeClass(typeId);
+                    return $"<span class='badge {badgeClass}'>{typeId}</span>";
+                }
+            },
+            new()
+            {
+                Header = "WITHDRAWAL TYPE NAME",
+                PropertyName = nameof(WithdrawalTypeViewModel.WithdrawalTypeName),
+                CustomRenderer = (item) =>
+                {
+                    var typeName = ((WithdrawalTypeViewModel)item).WithdrawalTypeName;
+                    return string.IsNullOrEmpty(typeName)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{typeName}</strong>";
+                }
+            }
+            // new()
+            // {
+            //     Header = "ACTIONS",
+            //     PropertyName = "",
+            //     Sortable = false,
+            //     Searchable = false,
+            //     Width = 120,
+            //     CssClass = "text-center",
+            //     CustomRenderer = (item) => 
+            //     {
+            //         var withdrawalType = (WithdrawalTypeViewModel)item;
+            //         return $@"
+            //             <div class='btn-group btn-group-sm' role='group'>
+            //                 <button type='button' class='btn btn-warning btn-xs' onclick='editWithdrawalType({withdrawalType.WithdrawalTypeID})' title='Edit'>
+            //                     <i class='fa fa-edit'></i>
+            //                 </button>
+            //                 <button type='button' class='btn btn-danger btn-xs' onclick='deleteWithdrawalType({withdrawalType.WithdrawalTypeID})' title='Delete'>
+            //                     <i class='fa fa-trash'></i>
+            //                 </button>
+            //             </div>";
+            //     }
+            // }
+        };
+
+        withdrawalTypeOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search withdrawal types...",
+            TableId = "withdrawalTypesTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-madison font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "asc" } }, // Default sort by withdrawal type name
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search withdrawal types:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ withdrawal types",
+                    ["infoEmpty"] = "No withdrawal types found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total withdrawal types)",
+                    ["emptyTable"] = "No withdrawal type data available",
+                    ["zeroRecords"] = "No matching withdrawal types found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadWithdrawalTypesByCashierPayment()
+    {
+        if (cashierPaymentTypeID <= 0)
+        {
+            errorMessage = "Please enter a valid Cashier Payment Type ID.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            validationMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading withdrawal types for cashier payment type ID: {cashierPaymentTypeID}");
+
+            var result = await ApiClient.GetWithdrawalTypesPerCashierPaymentTypeAsync(
+                cashierPaymentTypeID: cashierPaymentTypeID,
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                withdrawalTypes = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                
+                // Set selected cashier payment type name (you might want to fetch this from another API)
+                selectedCashierPaymentType = $"Payment Type {cashierPaymentTypeID}";
+                
+                Console.WriteLine($"✅ Found {withdrawalTypes.Count} withdrawal types for cashier payment type ID: {cashierPaymentTypeID}");
+            }
+            else
+            {
+                withdrawalTypes = new List<WithdrawalTypeViewModel>();
+                filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
+                selectedCashierPaymentType = string.Empty;
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No withdrawal types found for cashier payment type ID: {cashierPaymentTypeID}");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load withdrawal types.";
+            Console.WriteLine($"❌ API Error loading withdrawal types: {apiEx.Message}");
+            withdrawalTypes = new List<WithdrawalTypeViewModel>();
+            filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
+            selectedCashierPaymentType = string.Empty;
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            withdrawalTypes = new List<WithdrawalTypeViewModel>();
+            filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
+            selectedCashierPaymentType = string.Empty;
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load withdrawal types. Please check your connection.";
+            Console.WriteLine($"❌ Error loading withdrawal types: {ex.Message}");
+            withdrawalTypes = new List<WithdrawalTypeViewModel>();
+            filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
+            selectedCashierPaymentType = string.Empty;
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadWithdrawalTypes()
+    {
+        await LoadWithdrawalTypesByCashierPayment();
+    }
+
+    private void ApplyFilters()
+    {
+        var query = withdrawalTypes.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(wt =>
+                wt.WithdrawalTypeName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
+            );
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "id" => sortOrder == "asc" 
+                ? query.OrderBy(wt => wt.WithdrawalTypeID)
+                : query.OrderByDescending(wt => wt.WithdrawalTypeID),
+            _ => sortOrder == "asc" 
+                ? query.OrderBy(wt => wt.WithdrawalTypeName)
+                : query.OrderByDescending(wt => wt.WithdrawalTypeName)
+        };
+
+        filteredWithdrawalTypes = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        ApplyFilters();
+    }
+
+    private void ClearCashierPaymentSelection()
+    {
+        cashierPaymentTypeID = 0;
+        selectedCashierPaymentType = string.Empty;
+        withdrawalTypes = new List<WithdrawalTypeViewModel>();
+        filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
+        ResetStatistics();
+        StateHasChanged();
+    }
+
+    private void CalculateStatistics()
+    {
+        highestWithdrawalTypeId = withdrawalTypes.Any() ? withdrawalTypes.Max(wt => wt.WithdrawalTypeID) : 0;
+        commonWithdrawalTypes = withdrawalTypes.Count(wt => 
+            wt.WithdrawalTypeID <= 5); // Common types are usually IDs 1-5
+    }
+
+    private void ResetStatistics()
+    {
+        highestWithdrawalTypeId = 0;
+        commonWithdrawalTypes = 0;
+    }
+
+    private string GetWithdrawalTypeBadgeClass(int withdrawalTypeId)
+    {
+        return withdrawalTypeId switch
+        {
+            1 => "bg-success",    // Cash
+            2 => "bg-info",       // Transfer
+            3 => "bg-warning",    // Cheque
+            4 => "bg-primary",    // ATM
+            5 => "bg-purple",     // Mobile Money
+            _ => "bg-secondary"   // Other types
+        };
+    }
+
+    private void ShowAddModal()
+    {
+        if (cashierPaymentTypeID <= 0)
+        {
+            errorMessage = "Please select a cashier payment type first.";
+            return;
+        }
+
+        currentWithdrawalType = new WithdrawalTypeViewModel();
+        newWithdrawalTypeId = highestWithdrawalTypeId + 1; // Suggest next available ID
+        isEditing = false;
+        validationMessage = string.Empty;
+        showWithdrawalTypeModal = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditWithdrawalType(int withdrawalTypeId)
+    {
+        var withdrawalType = withdrawalTypes.FirstOrDefault(wt => wt.WithdrawalTypeID == withdrawalTypeId);
+        if (withdrawalType != null)
+        {
+            currentWithdrawalType = new WithdrawalTypeViewModel
+            {
+                WithdrawalTypeID = withdrawalType.WithdrawalTypeID,
+                WithdrawalTypeName = withdrawalType.WithdrawalTypeName
+            };
+            isEditing = true;
+            validationMessage = string.Empty;
+            showWithdrawalTypeModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteWithdrawalType(int withdrawalTypeId)
+    {
+        withdrawalTypeToDelete = withdrawalTypes.FirstOrDefault(wt => wt.WithdrawalTypeID == withdrawalTypeId);
+        if (withdrawalTypeToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveWithdrawalType()
+    {
+        try
+        {
+            validationMessage = string.Empty;
+
+            if (string.IsNullOrEmpty(currentWithdrawalType.WithdrawalTypeName?.Trim()))
+            {
+                validationMessage = "Withdrawal Type Name is required.";
+                return;
+            }
+
+            // TODO: Implement actual API call to save withdrawal type for cashier payment
+            // For now, we'll simulate the save operation
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing withdrawal type
+                var existing = withdrawalTypes.FirstOrDefault(wt => wt.WithdrawalTypeID == currentWithdrawalType.WithdrawalTypeID);
+                if (existing != null)
+                {
+                    existing.WithdrawalTypeName = currentWithdrawalType.WithdrawalTypeName.Trim();
+                }
+                successMessage = "Withdrawal type updated successfully!";
+            }
+            else
+            {
+                // Add new withdrawal type
+                withdrawalTypes.Add(new WithdrawalTypeViewModel
+                {
+                    WithdrawalTypeID = newWithdrawalTypeId,
+                    WithdrawalTypeName = currentWithdrawalType.WithdrawalTypeName.Trim()
+                });
+                successMessage = "Withdrawal type created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseWithdrawalTypeModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} withdrawal type: {currentWithdrawalType.WithdrawalTypeName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} withdrawal type. Please try again.";
+            Console.WriteLine($"❌ Error saving withdrawal type: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (withdrawalTypeToDelete == null) return;
+
+            // TODO: Implement actual API call to delete withdrawal type
+            await Task.Delay(500);
+
+            withdrawalTypes.RemoveAll(wt => wt.WithdrawalTypeID == withdrawalTypeToDelete.WithdrawalTypeID);
+            successMessage = "Withdrawal type deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted withdrawal type: {withdrawalTypeToDelete.WithdrawalTypeName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete withdrawal type. Please try again.";
+            Console.WriteLine($"❌ Error deleting withdrawal type: {ex.Message}");
+        }
+    }
+
+    private void CloseWithdrawalTypeModal()
+    {
+        showWithdrawalTypeModal = false;
+        currentWithdrawalType = new WithdrawalTypeViewModel();
+        newWithdrawalTypeId = 0;
+        validationMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        withdrawalTypeToDelete = null;
+        StateHasChanged();
+    }
+
+    private bool IsSaveDisabled
+    {
+        get
+        {
+            if (isEditing)
+            {
+                return string.IsNullOrEmpty(currentWithdrawalType.WithdrawalTypeName?.Trim());
+            }
+            else
+            {
+                return newWithdrawalTypeId <= 0 || string.IsNullOrEmpty(currentWithdrawalType.WithdrawalTypeName?.Trim());
+            }
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "Withdrawal Type ID,Withdrawal Type Name,Cashier Payment Type ID\n";
+            
+            foreach (var withdrawalType in filteredWithdrawalTypes)
+            {
+                csvContent += $"\"{withdrawalType.WithdrawalTypeID}\",";
+                csvContent += $"\"{withdrawalType.WithdrawalTypeName}\",";
+                csvContent += $"\"{cashierPaymentTypeID}\"\n";
+            }
+
+            var fileName = $"WithdrawalTypes_CashierPayment{cashierPaymentTypeID}_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnWithdrawalTypeRowClick(WithdrawalTypeViewModel withdrawalType)
+    {
+        Console.WriteLine($"Withdrawal type row clicked: {withdrawalType.WithdrawalTypeName} (ID: {withdrawalType.WithdrawalTypeID})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editWithdrawalType = function(withdrawalTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditWithdrawalType', withdrawalTypeId)
+                .catch(err => {
+                    console.error('Error calling EditWithdrawalType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteWithdrawalType = function(withdrawalTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteWithdrawalType', withdrawalTypeId)
+                .catch(err => {
+                    console.error('Error calling DeleteWithdrawalType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

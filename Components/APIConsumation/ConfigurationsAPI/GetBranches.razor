@@ -1,0 +1,1493 @@
+@page "/branches"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Branches Management
+        <small>Manage bank branches and their configurations</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-home font-dark"></i>
+                <span class="caption-subject bold uppercase">Branches</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadBranches" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Branch">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            @if (branches.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@branches.Count</h4>
+                                        <small>Total Branches</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-building fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@activeSessions</h4>
+                                        <small>Active Sessions</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-play-circle fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@uniqueCountries</h4>
+                                        <small>Countries</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-globe fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">GHC @totalLoanCapacity.ToString("F2")</h4>
+                                        <small>Total Loan Capacity</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-money fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Search and Filter Section -->
+            @if (branches.Any())
+            {
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fa fa-search me-2"></i>
+                                    Search & Filter
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Search Branches</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                                <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by branch name, code, city..." />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Country</label>
+                                            <select class="form-select" @bind="countryFilter">
+                                                <option value="">All Countries</option>
+                                                @foreach (var country in availableCountries)
+                                                {
+                                                    <option value="@country">@country</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Session Status</label>
+                                            <select class="form-select" @bind="sessionStatusFilter">
+                                                <option value="all">All Sessions</option>
+                                                <option value="active">Active Only</option>
+                                                <option value="inactive">Inactive Only</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort By</label>
+                                            <select class="form-select" @bind="sortBy">
+                                                <option value="name">Branch Name</option>
+                                                <option value="code">Branch Code</option>
+                                                <option value="date">Open Date</option>
+                                                <option value="country">Country</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <button class="btn btn-secondary" @onclick="ClearSearch">
+                                            <i class="fa fa-times"></i> Clear Filters
+                                        </button>
+                                        <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredBranches.Any())">
+                                            <i class="fa fa-download"></i> Export to Excel
+                                        </button>
+                                        @* <button class="btn btn-info" @onclick="ToggleSessionAll" title="Toggle sessions for all branches"> *@
+                                        @*     <i class="fa fa-power-off"></i>  *@
+                                        @*     @(allSessionsActive ? "Close All Sessions" : "Open All Sessions") *@
+                                        @* </button> *@
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredBranches?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-building me-2"></i>
+                                    Bank Branches
+                                    <span class="badge bg-light text-dark ms-2">@filteredBranches.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(countryFilter))
+                                    {
+                                        <span class="badge bg-warning ms-2">Country: @countryFilter</span>
+                                    }
+                                    @if (sessionStatusFilter != "all")
+                                    {
+                                        <span class="badge bg-success ms-2">@sessionStatusFilter.ToUpper()</span>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="BranchViewModel"
+                                                 Data="@filteredBranches"
+                                                 Columns="@branchColumns"
+                                                 Options="@branchOptions"
+                                                 OnRowClick="@OnBranchRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Branches Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(countryFilter) || sessionStatusFilter != "all")
+                                {
+                                    <text>No branches found matching your search criteria.</text>
+                                }
+                                else
+                                {
+                                    <text>No branches have been configured in the system.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(countryFilter) || sessionStatusFilter != "all")
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Filters
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success mt-2" @onclick="ShowAddModal">
+                                    <i class="fa fa-plus"></i> Add First Branch
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading branches...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Branch Modal -->
+@if (showBranchModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit Branch" : "Add New Branch")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseBranchModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        @if (isEditing)
+                        {
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Branch ID</label>
+                                    <input type="text" class="form-control" value="@currentBranch.Id" disabled />
+                                    <small class="form-text text-muted">Branch ID cannot be changed</small>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Branch ID *</label>
+                                    <input type="number" class="form-control" @bind="newBranchId" 
+                                           placeholder="Enter unique branch ID" min="1" />
+                                    <small class="form-text text-muted">Unique numeric identifier for the branch</small>
+                                </div>
+                            </div>
+                        }
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Branch Code *</label>
+                                <input type="text" class="form-control" @bind="currentBranch.BranchCode" 
+                                       placeholder="e.g., BR001" maxlength="20" />
+                                <small class="form-text text-muted">Unique branch code identifier</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Branch Name *</label>
+                                <input type="text" class="form-control" @bind="currentBranch.BranchName" 
+                                       placeholder="Enter branch name" maxlength="100" />
+                                <small class="form-text text-muted">Full name of the branch</small>
+                            </div>
+                        </div>
+                        @* <div class="col-md-6"> *@
+                        @*     <div class="form-group mb-3"> *@
+                        @*         <label class="form-label">Branch Open Date *</label> *@
+                        @*         <input type="date" class="form-control" @bind="branchOpenDateString" /> *@
+                        @*         <small class="form-text text-muted">Date when the branch was opened</small> *@
+                        @*     </div> *@
+                        @* </div> *@
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Country *</label>
+                                <input type="text" class="form-control" @bind="currentBranch.Country" 
+                                       placeholder="Enter country" maxlength="50" />
+                                <small class="form-text text-muted">Country where the branch is located</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Currency *</label>
+                                <input type="text" class="form-control" @bind="currentBranch.Currency" 
+                                       placeholder="e.g., USD, EUR" maxlength="10" />
+                                <small class="form-text text-muted">Primary currency for the branch</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">City</label>
+                                <input type="text" class="form-control" @bind="currentBranch.BranchCity" 
+                                       placeholder="Enter city" maxlength="50" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Date Format</label>
+                                <input type="text" class="form-control" @bind="currentBranch.DateFormat" 
+                                       placeholder="e.g., MM/dd/yyyy" maxlength="20" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label">Branch Address</label>
+                        <textarea class="form-control" @bind="currentBranch.BranchAddress" 
+                                  placeholder="Enter full branch address" rows="2" maxlength="200"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Landline Phone</label>
+                                <input type="text" class="form-control" @bind="currentBranch.BranchLandLine" 
+                                       placeholder="e.g., +1234567890" maxlength="20" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Mobile Phone</label>
+                                <input type="text" class="form-control" @bind="currentBranch.BranchMobile" 
+                                       placeholder="e.g., +1234567890" maxlength="20" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Minimum Loan Amount</label>
+                                <input type="number" class="form-control" @bind="currentBranch.MinimumLoanAmount" 
+                                       placeholder="0.00" step="0.01" min="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Maximum Loan Amount</label>
+                                <input type="number" class="form-control" @bind="currentBranch.MaximumLoanAmount" 
+                                       placeholder="0.00" step="0.01" min="0" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Minimum Interest Rate (%)</label>
+                                <input type="number" class="form-control" @bind="currentBranch.MinimumInterestRate" 
+                                       placeholder="0.00" step="0.01" min="0" max="100" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Maximum Interest Rate (%)</label>
+                                <input type="number" class="form-control" @bind="currentBranch.MaximumLoanInterestRate" 
+                                       placeholder="0.00" step="0.01" min="0" max="100" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label">Suspense Account Number</label>
+                        <input type="text" class="form-control" @bind="currentBranch.SuspenseAccountNumber" 
+                               placeholder="Enter account number" maxlength="50" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="currentBranch.SessionOpen" />
+                            <label class="form-check-label">
+                                <strong>Session Open</strong>
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">
+                            @if (currentBranch.SessionOpen)
+                            {
+                                <text>Branch session is currently active</text>
+                            }
+                            else
+                            {
+                                <text>Branch session is currently closed</text>
+                            }
+                        </small>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> @validationMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseBranchModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveBranch" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") Branch
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && branchToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following branch?</p>
+                    <div class="alert alert-warning">
+                        <strong>@branchToDelete.BranchName</strong> (Code: @branchToDelete.BranchCode)<br />
+                        <small>ID: @branchToDelete.Id | Country: @branchToDelete.Country</small>
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone! This will affect all accounts and transactions associated with this branch.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete Branch
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Session Toggle Modal -->
+@if (showSessionModal && branchForSession != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @(branchForSession.SessionOpen ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-power-off me-2"></i>
+                        @(branchForSession.SessionOpen ? "Close Branch Session" : "Open Branch Session")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseSessionModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to @(branchForSession.SessionOpen ? "close" : "open") the session for:</p>
+                    <div class="alert @(branchForSession.SessionOpen ? "alert-warning" : "alert-success")">
+                        <strong>@branchForSession.BranchName</strong> (Code: @branchForSession.BranchCode)<br />
+                        <small>@branchForSession.BranchCity, @branchForSession.Country</small>
+                    </div>
+                    @if (branchForSession.SessionOpen)
+                    {
+                        <p class="text-warning">
+                            <i class="fa fa-info-circle"></i> Closing the session will prevent new transactions until the session is reopened.
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="text-success">
+                            <i class="fa fa-info-circle"></i> Opening the session will allow new transactions to be processed.
+                        </p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseSessionModal">Cancel</button>
+                    <button type="button" class="btn @(branchForSession.SessionOpen ? "btn-warning" : "btn-success")" @onclick="ToggleSession">
+                        <i class="fa fa-power-off me-1"></i>
+                        @(branchForSession.SessionOpen ? "Close Session" : "Open Session")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<BranchViewModel> branches = new();
+    private List<BranchViewModel> filteredBranches = new();
+    private List<DataTableColumn> branchColumns = new();
+    private DataTableOptions branchOptions = new();
+    private bool isLoading = false;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string validationMessage = string.Empty;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string countryFilter = "";
+    private string sessionStatusFilter = "all";
+    private string sortBy = "name";
+    
+    // Modal fields
+    private bool showBranchModal = false;
+    private bool showDeleteModal = false;
+    private bool showSessionModal = false;
+    private bool isEditing = false;
+    private BranchViewModel currentBranch = new();
+    private BranchViewModel branchToDelete = null;
+    private BranchViewModel branchForSession = null;
+    private int newBranchId = 0;
+    private string branchOpenDateString = "";
+    
+    // Statistics
+    private int activeSessions = 0;
+    private int uniqueCountries = 0;
+    private double totalLoanCapacity = 0;
+    private bool allSessionsActive = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureBranchTable();
+        await LoadBranches();
+    }
+
+    private void ConfigureBranchTable()
+    {
+        branchColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "BRANCH ID",
+                PropertyName = nameof(BranchViewModel.Id),
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var branchId = ((BranchViewModel)item).Id;
+                    var badgeClass = GetBranchBadgeClass(branchId);
+                    return $"<span class='badge {badgeClass}'>{branchId}</span>";
+                }
+            },
+            new()
+            {
+                Header = "BRANCH CODE",
+                PropertyName = nameof(BranchViewModel.BranchCode),
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var branchCode = ((BranchViewModel)item).BranchCode;
+                    return string.IsNullOrEmpty(branchCode)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{branchCode}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "BRANCH NAME",
+                PropertyName = nameof(BranchViewModel.BranchName),
+                CustomRenderer = (item) =>
+                {
+                    var branch = (BranchViewModel)item;
+                    var name = branch.BranchName;
+                    var city = branch.BranchCity;
+                    
+                    var display = string.IsNullOrEmpty(name)
+                        ? "<span class='text-muted'><i>Unnamed Branch</i></span>"
+                        : $"<strong class='text-primary'>{name}</strong>";
+                    
+                    if (!string.IsNullOrEmpty(city))
+                    {
+                        display += $"<br/><small class='text-muted'><i class='fa fa-map-marker'></i> {city}</small>";
+                    }
+                    
+                    return display;
+                }
+            },
+            new()
+            {
+                Header = "LOCATION",
+                PropertyName = nameof(BranchViewModel.Country),
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var branch = (BranchViewModel)item;
+                    var country = branch.Country;
+                    var currency = branch.Currency;
+                    
+                    var display = string.IsNullOrEmpty(country)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<span class='fw-bold'>{country}</span>";
+                    
+                    if (!string.IsNullOrEmpty(currency))
+                    {
+                        display += $"<br/><small class='badge bg-info'>{currency}</small>";
+                    }
+                    
+                    return display;
+                }
+            },
+            new()
+            {
+                Header = "OPEN DATE",
+                PropertyName = nameof(BranchViewModel.BranchOpenDate),
+                Width = 120,
+                CustomRenderer = (item) =>
+                {
+                    var openDate = ((BranchViewModel)item).BranchOpenDate;
+                    return openDate == DateTimeOffset.MinValue
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<small>{openDate:MMM dd, yyyy}</small>";
+                }
+            },
+            new()
+            {
+                Header = "LOAN RANGE",
+                PropertyName = "",
+                Width = 180,
+                CustomRenderer = (item) =>
+                {
+                    var branch = (BranchViewModel)item;
+                    var minLoan = branch.MinimumLoanAmount;
+                    var maxLoan = branch.MaximumLoanAmount;
+                    
+                    if (minLoan == 0 && maxLoan == 0)
+                        return "<span class='text-muted'>N/A</span>";
+                    
+                    return $@"
+                        <div class='loan-range'>
+                            <small class='text-success'>Min: {minLoan:C0}</small><br/>
+                            <small class='text-primary'>Max: {maxLoan:C0}</small>
+                        </div>";
+                }
+            },
+            new()
+            {
+                Header = "SESSION",
+                PropertyName = nameof(BranchViewModel.SessionOpen),
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var branch = (BranchViewModel)item;
+                    var isOpen = branch.SessionOpen;
+                    var badgeClass = isOpen ? "bg-success" : "bg-secondary";
+                    var text = isOpen ? "Open" : "Closed";
+                    var icon = isOpen ? "fa-play" : "fa-stop";
+                    
+                    return $@"
+                        <span class='badge {badgeClass}'>
+                            <i class='fa {icon} me-1'></i>{text}
+                        </span>";
+                }
+            }
+            // new()
+            // {
+            //     Header = "ACTIONS",
+            //     PropertyName = "",
+            //     Sortable = false,
+            //     Searchable = false,
+            //     Width = 140,
+            //     CssClass = "text-center",
+            //     CustomRenderer = (item) => 
+            //     {
+            //         var branch = (BranchViewModel)item;
+            //         var sessionBtnClass = branch.SessionOpen ? "btn-warning" : "btn-success";
+            //         var sessionIcon = branch.SessionOpen ? "fa-stop" : "fa-play";
+            //         var sessionTitle = branch.SessionOpen ? "Close Session" : "Open Session";
+            //         
+            //         return $@"
+            //             <div class='btn-group btn-group-sm' role='group'>
+            //                 <button type='button' class='btn btn-info btn-xs' onclick='toggleBranchSession({branch.Id})' title='{sessionTitle}'>
+            //                     <i class='fa {sessionIcon}'></i>
+            //                 </button>
+            //                 <button type='button' class='btn btn-warning btn-xs' onclick='editBranch({branch.Id})' title='Edit'>
+            //                     <i class='fa fa-edit'></i>
+            //                 </button>
+            //                 <button type='button' class='btn btn-danger btn-xs' onclick='deleteBranch({branch.Id})' title='Delete'>
+            //                     <i class='fa fa-trash'></i>
+            //                 </button>
+            //             </div>";
+            //     }
+            // }
+        };
+
+        branchOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search branches...",
+            TableId = "branchesTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-madison font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 2, "asc" } }, // Default sort by branch name
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search branches:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ branches",
+                    ["infoEmpty"] = "No branches found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total branches)",
+                    ["emptyTable"] = "No branch data available",
+                    ["zeroRecords"] = "No matching branches found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadBranches()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            validationMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading branches...");
+
+            var result = await ApiClient.GetBranchesAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                branches = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {branches.Count} branches");
+            }
+            else
+            {
+                branches = new List<BranchViewModel>();
+                filteredBranches = new List<BranchViewModel>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No branches found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load branches.";
+            Console.WriteLine($"❌ API Error loading branches: {apiEx.Message}");
+            branches = new List<BranchViewModel>();
+            filteredBranches = new List<BranchViewModel>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            branches = new List<BranchViewModel>();
+            filteredBranches = new List<BranchViewModel>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load branches. Please check your connection.";
+            Console.WriteLine($"❌ Error loading branches: {ex.Message}");
+            branches = new List<BranchViewModel>();
+            filteredBranches = new List<BranchViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = branches.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(b =>
+                b.BranchName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                b.BranchCode?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                b.BranchCity?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                b.Country?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
+            );
+        }
+
+        // Apply country filter
+        if (!string.IsNullOrEmpty(countryFilter))
+        {
+            query = query.Where(b => b.Country == countryFilter);
+        }
+
+        // Apply session status filter
+        if (sessionStatusFilter != "all")
+        {
+            var sessionOpen = sessionStatusFilter == "active";
+            query = query.Where(b => b.SessionOpen == sessionOpen);
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "code" => query.OrderBy(b => b.BranchCode),
+            "date" => query.OrderBy(b => b.BranchOpenDate),
+            "country" => query.OrderBy(b => b.Country).ThenBy(b => b.BranchName),
+            _ => query.OrderBy(b => b.BranchName)
+        };
+
+        filteredBranches = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        countryFilter = "";
+        sessionStatusFilter = "all";
+        ApplyFilters();
+    }
+
+    private List<string> availableCountries => branches
+        .Where(b => !string.IsNullOrEmpty(b.Country))
+        .Select(b => b.Country)
+        .Distinct()
+        .OrderBy(c => c)
+        .ToList();
+
+    private void CalculateStatistics()
+    {
+        activeSessions = branches.Count(b => b.SessionOpen);
+        uniqueCountries = branches.Select(b => b.Country).Distinct().Count();
+        totalLoanCapacity = branches.Sum(b => b.MaximumLoanAmount);
+        allSessionsActive = branches.All(b => b.SessionOpen) && branches.Any();
+    }
+
+    private void ResetStatistics()
+    {
+        activeSessions = 0;
+        uniqueCountries = 0;
+        totalLoanCapacity = 0;
+        allSessionsActive = false;
+    }
+
+    private string GetBranchBadgeClass(int branchId)
+    {
+        return branchId switch
+        {
+            <= 5 => "bg-primary",    // Primary branches
+            <= 10 => "bg-success",   // Secondary branches
+            <= 15 => "bg-info",      // Tertiary branches
+            <= 20 => "bg-warning",   // Additional branches
+            _ => "bg-secondary"      // Other branches
+        };
+    }
+
+    private void ShowAddModal()
+    {
+        currentBranch = new BranchViewModel
+        {
+            BranchOpenDate = DateTimeOffset.Now,
+            SessionOpen = false
+        };
+        newBranchId = branches.Any() ? branches.Max(b => b.Id) + 1 : 1;
+        branchOpenDateString = DateTime.Now.ToString("yyyy-MM-dd");
+        isEditing = false;
+        validationMessage = string.Empty;
+        showBranchModal = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditBranch(int branchId)
+    {
+        var branch = branches.FirstOrDefault(b => b.Id == branchId);
+        if (branch != null)
+        {
+            currentBranch = new BranchViewModel
+            {
+                Id = branch.Id,
+                BranchName = branch.BranchName,
+                BranchCode = branch.BranchCode,
+                BranchOpenDate = branch.BranchOpenDate,
+                Country = branch.Country,
+                Currency = branch.Currency,
+                DateFormat = branch.DateFormat,
+                BranchAddress = branch.BranchAddress,
+                BranchCity = branch.BranchCity,
+                BranchLandLine = branch.BranchLandLine,
+                BranchMobile = branch.BranchMobile,
+                MinimumLoanAmount = branch.MinimumLoanAmount,
+                MaximumLoanAmount = branch.MaximumLoanAmount,
+                MinimumInterestRate = branch.MinimumInterestRate,
+                MaximumLoanInterestRate = branch.MaximumLoanInterestRate,
+                SessionOpen = branch.SessionOpen,
+                SuspenseAccountNumber = branch.SuspenseAccountNumber
+            };
+            branchOpenDateString = currentBranch.BranchOpenDate.ToString("yyyy-MM-dd");
+            isEditing = true;
+            validationMessage = string.Empty;
+            showBranchModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteBranch(int branchId)
+    {
+        branchToDelete = branches.FirstOrDefault(b => b.Id == branchId);
+        if (branchToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task ToggleBranchSession(int branchId)
+    {
+        branchForSession = branches.FirstOrDefault(b => b.Id == branchId);
+        if (branchForSession != null)
+        {
+            showSessionModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveBranch()
+    {
+        try
+        {
+            validationMessage = string.Empty;
+
+            // Validation
+            if (string.IsNullOrEmpty(currentBranch.BranchName?.Trim()))
+            {
+                validationMessage = "Branch Name is required.";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(currentBranch.BranchCode?.Trim()))
+            {
+                validationMessage = "Branch Code is required.";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(currentBranch.Country?.Trim()))
+            {
+                validationMessage = "Country is required.";
+                return;
+            }
+
+            if (string.IsNullOrEmpty(currentBranch.Currency?.Trim()))
+            {
+                validationMessage = "Currency is required.";
+                return;
+            }
+
+            // Parse open date
+            if (DateTime.TryParse(branchOpenDateString, out DateTime openDate))
+            {
+                currentBranch.BranchOpenDate = new DateTimeOffset(openDate);
+            }
+            else
+            {
+                validationMessage = "Invalid branch open date.";
+                return;
+            }
+
+            // TODO: Implement actual API call to save branch
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing branch
+                var existing = branches.FirstOrDefault(b => b.Id == currentBranch.Id);
+                if (existing != null)
+                {
+                    existing.BranchName = currentBranch.BranchName.Trim();
+                    existing.BranchCode = currentBranch.BranchCode.Trim();
+                    existing.BranchOpenDate = currentBranch.BranchOpenDate;
+                    existing.Country = currentBranch.Country.Trim();
+                    existing.Currency = currentBranch.Currency.Trim();
+                    existing.DateFormat = currentBranch.DateFormat;
+                    existing.BranchAddress = currentBranch.BranchAddress;
+                    existing.BranchCity = currentBranch.BranchCity;
+                    existing.BranchLandLine = currentBranch.BranchLandLine;
+                    existing.BranchMobile = currentBranch.BranchMobile;
+                    existing.MinimumLoanAmount = currentBranch.MinimumLoanAmount;
+                    existing.MaximumLoanAmount = currentBranch.MaximumLoanAmount;
+                    existing.MinimumInterestRate = currentBranch.MinimumInterestRate;
+                    existing.MaximumLoanInterestRate = currentBranch.MaximumLoanInterestRate;
+                    existing.SessionOpen = currentBranch.SessionOpen;
+                    existing.SuspenseAccountNumber = currentBranch.SuspenseAccountNumber;
+                }
+                successMessage = "Branch updated successfully!";
+            }
+            else
+            {
+                // Check if ID already exists
+                if (branches.Any(b => b.Id == newBranchId))
+                {
+                    validationMessage = $"A branch with ID {newBranchId} already exists.";
+                    return;
+                }
+
+                // Check if branch code already exists
+                if (branches.Any(b => b.BranchCode == currentBranch.BranchCode))
+                {
+                    validationMessage = $"A branch with code {currentBranch.BranchCode} already exists.";
+                    return;
+                }
+
+                // Add new branch
+                currentBranch.Id = newBranchId;
+                branches.Add(currentBranch);
+                successMessage = "Branch created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseBranchModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} branch: {currentBranch.BranchName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} branch. Please try again.";
+            Console.WriteLine($"❌ Error saving branch: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (branchToDelete == null) return;
+
+            // TODO: Implement actual API call to delete branch
+            await Task.Delay(500);
+
+            branches.RemoveAll(b => b.Id == branchToDelete.Id);
+            successMessage = "Branch deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted branch: {branchToDelete.BranchName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete branch. Please try again.";
+            Console.WriteLine($"❌ Error deleting branch: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleSession()
+    {
+        try
+        {
+            if (branchForSession == null) return;
+
+            // TODO: Implement actual API call to toggle session
+            await Task.Delay(300);
+
+            branchForSession.SessionOpen = !branchForSession.SessionOpen;
+            if (branchForSession.SessionOpen)
+            {
+                branchForSession.SessionLastOpenedAt = DateTimeOffset.Now;
+            }
+
+            successMessage = $"Session {(branchForSession.SessionOpen ? "opened" : "closed")} for {branchForSession.BranchName}!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseSessionModal();
+            
+            Console.WriteLine($"✅ {(branchForSession.SessionOpen ? "Opened" : "Closed")} session for branch: {branchForSession.BranchName}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to toggle session. Please try again.";
+            Console.WriteLine($"❌ Error toggling session: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleSessionAll()
+    {
+        try
+        {
+            var newSessionState = !allSessionsActive;
+            
+            // TODO: Implement actual API call to toggle all sessions
+            await Task.Delay(500);
+
+            foreach (var branch in branches)
+            {
+                branch.SessionOpen = newSessionState;
+                if (newSessionState)
+                {
+                    branch.SessionLastOpenedAt = DateTimeOffset.Now;
+                }
+            }
+
+            successMessage = $"All sessions {(newSessionState ? "opened" : "closed")} successfully!";
+            ApplyFilters();
+            CalculateStatistics();
+            
+            Console.WriteLine($"✅ {(newSessionState ? "Opened" : "Closed")} all branch sessions");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to toggle all sessions. Please try again.";
+            Console.WriteLine($"❌ Error toggling all sessions: {ex.Message}");
+        }
+    }
+
+    private void CloseBranchModal()
+    {
+        showBranchModal = false;
+        currentBranch = new BranchViewModel();
+        newBranchId = 0;
+        branchOpenDateString = "";
+        validationMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        branchToDelete = null;
+        StateHasChanged();
+    }
+
+    private void CloseSessionModal()
+    {
+        showSessionModal = false;
+        branchForSession = null;
+        StateHasChanged();
+    }
+
+    private bool IsSaveDisabled
+    {
+        get
+        {
+            if (isEditing)
+            {
+                return string.IsNullOrEmpty(currentBranch.BranchName?.Trim()) ||
+                       string.IsNullOrEmpty(currentBranch.BranchCode?.Trim()) ||
+                       string.IsNullOrEmpty(currentBranch.Country?.Trim()) ||
+                       string.IsNullOrEmpty(currentBranch.Currency?.Trim());
+            }
+            else
+            {
+                return newBranchId <= 0 ||
+                       string.IsNullOrEmpty(currentBranch.BranchName?.Trim()) ||
+                       string.IsNullOrEmpty(currentBranch.BranchCode?.Trim()) ||
+                       string.IsNullOrEmpty(currentBranch.Country?.Trim()) ||
+                       string.IsNullOrEmpty(currentBranch.Currency?.Trim());
+            }
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "Branch ID,Branch Code,Branch Name,Open Date,Country,Currency,City,Address,Landline,Mobile,Min Loan,Max Loan,Min Interest Rate,Max Interest Rate,Session Open,Suspense Account\n";
+            
+            foreach (var branch in filteredBranches)
+            {
+                csvContent += $"\"{branch.Id}\",";
+                csvContent += $"\"{branch.BranchCode}\",";
+                csvContent += $"\"{branch.BranchName}\",";
+                csvContent += $"\"{branch.BranchOpenDate:yyyy-MM-dd}\",";
+                csvContent += $"\"{branch.Country}\",";
+                csvContent += $"\"{branch.Currency}\",";
+                csvContent += $"\"{branch.BranchCity}\",";
+                csvContent += $"\"{branch.BranchAddress}\",";
+                csvContent += $"\"{branch.BranchLandLine}\",";
+                csvContent += $"\"{branch.BranchMobile}\",";
+                csvContent += $"\"{branch.MinimumLoanAmount}\",";
+                csvContent += $"\"{branch.MaximumLoanAmount}\",";
+                csvContent += $"\"{branch.MinimumInterestRate}\",";
+                csvContent += $"\"{branch.MaximumLoanInterestRate}\",";
+                csvContent += $"\"{(branch.SessionOpen ? "Yes" : "No")}\",";
+                csvContent += $"\"{branch.SuspenseAccountNumber}\"\n";
+            }
+
+            var fileName = $"Branches_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnBranchRowClick(BranchViewModel branch)
+    {
+        Console.WriteLine($"Branch row clicked: {branch.BranchName} (ID: {branch.Id})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .loan-range {
+        line-height: 1.2;
+    }
+
+    .form-check-input:checked {
+        background-color: #198754;
+        border-color: #198754;
+    }
+
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .avatar-initials {
+        line-height: 1;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editBranch = function(branchId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditBranch', branchId)
+                .catch(err => {
+                    console.error('Error calling EditBranch:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteBranch = function(branchId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteBranch', branchId)
+                .catch(err => {
+                    console.error('Error calling DeleteBranch:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.toggleBranchSession = function(branchId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ToggleBranchSession', branchId)
+                .catch(err => {
+                    console.error('Error calling ToggleBranchSession:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

@@ -1,0 +1,1067 @@
+@page "/product-types"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Product Types
+        <small>Manage and view all product types</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-tag font-dark"></i>
+                <span class="caption-subject bold uppercase">Product Types Management</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadProductTypes" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Product Type">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@productTypes.Count</h4>
+                                    <small>Total Product Types</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-tags fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@susuProductTypes</h4>
+                                    <small>Susu Types</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-money fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@fixedDepositTypes</h4>
+                                    <small>Fixed Deposit Types</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-lock fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1">
+                                    <h4 class="mb-0">@highestSortOrder</h4>
+                                    <small>Highest Sort Order</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-sort-numeric-desc fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Section -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fa fa-search me-2"></i>
+                                Search & Filter
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">Search Product Types</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                            <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by product type name..." />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Type Category</label>
+                                        <select class="form-select" @bind="filterCategory">
+                                            <option value="">All Categories</option>
+                                            <option value="susu">Susu Types</option>
+                                            <option value="fixed">Fixed Deposit Types</option>
+                                            <option value="other">Other Types</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Sort By</label>
+                                        <select class="form-select" @bind="sortBy">
+                                            <option value="name">Product Type</option>
+                                            <option value="sortorder">Sort Order</option>
+                                            <option value="id">ID</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label class="form-label">Sort Order</label>
+                                        <select class="form-select" @bind="sortOrder">
+                                            <option value="asc">Ascending</option>
+                                            <option value="desc">Descending</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <button class="btn btn-secondary" @onclick="ClearSearch">
+                                        <i class="fa fa-times"></i> Clear Search
+                                    </button>
+                                    <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredProductTypes.Any())">
+                                        <i class="fa fa-download"></i> Export to Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredProductTypes?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-list-alt me-2"></i>
+                                    Product Types
+                                    <span class="badge bg-light text-dark ms-2">@filteredProductTypes.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(filterCategory))
+                                    {
+                                        <span class="badge bg-info ms-2">Category: @filterCategory</span>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="ProductTypeViewModel"
+                                                 Data="@filteredProductTypes"
+                                                 Columns="@productTypeColumns"
+                                                 Options="@productTypeOptions"
+                                                 OnRowClick="@OnProductTypeRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Product Types Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <text>No product types found matching your search criteria.</text>
+                                }
+                                else
+                                {
+                                    <text>No product types have been configured yet.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Search
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success mt-2" @onclick="ShowAddModal">
+                                    <i class="fa fa-plus"></i> Add First Product Type
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading product types...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Product Type Modal -->
+@if (showProductTypeModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit Product Type" : "Add New Product Type")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseProductTypeModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isEditing)
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Product Type ID</label>
+                            <input type="text" class="form-control" value="@currentProductType.Id" disabled />
+                            <small class="form-text text-muted">Product Type ID cannot be changed</small>
+                        </div>
+                    }
+                    <div class="form-group mb-3">
+                        <label class="form-label">Product Type Name *</label>
+                        <input type="text" class="form-control" @bind="currentProductType.ProductType" 
+                               placeholder="Enter product type name" maxlength="100" />
+                        <small class="form-text text-muted">Descriptive name for the product type</small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Sort Order *</label>
+                        <input type="number" class="form-control" @bind="currentProductType.SortOrder" 
+                               placeholder="Enter sort order" min="1" />
+                        <small class="form-text text-muted">Numeric order for sorting product types</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="form-label">Product Category</label>
+                                <div class="mt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" @bind="currentProductType.IsSusu" 
+                                               disabled="@(currentProductType.IsFixedDeposit)" />
+                                        <label class="form-check-label">
+                                            Susu Product Type
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" @bind="currentProductType.IsFixedDeposit" 
+                                               disabled="@(currentProductType.IsSusu)" />
+                                        <label class="form-check-label">
+                                            Fixed Deposit Type
+                                        </label>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">Select the appropriate category for this product type</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <i class="fa fa-info-circle"></i>
+                                <strong>Category Information:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li><strong>Susu:</strong> Rotating savings and credit associations</li>
+                                    <li><strong>Fixed Deposit:</strong> Time-bound deposit products</li>
+                                    <li><strong>None:</strong> Regular savings or other product types</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> @validationMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseProductTypeModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveProductType" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") Product Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && productTypeToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following product type?</p>
+                    <div class="alert alert-warning">
+                        <strong>@productTypeToDelete.ProductType</strong>
+                        <br />
+                        <small>ID: @productTypeToDelete.Id</small>
+                        <br />
+                        <small>Sort Order: @productTypeToDelete.SortOrder</small>
+                        <br />
+                        <small>
+                            Category: 
+                            @if (productTypeToDelete.IsSusu)
+                            {
+                                <span class="badge bg-success">Susu</span>
+                            }
+                            else if (productTypeToDelete.IsFixedDeposit)
+                            {
+                                <span class="badge bg-warning">Fixed Deposit</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-info">Other</span>
+                            }
+                        </small>
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone! This may affect products that use this product type.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete Product Type
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProductTypeViewModel> productTypes = new();
+    private List<ProductTypeViewModel> filteredProductTypes = new();
+    private List<DataTableColumn> productTypeColumns = new();
+    private DataTableOptions productTypeOptions = new();
+    private bool isLoading = true;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string validationMessage = string.Empty;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string filterCategory = "";
+    private string sortBy = "name";
+    private string sortOrder = "asc";
+    
+    // Modal fields
+    private bool showProductTypeModal = false;
+    private bool showDeleteModal = false;
+    private bool isEditing = false;
+    private ProductTypeViewModel currentProductType = new();
+    private ProductTypeViewModel productTypeToDelete = null;
+    
+    // Statistics
+    private int susuProductTypes = 0;
+    private int fixedDepositTypes = 0;
+    private int highestSortOrder = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureProductTypeTable();
+        await LoadProductTypes();
+    }
+
+    private void ConfigureProductTypeTable()
+    {
+        productTypeColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "ID",
+                PropertyName = nameof(ProductTypeViewModel.Id),
+                Width = 80,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var id = ((ProductTypeViewModel)item).Id;
+                    return $"<span class='badge bg-primary'>{id}</span>";
+                }
+            },
+            new()
+            {
+                Header = "PRODUCT TYPE",
+                PropertyName = nameof(ProductTypeViewModel.ProductType),
+                CustomRenderer = (item) =>
+                {
+                    var productType = ((ProductTypeViewModel)item).ProductType;
+                    return string.IsNullOrEmpty(productType)
+                        ? "<span class='text-muted'>N/A</span>"
+                        : $"<strong class='text-primary'>{productType}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "SORT ORDER",
+                PropertyName = nameof(ProductTypeViewModel.SortOrder),
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var sortOrder = ((ProductTypeViewModel)item).SortOrder;
+                    return $"<span class='badge bg-info'>{sortOrder}</span>";
+                }
+            },
+            new()
+            {
+                Header = "CATEGORY",
+                PropertyName = "",
+                Width = 150,
+                CustomRenderer = (item) =>
+                {
+                    var productType = (ProductTypeViewModel)item;
+                    if (productType.IsSusu)
+                    {
+                        return "<span class='badge bg-success'><i class='fa fa-money me-1'></i> Susu</span>";
+                    }
+                    else if (productType.IsFixedDeposit)
+                    {
+                        return "<span class='badge bg-warning'><i class='fa fa-lock me-1'></i> Fixed Deposit</span>";
+                    }
+                    else
+                    {
+                        return "<span class='badge bg-info'><i class='fa fa-tag me-1'></i> Other</span>";
+                    }
+                }
+            }
+            // new()
+            // {
+            //     Header = "ACTIONS",
+            //     PropertyName = "",
+            //     Sortable = false,
+            //     Searchable = false,
+            //     Width = 120,
+            //     CssClass = "text-center",
+            //     CustomRenderer = (item) => 
+            //     {
+            //         var productType = (ProductTypeViewModel)item;
+            //         return $@"
+            //             <div class='btn-group btn-group-sm' role='group'>
+            //                 <button type='button' class='btn btn-warning btn-xs' onclick='editProductType({productType.Id})' title='Edit'>
+            //                     <i class='fa fa-edit'></i>
+            //                 </button>
+            //                 <button type='button' class='btn btn-danger btn-xs' onclick='deleteProductType({productType.Id})' title='Delete'>
+            //                     <i class='fa fa-trash'></i>
+            //                 </button>
+            //             </div>";
+            //     }
+            // }
+        };
+
+        productTypeOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search product types...",
+            TableId = "productTypesTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-purple-studio font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 2, "asc" } }, // Default sort by sort order
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search product types:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ product types",
+                    ["infoEmpty"] = "No product types found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total product types)",
+                    ["emptyTable"] = "No product type data available",
+                    ["zeroRecords"] = "No matching product types found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadProductTypes()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            validationMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading product types...");
+
+            var result = await ApiClient.GetProductTypesAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                productTypes = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {productTypes.Count} product type records");
+            }
+            else
+            {
+                productTypes = new List<ProductTypeViewModel>();
+                filteredProductTypes = new List<ProductTypeViewModel>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No product type records found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load product types.";
+            Console.WriteLine($"❌ API Error loading product types: {apiEx.Message}");
+            productTypes = new List<ProductTypeViewModel>();
+            filteredProductTypes = new List<ProductTypeViewModel>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            productTypes = new List<ProductTypeViewModel>();
+            filteredProductTypes = new List<ProductTypeViewModel>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load product types. Please check your connection.";
+            Console.WriteLine($"❌ Error loading product types: {ex.Message}");
+            productTypes = new List<ProductTypeViewModel>();
+            filteredProductTypes = new List<ProductTypeViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = productTypes.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(pt =>
+                pt.ProductType?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
+            );
+        }
+
+        // Apply category filter
+        if (!string.IsNullOrEmpty(filterCategory))
+        {
+            query = filterCategory switch
+            {
+                "susu" => query.Where(pt => pt.IsSusu),
+                "fixed" => query.Where(pt => pt.IsFixedDeposit),
+                "other" => query.Where(pt => !pt.IsSusu && !pt.IsFixedDeposit),
+                _ => query
+            };
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "id" => sortOrder == "asc" 
+                ? query.OrderBy(pt => pt.Id)
+                : query.OrderByDescending(pt => pt.Id),
+            "sortorder" => sortOrder == "asc" 
+                ? query.OrderBy(pt => pt.SortOrder)
+                : query.OrderByDescending(pt => pt.SortOrder),
+            _ => sortOrder == "asc" 
+                ? query.OrderBy(pt => pt.ProductType)
+                : query.OrderByDescending(pt => pt.ProductType)
+        };
+
+        filteredProductTypes = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        filterCategory = "";
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        susuProductTypes = productTypes.Count(pt => pt.IsSusu);
+        fixedDepositTypes = productTypes.Count(pt => pt.IsFixedDeposit);
+        highestSortOrder = productTypes.Any() ? productTypes.Max(pt => pt.SortOrder) : 0;
+    }
+
+    private void ResetStatistics()
+    {
+        susuProductTypes = 0;
+        fixedDepositTypes = 0;
+        highestSortOrder = 0;
+    }
+
+    private void ShowAddModal()
+    {
+        currentProductType = new ProductTypeViewModel
+        {
+            SortOrder = highestSortOrder + 1 // Suggest next available sort order
+        };
+        isEditing = false;
+        validationMessage = string.Empty;
+        showProductTypeModal = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditProductType(int productTypeId)
+    {
+        var productType = productTypes.FirstOrDefault(pt => pt.Id == productTypeId);
+        if (productType != null)
+        {
+            currentProductType = new ProductTypeViewModel
+            {
+                Id = productType.Id,
+                ProductType = productType.ProductType,
+                SortOrder = productType.SortOrder,
+                IsSusu = productType.IsSusu,
+                IsFixedDeposit = productType.IsFixedDeposit
+            };
+            isEditing = true;
+            validationMessage = string.Empty;
+            showProductTypeModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteProductType(int productTypeId)
+    {
+        productTypeToDelete = productTypes.FirstOrDefault(pt => pt.Id == productTypeId);
+        if (productTypeToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveProductType()
+    {
+        try
+        {
+            validationMessage = string.Empty;
+
+            if (string.IsNullOrEmpty(currentProductType.ProductType?.Trim()))
+            {
+                validationMessage = "Product Type Name is required.";
+                return;
+            }
+
+            if (currentProductType.SortOrder <= 0)
+            {
+                validationMessage = "Sort Order must be greater than 0.";
+                return;
+            }
+
+            // Validate that only one category is selected
+            if (currentProductType.IsSusu && currentProductType.IsFixedDeposit)
+            {
+                validationMessage = "A product type cannot be both Susu and Fixed Deposit. Please select only one category.";
+                return;
+            }
+
+            // Check for duplicates
+            if (!isEditing && productTypes.Any(pt => 
+                pt.ProductType?.Equals(currentProductType.ProductType.Trim(), StringComparison.OrdinalIgnoreCase) == true))
+            {
+                validationMessage = "A product type with this name already exists.";
+                return;
+            }
+
+            if (!isEditing && productTypes.Any(pt => pt.SortOrder == currentProductType.SortOrder))
+            {
+                validationMessage = "A product type with this sort order already exists.";
+                return;
+            }
+
+            // TODO: Implement actual API call to save product type
+            // For now, we'll simulate the save operation
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing product type
+                var existing = productTypes.FirstOrDefault(pt => pt.Id == currentProductType.Id);
+                if (existing != null)
+                {
+                    existing.ProductType = currentProductType.ProductType.Trim();
+                    existing.SortOrder = currentProductType.SortOrder;
+                    existing.IsSusu = currentProductType.IsSusu;
+                    existing.IsFixedDeposit = currentProductType.IsFixedDeposit;
+                }
+                successMessage = "Product type updated successfully!";
+            }
+            else
+            {
+                // Add new product type
+                var newProductType = new ProductTypeViewModel
+                {
+                    Id = productTypes.Any() ? productTypes.Max(pt => pt.Id) + 1 : 1,
+                    ProductType = currentProductType.ProductType.Trim(),
+                    SortOrder = currentProductType.SortOrder,
+                    IsSusu = currentProductType.IsSusu,
+                    IsFixedDeposit = currentProductType.IsFixedDeposit
+                };
+                productTypes.Add(newProductType);
+                successMessage = "Product type created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseProductTypeModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} product type: {currentProductType.ProductType}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} product type. Please try again.";
+            Console.WriteLine($"❌ Error saving product type: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (productTypeToDelete == null) return;
+
+            // TODO: Implement actual API call to delete product type
+            await Task.Delay(500);
+
+            productTypes.RemoveAll(pt => pt.Id == productTypeToDelete.Id);
+            successMessage = "Product type deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted product type: {productTypeToDelete.ProductType}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete product type. Please try again.";
+            Console.WriteLine($"❌ Error deleting product type: {ex.Message}");
+        }
+    }
+
+    private void CloseProductTypeModal()
+    {
+        showProductTypeModal = false;
+        currentProductType = new ProductTypeViewModel();
+        validationMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        productTypeToDelete = null;
+        StateHasChanged();
+    }
+
+    private bool IsSaveDisabled => 
+        string.IsNullOrEmpty(currentProductType.ProductType?.Trim()) || 
+        currentProductType.SortOrder <= 0;
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "ID,Product Type,Sort Order,Category\n";
+            
+            foreach (var productType in filteredProductTypes)
+            {
+                csvContent += $"\"{productType.Id}\",";
+                csvContent += $"\"{productType.ProductType}\",";
+                csvContent += $"\"{productType.SortOrder}\",";
+                
+                var category = productType.IsSusu ? "Susu" : 
+                              productType.IsFixedDeposit ? "Fixed Deposit" : "Other";
+                csvContent += $"\"{category}\"\n";
+            }
+
+            var fileName = $"ProductTypes_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnProductTypeRowClick(ProductTypeViewModel productType)
+    {
+        Console.WriteLine($"Product type row clicked: {productType.ProductType} (ID: {productType.Id})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    .page-title {
+        margin: 20px 0;
+        font-size: 28px;
+        font-weight: 300;
+    }
+
+    .page-title small {
+        color: #888;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    .portlet.light.bordered {
+        background-color: #fff;
+        border: 1px solid #e7ecf1;
+        margin-bottom: 20px;
+    }
+
+    .portlet > .portlet-title {
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+        margin-bottom: 0;
+    }
+
+    .portlet > .portlet-body {
+        padding: 20px;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .form-check-input:checked {
+        background-color: #1bc5bd;
+        border-color: #1bc5bd;
+    }
+
+    .form-check-input:disabled {
+        background-color: #e9ecef;
+        border-color: #adb5bd;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editProductType = function(productTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditProductType', productTypeId)
+                .catch(err => {
+                    console.error('Error calling EditProductType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteProductType = function(productTypeId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteProductType', productTypeId)
+                .catch(err => {
+                    console.error('Error calling DeleteProductType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

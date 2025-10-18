@@ -1,0 +1,1216 @@
+@page "/relationship-officers"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.DataFields
+@inject ApiClient ApiClient
+@inject IJSRuntime JSRuntime
+
+<div class="container mt-4">
+    <h1 class="page-title">
+        Relationship Officers Management
+        <small>Manage relationship officers and their assignments</small>
+    </h1>
+
+    <div class="portlet light bordered">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-user-follow font-dark"></i>
+                <span class="caption-subject bold uppercase">Relationship Officers</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadRelationshipOfficers" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Relationship Officer">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Statistics Cards -->
+            @if (relationshipOfficers.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@relationshipOfficers.Count</h4>
+                                        <small>Total Officers</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-users fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@highestOfficerId</h4>
+                                        <small>Highest Officer ID</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-hashtag fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h4 class="mb-0">@officersWithNames</h4>
+                                        <small>Officers with Names</small>
+                                    </div>
+                                    <div class="flex-shrink-0">
+                                        <i class="fa fa-id-card fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Search and Filter Section -->
+            @if (relationshipOfficers.Any())
+            {
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fa fa-search me-2"></i>
+                                    Search & Filter
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Search Relationship Officers</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                                <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by officer name..." />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort By</label>
+                                            <select class="form-select" @bind="sortBy">
+                                                <option value="name">Officer Name</option>
+                                                <option value="id">Officer ID</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Sort Order</label>
+                                            <select class="form-select" @bind="sortOrder">
+                                                <option value="asc">Ascending</option>
+                                                <option value="desc">Descending</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <button class="btn btn-secondary" @onclick="ClearSearch">
+                                            <i class="fa fa-times"></i> Clear Search
+                                        </button>
+                                        <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredRelationshipOfficers.Any())">
+                                            <i class="fa fa-download"></i> Export to Excel
+                                        </button>
+                                        @* <button class="btn btn-info" @onclick="GenerateSampleData" title="Generate sample data for testing"> *@
+                                        @*     <i class="fa fa-magic"></i> Generate Sample Data *@
+                                        @* </button> *@
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Results Section -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-danger alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearErrorMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Error!</strong> @errorMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-success alert-dismissible">
+                            <button type="button" class="close" @onclick="ClearSuccessMessage">
+                                <span>&times;</span>
+                            </button>
+                            <strong>Success!</strong> @successMessage
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (filteredRelationshipOfficers?.Any() == true)
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="fa fa-user-tie me-2"></i>
+                                    Relationship Officers
+                                    <span class="badge bg-light text-dark ms-2">@filteredRelationshipOfficers.Count records</span>
+                                    @if (!string.IsNullOrEmpty(searchTerm))
+                                    {
+                                        <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
+                                    }
+                                </h5>
+                            </div>
+                            <br/>
+                            <div class="card-body p-0">
+                                <ReusableDataTable TItem="RelationshipOfficerViewModel"
+                                                 Data="@filteredRelationshipOfficers"
+                                                 Columns="@relationshipOfficerColumns"
+                                                 Options="@relationshipOfficerOptions"
+                                                 OnRowClick="@OnRelationshipOfficerRowClick" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (hasLoaded && !isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fa fa-info-circle fa-2x mb-3"></i>
+                            <h5>No Relationship Officers Found</h5>
+                            <p class="mb-0">
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <text>No relationship officers found matching your search criteria.</text>
+                                }
+                                else
+                                {
+                                    <text>No relationship officers have been configured in the system.</text>
+                                }
+                            </p>
+                            @if (!string.IsNullOrEmpty(searchTerm))
+                            {
+                                <button class="btn btn-info mt-2" @onclick="ClearSearch">
+                                    <i class="fa fa-times"></i> Clear Search
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success mt-2" @onclick="ShowAddModal">
+                                    <i class="fa fa-plus"></i> Add First Relationship Officer
+                                </button>
+                                <button class="btn btn-outline-info mt-2" @onclick="GenerateSampleData">
+                                    <i class="fa fa-magic"></i> Generate Sample Data
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info text-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading relationship officers...
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Relationship Officer Modal -->
+@if (showRelationshipOfficerModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
+                        @(isEditing ? "Edit Relationship Officer" : "Add New Relationship Officer")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseRelationshipOfficerModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (isEditing)
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Relationship Officer ID</label>
+                            <input type="text" class="form-control" value="@currentRelationshipOfficer.Id" disabled />
+                            <small class="form-text text-muted">Relationship Officer ID cannot be changed</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-group mb-3">
+                            <label class="form-label">Relationship Officer ID *</label>
+                            <input type="number" class="form-control" @bind="newRelationshipOfficerId" 
+                                   placeholder="Enter unique relationship officer ID" min="1" />
+                            <small class="form-text text-muted">Unique numeric identifier for the relationship officer</small>
+                        </div>
+                    }
+                    <div class="form-group mb-3">
+                        <label class="form-label">Officer Name *</label>
+                        <input type="text" class="form-control" @bind="currentRelationshipOfficer.Name" 
+                               placeholder="Enter relationship officer name" maxlength="100" />
+                        <small class="form-text text-muted">Full name of the relationship officer (e.g., John Smith, Sarah Johnson)</small>
+                    </div>
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fa fa-exclamation-triangle"></i> @validationMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseRelationshipOfficerModal">Cancel</button>
+                    <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
+                            @onclick="SaveRelationshipOfficer" disabled="@IsSaveDisabled">
+                        <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
+                        @(isEditing ? "Update" : "Create") Relationship Officer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal && relationshipOfficerToDelete != null)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the following relationship officer?</p>
+                    <div class="alert alert-warning">
+                        <strong>ID: @relationshipOfficerToDelete.Id</strong> - @relationshipOfficerToDelete.Name
+                    </div>
+                    <p class="text-danger">
+                        <i class="fa fa-warning"></i> This action cannot be undone! This may affect client assignments and transactions associated with this officer.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
+                        <i class="fa fa-trash me-1"></i> Delete Relationship Officer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Bulk Actions Modal -->
+@if (showBulkActionsModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fa fa-users me-2"></i>
+                        Bulk Relationship Officers Management
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseBulkActionsModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i> 
+                        You can add multiple relationship officers at once. Enter one officer per line in the format: <code>ID,Name</code>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Bulk Relationship Officers Data</label>
+                        <textarea class="form-control" @bind="bulkOfficersData" rows="10" 
+                                  placeholder="Example:&#10;1,John Smith&#10;2,Sarah Johnson&#10;3,Michael Brown&#10;4,Emily Davis&#10;5,Robert Wilson"></textarea>
+                        <small class="form-text text-muted">
+                            Format: <strong>ID,Name</strong> (one per line). IDs must be unique numeric values.
+                        </small>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(bulkActionsMessage))
+                    {
+                        <div class="alert @(bulkActionsMessage.Contains("Error") ? "alert-danger" : "alert-success")">
+                            @bulkActionsMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseBulkActionsModal">Cancel</button>
+                    <button type="button" class="btn btn-info" @onclick="ValidateBulkData">
+                        <i class="fa fa-check"></i> Validate Data
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="ImportBulkOfficers" disabled="@string.IsNullOrEmpty(bulkOfficersData)">
+                        <i class="fa fa-upload"></i> Import Officers
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<RelationshipOfficerViewModel> relationshipOfficers = new();
+    private List<RelationshipOfficerViewModel> filteredRelationshipOfficers = new();
+    private List<DataTableColumn> relationshipOfficerColumns = new();
+    private DataTableOptions relationshipOfficerOptions = new();
+    private bool isLoading = false;
+    private bool hasLoaded = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private string validationMessage = string.Empty;
+    
+    // Search and filter fields
+    private string searchTerm = "";
+    private string sortBy = "name";
+    private string sortOrder = "asc";
+    
+    // Modal fields
+    private bool showRelationshipOfficerModal = false;
+    private bool showDeleteModal = false;
+    private bool showBulkActionsModal = false;
+    private bool isEditing = false;
+    private RelationshipOfficerViewModel currentRelationshipOfficer = new();
+    private RelationshipOfficerViewModel relationshipOfficerToDelete = null;
+    private int newRelationshipOfficerId = 0;
+    
+    // Bulk actions
+    private string bulkOfficersData = "";
+    private string bulkActionsMessage = "";
+    
+    // Statistics
+    private int highestOfficerId = 0;
+    private int officersWithNames = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureRelationshipOfficerTable();
+        await LoadRelationshipOfficers();
+    }
+
+    private void ConfigureRelationshipOfficerTable()
+    {
+        relationshipOfficerColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "OFFICER ID",
+                PropertyName = nameof(RelationshipOfficerViewModel.Id),
+                Width = 120,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var officerId = ((RelationshipOfficerViewModel)item).Id;
+                    var badgeClass = GetOfficerBadgeClass(officerId);
+                    return $"<span class='badge {badgeClass}'>{officerId}</span>";
+                }
+            },
+            new()
+            {
+                Header = "OFFICER NAME",
+                PropertyName = nameof(RelationshipOfficerViewModel.Name),
+                CustomRenderer = (item) =>
+                {
+                    var officer = (RelationshipOfficerViewModel)item;
+                    var name = officer.Name;
+                    
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        return "<span class='text-muted'><i>Unnamed Officer</i></span>";
+                    }
+                    
+                    var initials = GetOfficerInitials(name);
+                    return $@"
+                        <div class='d-flex align-items-center'>
+                            <div class='avatar-circle bg-primary text-white me-3'>
+                                <span class='avatar-initials'>{initials}</span>
+                            </div>
+                            <div>
+                                <strong class='text-primary'>{name}</strong>
+                                <br/>
+                                <small class='text-muted'>Relationship Officer</small>
+                            </div>
+                        </div>";
+                }
+            },
+            new()
+            {
+                Header = "STATUS",
+                PropertyName = nameof(RelationshipOfficerViewModel.Name),
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) =>
+                {
+                    var officer = (RelationshipOfficerViewModel)item;
+                    var hasName = !string.IsNullOrEmpty(officer.Name);
+                    var badgeClass = hasName ? "bg-success" : "bg-warning";
+                    var text = hasName ? "Active" : "Incomplete";
+                    return $"<span class='badge {badgeClass}'>{text}</span>";
+                }
+            }
+            // new()
+            // {
+            //     Header = "ACTIONS",
+            //     PropertyName = "",
+            //     Sortable = false,
+            //     Searchable = false,
+            //     Width = 120,
+            //     CssClass = "text-center",
+            //     CustomRenderer = (item) => 
+            //     {
+            //         var officer = (RelationshipOfficerViewModel)item;
+            //         return $@"
+            //             <div class='btn-group btn-group-sm' role='group'>
+            //                 <button type='button' class='btn btn-warning btn-xs' onclick='editRelationshipOfficer({officer.Id})' title='Edit'>
+            //                     <i class='fa fa-edit'></i>
+            //                 </button>
+            //                 <button type='button' class='btn btn-danger btn-xs' onclick='deleteRelationshipOfficer({officer.Id})' title='Delete'>
+            //                     <i class='fa fa-trash'></i>
+            //                 </button>
+            //             </div>";
+            //     }
+            // }
+        };
+
+        relationshipOfficerOptions = new DataTableOptions
+        {
+            PageLength = 15,
+            LengthMenu = new[] { 15, 30, 50, 100 },
+            LengthMenuLabels = new[] { "15", "30", "50", "100" },
+            SearchPlaceholder = "Search relationship officers...",
+            TableId = "relationshipOfficersTable",
+            TableCssClass = "table table-striped table-bordered table-hover mb-0",
+            HeaderCssClass = "leadBold bg-blue-madison font-white",
+            RowCssClass = "",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            ShowLengthMenu = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 1, "asc" } }, // Default sort by officer name
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search relationship officers:",
+                    ["lengthMenu"] = "Show _MENU_ records per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ relationship officers",
+                    ["infoEmpty"] = "No relationship officers found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total relationship officers)",
+                    ["emptyTable"] = "No relationship officer data available",
+                    ["zeroRecords"] = "No matching relationship officers found"
+                }
+            }
+        };
+    }
+
+    private async Task LoadRelationshipOfficers()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            validationMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading relationship officers...");
+
+            var result = await ApiClient.GetRelationshipOfficersAsync(
+                bP_Tenant: null,
+                accept_Language: null
+            );
+
+            if (result?.Payload != null)
+            {
+                relationshipOfficers = result.Payload.ToList();
+                ApplyFilters();
+                CalculateStatistics();
+                Console.WriteLine($"✅ Found {relationshipOfficers.Count} relationship officers");
+            }
+            else
+            {
+                relationshipOfficers = new List<RelationshipOfficerViewModel>();
+                filteredRelationshipOfficers = new List<RelationshipOfficerViewModel>();
+                ResetStatistics();
+                Console.WriteLine($"ℹ️ No relationship officers found");
+            }
+            
+            hasLoaded = true;
+        }
+        catch (ApiException<ApiErrorResponse> apiEx)
+        {
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load relationship officers.";
+            Console.WriteLine($"❌ API Error loading relationship officers: {apiEx.Message}");
+            relationshipOfficers = new List<RelationshipOfficerViewModel>();
+            filteredRelationshipOfficers = new List<RelationshipOfficerViewModel>();
+            ResetStatistics();
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            relationshipOfficers = new List<RelationshipOfficerViewModel>();
+            filteredRelationshipOfficers = new List<RelationshipOfficerViewModel>();
+            ResetStatistics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load relationship officers. Please check your connection.";
+            Console.WriteLine($"❌ Error loading relationship officers: {ex.Message}");
+            relationshipOfficers = new List<RelationshipOfficerViewModel>();
+            filteredRelationshipOfficers = new List<RelationshipOfficerViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var query = relationshipOfficers.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(ro =>
+                ro.Name?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
+            );
+        }
+
+        // Apply sorting
+        query = sortBy switch
+        {
+            "id" => sortOrder == "asc" 
+                ? query.OrderBy(ro => ro.Id)
+                : query.OrderByDescending(ro => ro.Id),
+            _ => sortOrder == "asc" 
+                ? query.OrderBy(ro => ro.Name)
+                : query.OrderByDescending(ro => ro.Name)
+        };
+
+        filteredRelationshipOfficers = query.ToList();
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        ApplyFilters();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        ApplyFilters();
+    }
+
+    private void CalculateStatistics()
+    {
+        highestOfficerId = relationshipOfficers.Any() ? relationshipOfficers.Max(ro => ro.Id) : 0;
+        officersWithNames = relationshipOfficers.Count(ro => !string.IsNullOrEmpty(ro.Name));
+    }
+
+    private void ResetStatistics()
+    {
+        highestOfficerId = 0;
+        officersWithNames = 0;
+    }
+
+    private string GetOfficerBadgeClass(int officerId)
+    {
+        return officerId switch
+        {
+            <= 5 => "bg-primary",    // Primary officers
+            <= 10 => "bg-success",   // Secondary officers
+            <= 15 => "bg-info",      // Tertiary officers
+            <= 20 => "bg-warning",   // Additional officers
+            _ => "bg-secondary"      // Other officers
+        };
+    }
+
+    private string GetOfficerInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "??";
+        
+        var names = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (names.Length >= 2)
+        {
+            return $"{names[0][0]}{names[1][0]}".ToUpper();
+        }
+        else if (names.Length == 1 && names[0].Length >= 2)
+        {
+            return names[0].Substring(0, 2).ToUpper();
+        }
+        else
+        {
+            return name.Length >= 2 ? name.Substring(0, 2).ToUpper() : name.ToUpper();
+        }
+    }
+
+    private void ShowAddModal()
+    {
+        currentRelationshipOfficer = new RelationshipOfficerViewModel();
+        newRelationshipOfficerId = highestOfficerId + 1; // Suggest next available ID
+        isEditing = false;
+        validationMessage = string.Empty;
+        showRelationshipOfficerModal = true;
+        StateHasChanged();
+    }
+
+    private void ShowBulkActionsModal()
+    {
+        showBulkActionsModal = true;
+        bulkActionsMessage = "";
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task EditRelationshipOfficer(int officerId)
+    {
+        var officer = relationshipOfficers.FirstOrDefault(ro => ro.Id == officerId);
+        if (officer != null)
+        {
+            currentRelationshipOfficer = new RelationshipOfficerViewModel
+            {
+                Id = officer.Id,
+                Name = officer.Name
+            };
+            isEditing = true;
+            validationMessage = string.Empty;
+            showRelationshipOfficerModal = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task DeleteRelationshipOfficer(int officerId)
+    {
+        relationshipOfficerToDelete = relationshipOfficers.FirstOrDefault(ro => ro.Id == officerId);
+        if (relationshipOfficerToDelete != null)
+        {
+            showDeleteModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveRelationshipOfficer()
+    {
+        try
+        {
+            validationMessage = string.Empty;
+
+            if (string.IsNullOrEmpty(currentRelationshipOfficer.Name?.Trim()))
+            {
+                validationMessage = "Officer Name is required.";
+                return;
+            }
+
+            // TODO: Implement actual API call to save relationship officer
+            // For now, we'll simulate the save operation
+            await Task.Delay(500);
+
+            if (isEditing)
+            {
+                // Update existing relationship officer
+                var existing = relationshipOfficers.FirstOrDefault(ro => ro.Id == currentRelationshipOfficer.Id);
+                if (existing != null)
+                {
+                    existing.Name = currentRelationshipOfficer.Name.Trim();
+                }
+                successMessage = "Relationship officer updated successfully!";
+            }
+            else
+            {
+                // Check if ID already exists
+                if (relationshipOfficers.Any(ro => ro.Id == newRelationshipOfficerId))
+                {
+                    validationMessage = $"A relationship officer with ID {newRelationshipOfficerId} already exists.";
+                    return;
+                }
+
+                // Add new relationship officer
+                relationshipOfficers.Add(new RelationshipOfficerViewModel
+                {
+                    Id = newRelationshipOfficerId,
+                    Name = currentRelationshipOfficer.Name.Trim()
+                });
+                successMessage = "Relationship officer created successfully!";
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            CloseRelationshipOfficerModal();
+            
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} relationship officer: {currentRelationshipOfficer.Name}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} relationship officer. Please try again.";
+            Console.WriteLine($"❌ Error saving relationship officer: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            if (relationshipOfficerToDelete == null) return;
+
+            // TODO: Implement actual API call to delete relationship officer
+            await Task.Delay(500);
+
+            relationshipOfficers.RemoveAll(ro => ro.Id == relationshipOfficerToDelete.Id);
+            successMessage = "Relationship officer deleted successfully!";
+            
+            ApplyFilters();
+            CalculateStatistics();
+            CloseDeleteModal();
+            
+            Console.WriteLine($"✅ Deleted relationship officer: {relationshipOfficerToDelete.Name}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to delete relationship officer. Please try again.";
+            Console.WriteLine($"❌ Error deleting relationship officer: {ex.Message}");
+        }
+    }
+
+    private void CloseRelationshipOfficerModal()
+    {
+        showRelationshipOfficerModal = false;
+        currentRelationshipOfficer = new RelationshipOfficerViewModel();
+        newRelationshipOfficerId = 0;
+        validationMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        relationshipOfficerToDelete = null;
+        StateHasChanged();
+    }
+
+    private void CloseBulkActionsModal()
+    {
+        showBulkActionsModal = false;
+        bulkOfficersData = "";
+        bulkActionsMessage = "";
+        StateHasChanged();
+    }
+
+    private async Task ValidateBulkData()
+    {
+        if (string.IsNullOrEmpty(bulkOfficersData))
+        {
+            bulkActionsMessage = "Error: Please enter data to validate.";
+            return;
+        }
+
+        try
+        {
+            var lines = bulkOfficersData.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var validEntries = new List<string>();
+            var errors = new List<string>();
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i].Trim();
+                if (string.IsNullOrEmpty(line)) continue;
+
+                var parts = line.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length != 2)
+                {
+                    errors.Add($"Line {i + 1}: Invalid format. Expected 'ID,Name'");
+                    continue;
+                }
+
+                if (!int.TryParse(parts[0].Trim(), out int id) || id <= 0)
+                {
+                    errors.Add($"Line {i + 1}: Invalid ID '{parts[0]}'. Must be a positive number.");
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(parts[1].Trim()))
+                {
+                    errors.Add($"Line {i + 1}: Officer name cannot be empty.");
+                    continue;
+                }
+
+                if (relationshipOfficers.Any(ro => ro.Id == id))
+                {
+                    errors.Add($"Line {i + 1}: Officer ID {id} already exists.");
+                    continue;
+                }
+
+                validEntries.Add($"ID: {id}, Name: {parts[1].Trim()}");
+            }
+
+            if (errors.Any())
+            {
+                bulkActionsMessage = $"Validation failed with {errors.Count} error(s):\n" + string.Join("\n", errors.Take(5));
+                if (errors.Count > 5)
+                {
+                    bulkActionsMessage += $"\n... and {errors.Count - 5} more error(s)";
+                }
+            }
+            else
+            {
+                bulkActionsMessage = $"✅ Validation successful! Found {validEntries.Count} valid officer(s) ready for import.";
+            }
+        }
+        catch (Exception ex)
+        {
+            bulkActionsMessage = $"Error during validation: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ImportBulkOfficers()
+    {
+        try
+        {
+            var lines = bulkOfficersData.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var importedCount = 0;
+
+            foreach (var line in lines)
+            {
+                var trimmedLine = line.Trim();
+                if (string.IsNullOrEmpty(trimmedLine)) continue;
+
+                var parts = trimmedLine.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int id) && id > 0)
+                {
+                    var name = parts[1].Trim();
+                    if (!string.IsNullOrEmpty(name) && !relationshipOfficers.Any(ro => ro.Id == id))
+                    {
+                        relationshipOfficers.Add(new RelationshipOfficerViewModel
+                        {
+                            Id = id,
+                            Name = name
+                        });
+                        importedCount++;
+                    }
+                }
+            }
+
+            if (importedCount > 0)
+            {
+                ApplyFilters();
+                CalculateStatistics();
+                successMessage = $"Successfully imported {importedCount} relationship officer(s)!";
+                CloseBulkActionsModal();
+            }
+            else
+            {
+                bulkActionsMessage = "No valid officers were imported. Please check your data.";
+            }
+        }
+        catch (Exception ex)
+        {
+            bulkActionsMessage = $"Error during import: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task GenerateSampleData()
+    {
+        try
+        {
+            var sampleOfficers = new List<RelationshipOfficerViewModel>
+            {
+                new() { Id = 1, Name = "John Smith" },
+                new() { Id = 2, Name = "Sarah Johnson" },
+                new() { Id = 3, Name = "Michael Brown" },
+                new() { Id = 4, Name = "Emily Davis" },
+                new() { Id = 5, Name = "Robert Wilson" },
+                new() { Id = 6, Name = "Lisa Anderson" },
+                new() { Id = 7, Name = "David Miller" },
+                new() { Id = 8, Name = "Jennifer Taylor" },
+                new() { Id = 9, Name = "Christopher Lee" },
+                new() { Id = 10, Name = "Amanda White" }
+            };
+
+            // Add sample data only for IDs that don't exist
+            foreach (var officer in sampleOfficers)
+            {
+                if (!relationshipOfficers.Any(ro => ro.Id == officer.Id))
+                {
+                    relationshipOfficers.Add(officer);
+                }
+            }
+
+            ApplyFilters();
+            CalculateStatistics();
+            successMessage = "Sample relationship officers data generated successfully!";
+            
+            Console.WriteLine($"✅ Generated sample data with {sampleOfficers.Count} relationship officers");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to generate sample data: " + ex.Message;
+            Console.WriteLine($"❌ Error generating sample data: {ex.Message}");
+        }
+    }
+
+    private bool IsSaveDisabled
+    {
+        get
+        {
+            if (isEditing)
+            {
+                return string.IsNullOrEmpty(currentRelationshipOfficer.Name?.Trim());
+            }
+            else
+            {
+                return newRelationshipOfficerId <= 0 || string.IsNullOrEmpty(currentRelationshipOfficer.Name?.Trim());
+            }
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        try
+        {
+            var csvContent = "Officer ID,Officer Name\n";
+            
+            foreach (var officer in filteredRelationshipOfficers)
+            {
+                csvContent += $"\"{officer.Id}\",";
+                csvContent += $"\"{officer.Name}\"\n";
+            }
+
+            var fileName = $"RelationshipOfficers_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to export data: " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ClearSuccessMessage()
+    {
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void OnRelationshipOfficerRowClick(RelationshipOfficerViewModel officer)
+    {
+        Console.WriteLine($"Relationship officer row clicked: {officer.Name} (ID: {officer.Id})");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+}
+
+<style>
+    /*.page-title {*/
+    /*    margin: 20px 0;*/
+    /*    font-size: 28px;*/
+    /*    font-weight: 300;*/
+    /*}*/
+    
+    /*.page-title small {*/
+    /*    color: #888;*/
+    /*    font-size: 14px;*/
+    /*    margin-left: 10px;*/
+    /*}*/
+    
+    /*.portlet.light.bordered {*/
+    /*    background-color: #fff;*/
+    /*    border: 1px solid #e7ecf1;*/
+    /*    margin-bottom: 20px;*/
+    /*}*/
+    
+    /*.portlet > .portlet-title {*/
+    /*    border-bottom: 1px solid #eee;*/
+    /*    padding: 15px 20px;*/
+    /*    margin-bottom: 0;*/
+    /*}*/
+    
+    /*.portlet > .portlet-body {*/
+    /*    padding: 20px;*/
+    /*}*/
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    code {
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 0.875em;
+        color: #e83e8c;
+    }
+
+    .fw-bold {
+        font-weight: bold;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .modal {
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-xs {
+        padding: 1px 5px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .avatar-initials {
+        line-height: 1;
+    }
+
+    .form-check-input:checked {
+        background-color: #198754;
+        border-color: #198754;
+    }
+</style>
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.editRelationshipOfficer = function(officerId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditRelationshipOfficer', officerId)
+                .catch(err => {
+                    console.error('Error calling EditRelationshipOfficer:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.deleteRelationshipOfficer = function(officerId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('DeleteRelationshipOfficer', officerId)
+                .catch(err => {
+                    console.error('Error calling DeleteRelationshipOfficer:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    function downloadCsv(content, fileName) {
+        const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Initialize DotNet reference when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // This will be set by the Blazor component
+    });
+</script>

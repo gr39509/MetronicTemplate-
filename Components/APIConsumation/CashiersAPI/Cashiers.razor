@@ -51,11 +51,11 @@ else if (!string.IsNullOrEmpty(errorMessage))
 }
 else
 {
-    <div class="portlet light bordered">
+    <div class="portlet">
         <div class="portlet-title">
             <div class="caption font-dark">
                 <i class="icon-user font-dark"></i>
-                <span class="caption-subject bold uppercase">CBS Clients</span>
+                <span class="caption-subject bold uppercase">Cashiers</span>
             </div>
             <div class="actions">
                 <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadCashiers" title="Refresh">
@@ -326,36 +326,36 @@ else
         await JSRuntime.InvokeVoidAsync("viewCbsClient", cashier.Id);
     }
 }
-
-<style>
-    .portlet.light.bordered {
-        background-color: #fff;
-        border: 1px solid #e7ecf1;
-        margin-bottom: 20px;
-    }
-
-    .portlet > .portlet-title {
-        border-bottom: 1px solid #eee;
-        padding: 15px 20px;
-        margin-bottom: 0;
-    }
-
-    .portlet > .portlet-body {
-        padding: 20px;
-    }
-
-    .page-title {
-        margin: 20px 0;
-        font-size: 28px;
-        font-weight: 300;
-    }
-
-    .page-title small {
-        color: #888;
-        font-size: 14px;
-        margin-left: 10px;
-    }
-</style>
+@* *@
+@* <style> *@
+@*     .portlet.light.bordered { *@
+@*         background-color: #fff; *@
+@*         border: 1px solid #e7ecf1; *@
+@*         margin-bottom: 20px; *@
+@*     } *@
+@* *@
+@*     .portlet > .portlet-title { *@
+@*         border-bottom: 1px solid #eee; *@
+@*         padding: 15px 20px; *@
+@*         margin-bottom: 0; *@
+@*     } *@
+@* *@
+@*     .portlet > .portlet-body { *@
+@*         padding: 20px; *@
+@*     } *@
+@* *@
+@*     .page-title { *@
+@*         margin: 20px 0; *@
+@*         font-size: 28px; *@
+@*         font-weight: 300; *@
+@*     } *@
+@* *@
+@*     .page-title small { *@
+@*         color: #888; *@
+@*         font-size: 14px; *@
+@*         margin-left: 10px; *@
+@*     } *@
+@* </style> *@
 
 <script>
 

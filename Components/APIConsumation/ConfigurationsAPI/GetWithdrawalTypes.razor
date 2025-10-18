@@ -1,4 +1,4 @@
-@page "/document-types"
+@page "/withdrawal-types"
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.DataFields
@@ -7,21 +7,21 @@
 
 <div class="container mt-4">
     <h1 class="page-title">
-        Document Types
-        <small>Manage and view all document types</small>
+        Withdrawal Types
+        <small>Manage and view all withdrawal types</small>
     </h1>
 
     <div class="portlet light bordered">
         <div class="portlet-title">
             <div class="caption font-dark">
-                <i class="icon-doc font-dark"></i>
-                <span class="caption-subject bold uppercase">Document Types Management</span>
+                <i class="icon-logout font-dark"></i>
+                <span class="caption-subject bold uppercase">Withdrawal Types Management</span>
             </div>
             <div class="actions">
-                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadDocumentTypes" title="Refresh">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadWithdrawalTypes" title="Refresh">
                     <i class="fa fa-refresh"></i>
                 </button>
-                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Document Type">
+                <button class="btn btn-circle btn-icon-only btn-success" @onclick="ShowAddModal" title="Add New Withdrawal Type">
                     <i class="fa fa-plus"></i>
                 </button>
             </div>
@@ -34,11 +34,11 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h4 class="mb-0">@documentTypes.Count</h4>
-                                    <small>Total Document Types</small>
+                                    <h4 class="mb-0">@withdrawalTypes.Count</h4>
+                                    <small>Total Withdrawal Types</small>
                                 </div>
                                 <div class="flex-shrink-0">
-                                    <i class="fa fa-file-text fa-2x"></i>
+                                    <i class="fa fa-list fa-2x"></i>
                                 </div>
                             </div>
                         </div>
@@ -49,8 +49,8 @@
                         <div class="card-body">
                             <div class="d-flex align-items-center">
                                 <div class="flex-grow-1">
-                                    <h4 class="mb-0">@highestDocumentTypeId</h4>
-                                    <small>Highest Document Type ID</small>
+                                    <h4 class="mb-0">@highestWithdrawalTypeId</h4>
+                                    <small>Highest Type ID</small>
                                 </div>
                                 <div class="flex-shrink-0">
                                     <i class="fa fa-hashtag fa-2x"></i>
@@ -75,10 +75,10 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="form-label">Search Document Types</label>
+                                        <label class="form-label">Search Withdrawal Types</label>
                                         <div class="input-group">
                                             <span class="input-group-text"><i class="fa fa-search"></i></span>
-                                            <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by document type name..." />
+                                            <input type="text" class="form-control" @bind="searchTerm" @oninput="OnSearchInput" placeholder="Search by withdrawal type name..." />
                                         </div>
                                     </div>
                                 </div>
@@ -86,8 +86,8 @@
                                     <div class="form-group">
                                         <label class="form-label">Sort By</label>
                                         <select class="form-select" @bind="sortBy">
-                                            <option value="name">Type Name</option>
-                                            <option value="id">Document Type ID</option>
+                                            <option value="name">Withdrawal Type Name</option>
+                                            <option value="id">Withdrawal Type ID</option>
                                         </select>
                                     </div>
                                 </div>
@@ -106,7 +106,7 @@
                                     <button class="btn btn-secondary" @onclick="ClearSearch">
                                         <i class="fa fa-times"></i> Clear Search
                                     </button>
-                                    <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredDocumentTypes.Any())">
+                                    <button class="btn btn-success" @onclick="ExportToExcel" disabled="@(!filteredWithdrawalTypes.Any())">
                                         <i class="fa fa-download"></i> Export to Excel
                                     </button>
                                 </div>
@@ -145,16 +145,16 @@
                 </div>
             }
 
-            @if (filteredDocumentTypes?.Any() == true)
+            @if (filteredWithdrawalTypes?.Any() == true)
             {
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header bg-primary text-white">
                                 <h5 class="mb-0">
-                                    <i class="fa fa-file-text me-2"></i>
-                                    Document Types
-                                    <span class="badge bg-light text-dark ms-2">@filteredDocumentTypes.Count records</span>
+                                    <i class="fa fa-list-alt me-2"></i>
+                                    Withdrawal Types
+                                    <span class="badge bg-light text-dark ms-2">@filteredWithdrawalTypes.Count records</span>
                                     @if (!string.IsNullOrEmpty(searchTerm))
                                     {
                                         <span class="badge bg-info ms-2">Search: "@searchTerm"</span>
@@ -163,11 +163,11 @@
                             </div>
                             <br/>
                             <div class="card-body p-0">
-                                <ReusableDataTable TItem="DocumentTypeViewModel"
-                                                 Data="@filteredDocumentTypes"
-                                                 Columns="@documentTypeColumns"
-                                                 Options="@documentTypeOptions"
-                                                 OnRowClick="@OnDocumentTypeRowClick" />
+                                <ReusableDataTable TItem="WithdrawalTypeViewModel"
+                                                 Data="@filteredWithdrawalTypes"
+                                                 Columns="@withdrawalTypeColumns"
+                                                 Options="@withdrawalTypeOptions"
+                                                 OnRowClick="@OnWithdrawalTypeRowClick" />
                             </div>
                         </div>
                     </div>
@@ -179,15 +179,15 @@
                     <div class="col-md-12">
                         <div class="alert alert-info text-center">
                             <i class="fa fa-info-circle fa-2x mb-3"></i>
-                            <h5>No Document Types Found</h5>
+                            <h5>No Withdrawal Types Found</h5>
                             <p class="mb-0">
                                 @if (!string.IsNullOrEmpty(searchTerm))
                                 {
-                                    <text>No document types found matching your search criteria.</text>
+                                    <text>No withdrawal types found matching your search criteria.</text>
                                 }
                                 else
                                 {
-                                    <text>No document types have been configured yet.</text>
+                                    <text>No withdrawal types have been configured yet.</text>
                                 }
                             </p>
                             @if (!string.IsNullOrEmpty(searchTerm))
@@ -199,7 +199,7 @@
                             else
                             {
                                 <button class="btn btn-success mt-2" @onclick="ShowAddModal">
-                                    <i class="fa fa-plus"></i> Add First Document Type
+                                    <i class="fa fa-plus"></i> Add First Withdrawal Type
                                 </button>
                             }
                         </div>
@@ -214,7 +214,7 @@
                     <div class="col-md-12">
                         <div class="alert alert-info text-center">
                             <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                            Loading document types...
+                            Loading withdrawal types...
                         </div>
                     </div>
                 </div>
@@ -223,8 +223,8 @@
     </div>
 </div>
 
-<!-- Add/Edit Document Type Modal -->
-@if (showDocumentTypeModal)
+<!-- Add/Edit Withdrawal Type Modal -->
+@if (showWithdrawalTypeModal)
 {
     <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
         <div class="modal-dialog">
@@ -232,33 +232,33 @@
                 <div class="modal-header @(isEditing ? "bg-warning" : "bg-success") text-white">
                     <h5 class="modal-title">
                         <i class="fa @(isEditing ? "fa-edit" : "fa-plus") me-2"></i>
-                        @(isEditing ? "Edit Document Type" : "Add New Document Type")
+                        @(isEditing ? "Edit Withdrawal Type" : "Add New Withdrawal Type")
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDocumentTypeModal"></button>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseWithdrawalTypeModal"></button>
                 </div>
                 <div class="modal-body">
                     @if (isEditing)
                     {
                         <div class="form-group mb-3">
-                            <label class="form-label">Document Type ID</label>
-                            <input type="text" class="form-control" value="@currentDocumentType.DocumentTypeID" disabled />
-                            <small class="form-text text-muted">Document Type ID cannot be changed</small>
+                            <label class="form-label">Withdrawal Type ID</label>
+                            <input type="text" class="form-control" value="@currentWithdrawalType.WithdrawalTypeID" disabled />
+                            <small class="form-text text-muted">Withdrawal Type ID cannot be changed</small>
                         </div>
                     }
                     else
                     {
                         <div class="form-group mb-3">
-                            <label class="form-label">Document Type ID *</label>
-                            <input type="number" class="form-control" @bind="newDocumentTypeId" 
-                                   placeholder="Enter unique document type ID" min="1" />
-                            <small class="form-text text-muted">Unique numeric identifier for the document type</small>
+                            <label class="form-label">Withdrawal Type ID *</label>
+                            <input type="number" class="form-control" @bind="newWithdrawalTypeId" 
+                                   placeholder="Enter unique withdrawal type ID" min="1" />
+                            <small class="form-text text-muted">Unique numeric identifier for the withdrawal type</small>
                         </div>
                     }
                     <div class="form-group mb-3">
-                        <label class="form-label">Document Type Name *</label>
-                        <input type="text" class="form-control" @bind="currentDocumentType.TypeName" 
-                               placeholder="Enter document type name" />
-                        <small class="form-text text-muted">Descriptive name for the document type</small>
+                        <label class="form-label">Withdrawal Type Name *</label>
+                        <input type="text" class="form-control" @bind="currentWithdrawalType.WithdrawalTypeName" 
+                               placeholder="Enter withdrawal type name" maxlength="100" />
+                        <small class="form-text text-muted">Descriptive name for the withdrawal type (e.g., Cash, Transfer, Cheque, ATM)</small>
                     </div>
                     @if (!string.IsNullOrEmpty(validationMessage))
                     {
@@ -268,11 +268,11 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseDocumentTypeModal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseWithdrawalTypeModal">Cancel</button>
                     <button type="button" class="btn @(isEditing ? "btn-warning" : "btn-success")" 
-                            @onclick="SaveDocumentType" disabled="@IsSaveDisabled">
+                            @onclick="SaveWithdrawalType" disabled="@IsSaveDisabled">
                         <i class="fa @(isEditing ? "fa-save" : "fa-plus") me-1"></i>
-                        @(isEditing ? "Update" : "Create") Document Type
+                        @(isEditing ? "Update" : "Create") Withdrawal Type
                     </button>
                 </div>
             </div>
@@ -281,7 +281,7 @@
 }
 
 <!-- Delete Confirmation Modal -->
-@if (showDeleteModal && documentTypeToDelete != null)
+@if (showDeleteModal && withdrawalTypeToDelete != null)
 {
     <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
         <div class="modal-dialog">
@@ -294,18 +294,18 @@
                     <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to delete the following document type?</p>
+                    <p>Are you sure you want to delete the following withdrawal type?</p>
                     <div class="alert alert-warning">
-                        <strong>ID: @documentTypeToDelete.DocumentTypeID</strong> - @documentTypeToDelete.TypeName
+                        <strong>ID: @withdrawalTypeToDelete.WithdrawalTypeID</strong> - @withdrawalTypeToDelete.WithdrawalTypeName
                     </div>
                     <p class="text-danger">
-                        <i class="fa fa-warning"></i> This action cannot be undone!
+                        <i class="fa fa-warning"></i> This action cannot be undone! This may affect transaction records that reference this withdrawal type.
                     </p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
                     <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">
-                        <i class="fa fa-trash me-1"></i> Delete Document Type
+                        <i class="fa fa-trash me-1"></i> Delete Withdrawal Type
                     </button>
                 </div>
             </div>
@@ -314,10 +314,10 @@
 }
 
 @code {
-    private List<DocumentTypeViewModel> documentTypes = new();
-    private List<DocumentTypeViewModel> filteredDocumentTypes = new();
-    private List<DataTableColumn> documentTypeColumns = new();
-    private DataTableOptions documentTypeOptions = new();
+    private List<WithdrawalTypeViewModel> withdrawalTypes = new();
+    private List<WithdrawalTypeViewModel> filteredWithdrawalTypes = new();
+    private List<DataTableColumn> withdrawalTypeColumns = new();
+    private DataTableOptions withdrawalTypeOptions = new();
     private bool isLoading = true;
     private bool hasLoaded = false;
     private string errorMessage = string.Empty;
@@ -330,45 +330,46 @@
     private string sortOrder = "asc";
     
     // Modal fields
-    private bool showDocumentTypeModal = false;
+    private bool showWithdrawalTypeModal = false;
     private bool showDeleteModal = false;
     private bool isEditing = false;
-    private DocumentTypeViewModel currentDocumentType = new();
-    private DocumentTypeViewModel documentTypeToDelete = null;
-    private int newDocumentTypeId = 0;
+    private WithdrawalTypeViewModel currentWithdrawalType = new();
+    private WithdrawalTypeViewModel withdrawalTypeToDelete = null;
+    private int newWithdrawalTypeId = 0;
     
     // Statistics
-    private int highestDocumentTypeId = 0;
+    private int highestWithdrawalTypeId = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        ConfigureDocumentTypeTable();
-        await LoadDocumentTypes();
+        ConfigureWithdrawalTypeTable();
+        await LoadWithdrawalTypes();
     }
 
-    private void ConfigureDocumentTypeTable()
+    private void ConfigureWithdrawalTypeTable()
     {
-        documentTypeColumns = new List<DataTableColumn>
+        withdrawalTypeColumns = new List<DataTableColumn>
         {
             new()
             {
-                Header = "DOCUMENT TYPE ID",
-                PropertyName = nameof(DocumentTypeViewModel.DocumentTypeID),
+                Header = "WITHDRAWAL TYPE ID",
+                PropertyName = nameof(WithdrawalTypeViewModel.WithdrawalTypeID),
                 Width = 150,
                 CssClass = "text-center",
                 CustomRenderer = (item) =>
                 {
-                    var typeId = ((DocumentTypeViewModel)item).DocumentTypeID;
-                    return $"<span class='badge bg-primary'>{typeId}</span>";
+                    var typeId = ((WithdrawalTypeViewModel)item).WithdrawalTypeID;
+                    var badgeClass = GetWithdrawalTypeBadgeClass(typeId);
+                    return $"<span class='badge {badgeClass}'>{typeId}</span>";
                 }
             },
             new()
             {
-                Header = "DOCUMENT TYPE NAME",
-                PropertyName = nameof(DocumentTypeViewModel.TypeName),
+                Header = "WITHDRAWAL TYPE NAME",
+                PropertyName = nameof(WithdrawalTypeViewModel.WithdrawalTypeName),
                 CustomRenderer = (item) =>
                 {
-                    var typeName = ((DocumentTypeViewModel)item).TypeName;
+                    var typeName = ((WithdrawalTypeViewModel)item).WithdrawalTypeName;
                     return string.IsNullOrEmpty(typeName)
                         ? "<span class='text-muted'>N/A</span>"
                         : $"<strong class='text-primary'>{typeName}</strong>";
@@ -384,13 +385,13 @@
             //     CssClass = "text-center",
             //     CustomRenderer = (item) => 
             //     {
-            //         var documentType = (DocumentTypeViewModel)item;
+            //         var withdrawalType = (WithdrawalTypeViewModel)item;
             //         return $@"
             //             <div class='btn-group btn-group-sm' role='group'>
-            //                 <button type='button' class='btn btn-warning btn-xs' onclick='editDocumentType({documentType.DocumentTypeID})' title='Edit'>
+            //                 <button type='button' class='btn btn-warning btn-xs' onclick='editWithdrawalType({withdrawalType.WithdrawalTypeID})' title='Edit'>
             //                     <i class='fa fa-edit'></i>
             //                 </button>
-            //                 <button type='button' class='btn btn-danger btn-xs' onclick='deleteDocumentType({documentType.DocumentTypeID})' title='Delete'>
+            //                 <button type='button' class='btn btn-danger btn-xs' onclick='deleteWithdrawalType({withdrawalType.WithdrawalTypeID})' title='Delete'>
             //                     <i class='fa fa-trash'></i>
             //                 </button>
             //             </div>";
@@ -398,15 +399,15 @@
             // }
         };
 
-        documentTypeOptions = new DataTableOptions
+        withdrawalTypeOptions = new DataTableOptions
         {
             PageLength = 15,
             LengthMenu = new[] { 15, 30, 50, 100 },
             LengthMenuLabels = new[] { "15", "30", "50", "100" },
-            SearchPlaceholder = "Search document types...",
-            TableId = "documentTypesTable",
+            SearchPlaceholder = "Search withdrawal types...",
+            TableId = "withdrawalTypesTable",
             TableCssClass = "table table-striped table-bordered table-hover mb-0",
-            HeaderCssClass = "leadBold bg-green-meadow font-white",
+            HeaderCssClass = "leadBold bg-red-pink font-white",
             RowCssClass = "",
             ShowSearch = true,
             ShowPaging = true,
@@ -415,22 +416,22 @@
             Responsive = true,
             AdditionalOptions = new Dictionary<string, object>
             {
-                ["order"] = new object[] { new object[] { 1, "asc" } }, // Default sort by type name
+                ["order"] = new object[] { new object[] { 1, "asc" } }, // Default sort by withdrawal type name
                 ["language"] = new Dictionary<string, object>
                 {
-                    ["search"] = "Search document types:",
+                    ["search"] = "Search withdrawal types:",
                     ["lengthMenu"] = "Show _MENU_ records per page",
-                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ document types",
-                    ["infoEmpty"] = "No document types found",
-                    ["infoFiltered"] = "(filtered from _MAX_ total document types)",
-                    ["emptyTable"] = "No document type data available",
-                    ["zeroRecords"] = "No matching document types found"
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ withdrawal types",
+                    ["infoEmpty"] = "No withdrawal types found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total withdrawal types)",
+                    ["emptyTable"] = "No withdrawal type data available",
+                    ["zeroRecords"] = "No matching withdrawal types found"
                 }
             }
         };
     }
 
-    private async Task LoadDocumentTypes()
+    private async Task LoadWithdrawalTypes()
     {
         try
         {
@@ -440,52 +441,52 @@
             validationMessage = string.Empty;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading document types...");
+            Console.WriteLine($"🔍 Loading withdrawal types...");
 
-            var result = await ApiClient.GetDocumentTypesAsync(
+            var result = await ApiClient.GetWithdrawalTypesAsync(
                 bP_Tenant: null,
                 accept_Language: null
             );
 
             if (result?.Payload != null)
             {
-                documentTypes = result.Payload.ToList();
+                withdrawalTypes = result.Payload.ToList();
                 ApplyFilters();
                 CalculateStatistics();
-                Console.WriteLine($"✅ Found {documentTypes.Count} document type records");
+                Console.WriteLine($"✅ Found {withdrawalTypes.Count} withdrawal type records");
             }
             else
             {
-                documentTypes = new List<DocumentTypeViewModel>();
-                filteredDocumentTypes = new List<DocumentTypeViewModel>();
+                withdrawalTypes = new List<WithdrawalTypeViewModel>();
+                filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
                 ResetStatistics();
-                Console.WriteLine($"ℹ️ No document type records found");
+                Console.WriteLine($"ℹ️ No withdrawal type records found");
             }
             
             hasLoaded = true;
         }
         catch (ApiException<ApiErrorResponse> apiEx)
         {
-            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load document types.";
-            Console.WriteLine($"❌ API Error loading document types: {apiEx.Message}");
-            documentTypes = new List<DocumentTypeViewModel>();
-            filteredDocumentTypes = new List<DocumentTypeViewModel>();
+            errorMessage = apiEx.Result?.ErrorMessage ?? "Failed to load withdrawal types.";
+            Console.WriteLine($"❌ API Error loading withdrawal types: {apiEx.Message}");
+            withdrawalTypes = new List<WithdrawalTypeViewModel>();
+            filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
             ResetStatistics();
         }
         catch (ApiException ex)
         {
             errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
             Console.WriteLine($"❌ API Exception: {ex.Message}");
-            documentTypes = new List<DocumentTypeViewModel>();
-            filteredDocumentTypes = new List<DocumentTypeViewModel>();
+            withdrawalTypes = new List<WithdrawalTypeViewModel>();
+            filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
             ResetStatistics();
         }
         catch (Exception ex)
         {
-            errorMessage = "Failed to load document types. Please check your connection.";
-            Console.WriteLine($"❌ Error loading document types: {ex.Message}");
-            documentTypes = new List<DocumentTypeViewModel>();
-            filteredDocumentTypes = new List<DocumentTypeViewModel>();
+            errorMessage = "Failed to load withdrawal types. Please check your connection.";
+            Console.WriteLine($"❌ Error loading withdrawal types: {ex.Message}");
+            withdrawalTypes = new List<WithdrawalTypeViewModel>();
+            filteredWithdrawalTypes = new List<WithdrawalTypeViewModel>();
             ResetStatistics();
         }
         finally
@@ -497,14 +498,13 @@
 
     private void ApplyFilters()
     {
-        var query = documentTypes.AsEnumerable();
+        var query = withdrawalTypes.AsEnumerable();
 
         // Apply search filter
         if (!string.IsNullOrEmpty(searchTerm))
         {
-            query = query.Where(dt =>
-                (dt.TypeName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true) ||
-                dt.DocumentTypeID.ToString().Contains(searchTerm)
+            query = query.Where(wt =>
+                wt.WithdrawalTypeName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true
             );
         }
 
@@ -512,14 +512,14 @@
         query = sortBy switch
         {
             "id" => sortOrder == "asc" 
-                ? query.OrderBy(dt => dt.DocumentTypeID)
-                : query.OrderByDescending(dt => dt.DocumentTypeID),
+                ? query.OrderBy(wt => wt.WithdrawalTypeID)
+                : query.OrderByDescending(wt => wt.WithdrawalTypeID),
             _ => sortOrder == "asc" 
-                ? query.OrderBy(dt => dt.TypeName)
-                : query.OrderByDescending(dt => dt.TypeName)
+                ? query.OrderBy(wt => wt.WithdrawalTypeName)
+                : query.OrderByDescending(wt => wt.WithdrawalTypeName)
         };
 
-        filteredDocumentTypes = query.ToList();
+        filteredWithdrawalTypes = query.ToList();
         StateHasChanged();
     }
 
@@ -537,54 +537,66 @@
 
     private void CalculateStatistics()
     {
-        highestDocumentTypeId = documentTypes.Any() ? documentTypes.Max(dt => dt.DocumentTypeID) : 0;
+        highestWithdrawalTypeId = withdrawalTypes.Any() ? withdrawalTypes.Max(wt => wt.WithdrawalTypeID) : 0;
     }
 
     private void ResetStatistics()
     {
-        highestDocumentTypeId = 0;
+        highestWithdrawalTypeId = 0;
+    }
+
+    private string GetWithdrawalTypeBadgeClass(int withdrawalTypeId)
+    {
+        return withdrawalTypeId switch
+        {
+            1 => "bg-success",    // Cash
+            2 => "bg-info",       // Transfer
+            3 => "bg-warning",    // Cheque
+            4 => "bg-primary",    // ATM
+            _ => "bg-secondary"   // Other types
+        };
     }
 
     private void ShowAddModal()
     {
-        currentDocumentType = new DocumentTypeViewModel();
-        newDocumentTypeId = highestDocumentTypeId + 1; // Suggest next available ID
+        currentWithdrawalType = new WithdrawalTypeViewModel();
+        newWithdrawalTypeId = highestWithdrawalTypeId + 1; // Suggest next available ID
         isEditing = false;
         validationMessage = string.Empty;
-        showDocumentTypeModal = true;
+        showWithdrawalTypeModal = true;
         StateHasChanged();
     }
 
     [JSInvokable]
-    public async Task EditDocumentType(int documentTypeId)
+    public async Task EditWithdrawalType(int withdrawalTypeId)
     {
-        var documentType = documentTypes.FirstOrDefault(dt => dt.DocumentTypeID == documentTypeId);
-        if (documentType != null)
+        var withdrawalType = withdrawalTypes.FirstOrDefault(wt => wt.WithdrawalTypeID == withdrawalTypeId);
+        if (withdrawalType != null)
         {
-            currentDocumentType = new DocumentTypeViewModel
+            currentWithdrawalType = new WithdrawalTypeViewModel
             {
-                DocumentTypeID = documentType.DocumentTypeID,
-                TypeName = documentType.TypeName
+                WithdrawalTypeID = withdrawalType.WithdrawalTypeID,
+                WithdrawalTypeName = withdrawalType.WithdrawalTypeName
             };
             isEditing = true;
             validationMessage = string.Empty;
-            showDocumentTypeModal = true;
+            showWithdrawalTypeModal = true;
             StateHasChanged();
         }
     }
 
     [JSInvokable]
-    public async Task DeleteDocumentType(int documentTypeId)
+    public async Task DeleteWithdrawalType(int withdrawalTypeId)
     {
-        documentTypeToDelete = documentTypes.FirstOrDefault(dt => dt.DocumentTypeID == documentTypeId);
-        if (documentTypeToDelete != null)
+        withdrawalTypeToDelete = withdrawalTypes.FirstOrDefault(wt => wt.WithdrawalTypeID == withdrawalTypeId);
+        if (withdrawalTypeToDelete != null)
         {
             showDeleteModal = true;
             StateHasChanged();
         }
     }
 
-    private async Task SaveDocumentType()
+    private async Task SaveWithdrawalType()
     {
         try
         {
@@ -592,74 +604,74 @@
 
             if (isEditing)
             {
-                if (string.IsNullOrEmpty(currentDocumentType.TypeName))
+                if (string.IsNullOrEmpty(currentWithdrawalType.WithdrawalTypeName?.Trim()))
                 {
-                    validationMessage = "Document Type Name is required.";
+                    validationMessage = "Withdrawal Type Name is required.";
                     return;
                 }
             }
             else
             {
-                if (newDocumentTypeId <= 0)
+                if (newWithdrawalTypeId <= 0)
                 {
-                    validationMessage = "Please enter a valid Document Type ID (must be greater than 0).";
+                    validationMessage = "Please enter a valid Withdrawal Type ID (must be greater than 0).";
                     return;
                 }
 
-                if (string.IsNullOrEmpty(currentDocumentType.TypeName))
+                if (string.IsNullOrEmpty(currentWithdrawalType.WithdrawalTypeName?.Trim()))
                 {
-                    validationMessage = "Document Type Name is required.";
+                    validationMessage = "Withdrawal Type Name is required.";
                     return;
                 }
 
-                if (documentTypes.Any(dt => dt.DocumentTypeID == newDocumentTypeId))
+                if (withdrawalTypes.Any(wt => wt.WithdrawalTypeID == newWithdrawalTypeId))
                 {
-                    validationMessage = "A document type with this ID already exists.";
+                    validationMessage = "A withdrawal type with this ID already exists.";
                     return;
                 }
 
-                if (documentTypes.Any(dt => dt.TypeName?.Equals(currentDocumentType.TypeName, StringComparison.OrdinalIgnoreCase) == true))
+                if (withdrawalTypes.Any(wt => wt.WithdrawalTypeName?.Equals(currentWithdrawalType.WithdrawalTypeName, StringComparison.OrdinalIgnoreCase) == true))
                 {
-                    validationMessage = "A document type with this name already exists.";
+                    validationMessage = "A withdrawal type with this name already exists.";
                     return;
                 }
             }
 
-            // TODO: Implement actual API call to save document type
+            // TODO: Implement actual API call to save withdrawal type
             // For now, we'll simulate the save operation
             await Task.Delay(500);
 
             if (isEditing)
             {
-                // Update existing document type
-                var existing = documentTypes.FirstOrDefault(dt => dt.DocumentTypeID == currentDocumentType.DocumentTypeID);
+                // Update existing withdrawal type
+                var existing = withdrawalTypes.FirstOrDefault(wt => wt.WithdrawalTypeID == currentWithdrawalType.WithdrawalTypeID);
                 if (existing != null)
                 {
-                    existing.TypeName = currentDocumentType.TypeName;
+                    existing.WithdrawalTypeName = currentWithdrawalType.WithdrawalTypeName.Trim();
                 }
-                successMessage = "Document type updated successfully!";
+                successMessage = "Withdrawal type updated successfully!";
             }
             else
             {
-                // Add new document type
-                documentTypes.Add(new DocumentTypeViewModel
+                // Add new withdrawal type
+                withdrawalTypes.Add(new WithdrawalTypeViewModel
                 {
-                    DocumentTypeID = newDocumentTypeId,
-                    TypeName = currentDocumentType.TypeName
+                    WithdrawalTypeID = newWithdrawalTypeId,
+                    WithdrawalTypeName = currentWithdrawalType.WithdrawalTypeName.Trim()
                 });
-                successMessage = "Document type created successfully!";
+                successMessage = "Withdrawal type created successfully!";
             }
 
             ApplyFilters();
             CalculateStatistics();
-            CloseDocumentTypeModal();
+            CloseWithdrawalTypeModal();
             
-            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} document type: {currentDocumentType.TypeName}");
+            Console.WriteLine($"✅ {(isEditing ? "Updated" : "Created")} withdrawal type: {currentWithdrawalType.WithdrawalTypeName}");
         }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to {(isEditing ? "update" : "create")} document type. Please try again.";
-            Console.WriteLine($"❌ Error saving document type: {ex.Message}");
+            errorMessage = $"Failed to {(isEditing ? "update" : "create")} withdrawal type. Please try again.";
+            Console.WriteLine($"❌ Error saving withdrawal type: {ex.Message}");
         }
     }
 
@@ -667,32 +679,32 @@
     {
         try
         {
-            if (documentTypeToDelete == null) return;
+            if (withdrawalTypeToDelete == null) return;
 
-            // TODO: Implement actual API call to delete document type
+            // TODO: Implement actual API call to delete withdrawal type
             await Task.Delay(500);
 
-            documentTypes.RemoveAll(dt => dt.DocumentTypeID == documentTypeToDelete.DocumentTypeID);
-            successMessage = "Document type deleted successfully!";
+            withdrawalTypes.RemoveAll(wt => wt.WithdrawalTypeID == withdrawalTypeToDelete.WithdrawalTypeID);
+            successMessage = "Withdrawal type deleted successfully!";
             
             ApplyFilters();
             CalculateStatistics();
             CloseDeleteModal();
             
-            Console.WriteLine($"✅ Deleted document type: {documentTypeToDelete.TypeName}");
+            Console.WriteLine($"✅ Deleted withdrawal type: {withdrawalTypeToDelete.WithdrawalTypeName}");
         }
         catch (Exception ex)
         {
-            errorMessage = "Failed to delete document type. Please try again.";
-            Console.WriteLine($"❌ Error deleting document type: {ex.Message}");
+            errorMessage = "Failed to delete withdrawal type. Please try again.";
+            Console.WriteLine($"❌ Error deleting withdrawal type: {ex.Message}");
         }
     }
 
-    private void CloseDocumentTypeModal()
+    private void CloseWithdrawalTypeModal()
     {
-        showDocumentTypeModal = false;
-        currentDocumentType = new DocumentTypeViewModel();
-        newDocumentTypeId = 0;
+        showWithdrawalTypeModal = false;
+        currentWithdrawalType = new WithdrawalTypeViewModel();
+        newWithdrawalTypeId = 0;
         validationMessage = string.Empty;
         StateHasChanged();
     }
@@ -700,7 +712,7 @@
     private void CloseDeleteModal()
     {
         showDeleteModal = false;
-        documentTypeToDelete = null;
+        withdrawalTypeToDelete = null;
         StateHasChanged();
     }
 
@@ -710,11 +722,11 @@
         {
             if (isEditing)
             {
-                return string.IsNullOrEmpty(currentDocumentType.TypeName);
+                return string.IsNullOrEmpty(currentWithdrawalType.WithdrawalTypeName?.Trim());
             }
             else
             {
-                return newDocumentTypeId <= 0 || string.IsNullOrEmpty(currentDocumentType.TypeName);
+                return newWithdrawalTypeId <= 0 || string.IsNullOrEmpty(currentWithdrawalType.WithdrawalTypeName?.Trim());
             }
         }
     }
@@ -723,15 +735,15 @@
     {
         try
         {
-            var csvContent = "Document Type ID,Document Type Name\n";
+            var csvContent = "Withdrawal Type ID,Withdrawal Type Name\n";
             
-            foreach (var documentType in filteredDocumentTypes)
+            foreach (var withdrawalType in filteredWithdrawalTypes)
             {
-                csvContent += $"\"{documentType.DocumentTypeID}\",";
-                csvContent += $"\"{documentType.TypeName}\"\n";
+                csvContent += $"\"{withdrawalType.WithdrawalTypeID}\",";
+                csvContent += $"\"{withdrawalType.WithdrawalTypeName}\"\n";
             }
 
-            var fileName = $"DocumentTypes_{DateTime.Now:yyyyMMddHHmmss}.csv";
+            var fileName = $"WithdrawalTypes_{DateTime.Now:yyyyMMddHHmmss}.csv";
             await JSRuntime.InvokeVoidAsync("downloadCsv", csvContent, fileName);
         }
         catch (Exception ex)
@@ -753,9 +765,9 @@
         StateHasChanged();
     }
 
-    private void OnDocumentTypeRowClick(DocumentTypeViewModel documentType)
+    private void OnWithdrawalTypeRowClick(WithdrawalTypeViewModel withdrawalType)
     {
-        Console.WriteLine($"Document type row clicked: {documentType.TypeName} (ID: {documentType.DocumentTypeID})");
+        Console.WriteLine($"Withdrawal type row clicked: {withdrawalType.WithdrawalTypeName} (ID: {withdrawalType.WithdrawalTypeID})");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -858,22 +870,22 @@
         window.dotNetReference = reference;
     };
 
-    window.editDocumentType = function(documentTypeId) {
+    window.editWithdrawalType = function(withdrawalTypeId) {
         if (window.dotNetReference) {
-            window.dotNetReference.invokeMethodAsync('EditDocumentType', documentTypeId)
+            window.dotNetReference.invokeMethodAsync('EditWithdrawalType', withdrawalTypeId)
                 .catch(err => {
-                    console.error('Error calling EditDocumentType:', err);
+                    console.error('Error calling EditWithdrawalType:', err);
                 });
         } else {
             console.error('DotNet reference not available');
         }
     };
 
-    window.deleteDocumentType = function(documentTypeId) {
+    window.deleteWithdrawalType = function(withdrawalTypeId) {
         if (window.dotNetReference) {
-            window.dotNetReference.invokeMethodAsync('DeleteDocumentType', documentTypeId)
+            window.dotNetReference.invokeMethodAsync('DeleteWithdrawalType', withdrawalTypeId)
                 .catch(err => {
-                    console.error('Error calling DeleteDocumentType:', err);
+                    console.error('Error calling DeleteWithdrawalType:', err);
                 });
         } else {
             console.error('DotNet reference not available');
