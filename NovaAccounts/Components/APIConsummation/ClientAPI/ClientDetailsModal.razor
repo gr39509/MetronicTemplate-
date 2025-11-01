@@ -1,0 +1,944 @@
+@* ClientDetailsModal.razor - Updated with SMS Configurations *@
+@using NovaAccounts.Components.APIConsummation.EmailProviderConfigurationsAPI
+@using NovaAccounts.Components.APIConsummation.OtpProviderConfigurationsAPI
+@using NovaAccounts.Components.APIConsummation.PaymentProviderConfigurationsAPI
+@using NovaAccounts.Components.APIConsummation.SMSProviderConfigurationsAPI
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+@inject IConfiguration Configuration
+@* @inject JSRuntime JSRuntime *@
+
+@* Include all Configuration Modals *@
+<EmailProviderConfigurationCreateModal @ref="emailConfigCreateModal"
+                                       OnEmailConfigurationCreated="HandleEmailConfigurationCreated" />
+
+<EmailProviderConfigurationEditModal @ref="emailConfigEditModal"
+                                     OnEmailConfigurationUpdated="HandleEmailConfigurationUpdated" />
+
+<OtpProviderConfigurationCreateModal @ref="otpConfigCreateModal"
+                                     OnOtpConfigurationCreated="HandleOtpConfigurationCreated" />
+
+<OtpProviderConfigurationEditModal @ref="otpConfigEditModal"
+                                   OnOtpConfigurationUpdated="HandleOtpConfigurationUpdated" />
+
+<PaymentProviderConfigurationCreateModal @ref="paymentConfigCreateModal"
+                                         OnPaymentConfigurationCreated="HandlePaymentConfigurationCreated" />
+
+<PaymentProviderConfigurationEditModal @ref="paymentConfigEditModal"
+                                       OnPaymentConfigurationUpdated="HandlePaymentConfigurationUpdated" />
+
+<SmsProviderConfigurationCreateModal @ref="smsConfigCreateModal"
+                                     OnSmsConfigurationCreated="HandleSmsConfigurationCreated" />
+
+<SmsProviderConfigurationEditModal @ref="smsConfigEditModal"
+                                   OnSmsConfigurationUpdated="HandleSmsConfigurationUpdated" />
+
+<ReusableModal @ref="clientDetailsModal"
+               Title="Client Details"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="false"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading client details...</p>
+            </div>
+        }
+        else if (clientDetails != null)
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Client ID:</label>
+                        <span class="detail-value">@clientDetails.ClientId</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Identifier:</label>
+                        <span class="detail-value">@clientDetails.Identifier</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Client Name:</label>
+                        <span class="detail-value">@clientDetails.Name</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Created Date:</label>
+                        <span class="detail-value">@clientDetails.CreatedAt.ToString("yyyy-MM-dd HH:mm")</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Status:</label>
+                        <span class="badge badge-success">Active</span>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(clientDetails.Description))
+            {
+                <div class="detail-group mt-3">
+                    <label class="detail-label">Description:</label>
+                    <p class="detail-value text-muted">@clientDetails.Description</p>
+                </div>
+            }
+
+            <!-- Email Provider Configurations Section -->
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="icon-envelope"></i>
+                        Email Provider Configurations
+                    </h5>
+                    <button class="btn btn-sm btn-primary" @onclick="OpenCreateEmailConfiguration" title="Add Email Configuration">
+                        <i class="fa fa-plus"></i> Add Configuration
+                    </button>
+                </div>
+
+                @if (isLoadingEmailConfigs)
+                {
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ml-2">Loading email configurations...</span>
+                    </div>
+                }
+                else if (emailConfigurations?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Default</th>
+                                    <th>From Email</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var config in emailConfigurations)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@config.Provider.Name</strong>
+                                            @if (!string.IsNullOrEmpty(config.Url))
+                                            {
+                                                <br />
+                                                <small class="text-muted">@config.Url</small>
+                                            }
+                                        </td>
+                                        <td>@config.Description</td>
+                                        <td>
+                                            @if (config.IsActive)
+                                            {
+                                                <span class="badge badge-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (config.IsDefault)
+                                            {
+                                                <span class="badge badge-info">Default</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(config.EmailFrom))
+                                            {
+                                                <div>@config.EmailFrom</div>
+                                                @if (!string.IsNullOrEmpty(config.EmailFromName))
+                                                {
+                                                    <small class="text-muted">@config.EmailFromName</small>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not set</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-primary btn-xs" 
+                                                        @onclick="() => OpenEditEmailConfiguration(config.EmailProviderConfigurationId)" 
+                                                        title="Edit Configuration">
+                                                    <i class="fa fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i>
+                        No email provider configurations found for this client.
+                        <button class="btn btn-sm btn-outline-primary ml-2" @onclick="OpenCreateEmailConfiguration">
+                            <i class="fa fa-plus"></i> Create First Configuration
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <!-- SMS Provider Configurations Section -->
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="icon-mobile"></i>
+                        SMS Provider Configurations
+                    </h5>
+                    <button class="btn btn-sm btn-primary" @onclick="OpenCreateSmsConfiguration" title="Add SMS Configuration">
+                        <i class="fa fa-plus"></i> Add Configuration
+                    </button>
+                </div>
+
+                @if (isLoadingSmsConfigs)
+                {
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ml-2">Loading SMS configurations...</span>
+                    </div>
+                }
+                else if (smsConfigurations?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Default</th>
+                                    <th>Created Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var config in smsConfigurations)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@config.Provider.Name</strong>
+                                            @if (!string.IsNullOrEmpty(config.Url))
+                                            {
+                                                <br />
+                                                <small class="text-muted">@config.Url</small>
+                                            }
+                                        </td>
+                                        <td>@config.Description</td>
+                                        <td>
+                                            @if (config.IsActive)
+                                            {
+                                                <span class="badge badge-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (config.IsDefault)
+                                            {
+                                                <span class="badge badge-info">Default</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">@config.CreatedAt.ToString("yyyy-MM-dd")</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-primary btn-xs" 
+                                                        @onclick="() => OpenEditSmsConfiguration(config.SmsProviderConfigurationId)" 
+                                                        title="Edit Configuration">
+                                                    <i class="fa fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i>
+                        No SMS provider configurations found for this client.
+                        <button class="btn btn-sm btn-outline-primary ml-2" @onclick="OpenCreateSmsConfiguration">
+                            <i class="fa fa-plus"></i> Create First Configuration
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <!-- OTP Provider Configurations Section -->
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="icon-shield"></i>
+                        OTP Provider Configurations
+                    </h5>
+                    <button class="btn btn-sm btn-primary" @onclick="OpenCreateOtpConfiguration" title="Add OTP Configuration">
+                        <i class="fa fa-plus"></i> Add Configuration
+                    </button>
+                </div>
+
+                @if (isLoadingOtpConfigs)
+                {
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ml-2">Loading OTP configurations...</span>
+                    </div>
+                }
+                else if (otpConfigurations?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Default</th>
+                                    <th>Created Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var config in otpConfigurations)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@config.Provider.Name</strong>
+                                            @if (!string.IsNullOrEmpty(config.Url))
+                                            {
+                                                <br />
+                                                <small class="text-muted">@config.Url</small>
+                                            }
+                                        </td>
+                                        <td>@config.Description</td>
+                                        <td>
+                                            @if (config.IsActive)
+                                            {
+                                                <span class="badge badge-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (config.IsDefault)
+                                            {
+                                                <span class="badge badge-info">Default</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">@config.CreatedAt.ToString("yyyy-MM-dd")</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-primary btn-xs" 
+                                                        @onclick="() => OpenEditOtpConfiguration(config.ClientProviderConfigurationId)" 
+                                                        title="Edit Configuration">
+                                                    <i class="fa fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i>
+                        No OTP provider configurations found for this client.
+                        <button class="btn btn-sm btn-outline-primary ml-2" @onclick="OpenCreateOtpConfiguration">
+                            <i class="fa fa-plus"></i> Create First Configuration
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <!-- Payment Provider Configurations Section -->
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="icon-credit-card"></i>
+                        Payment Provider Configurations
+                    </h5>
+                    <button class="btn btn-sm btn-primary" @onclick="OpenCreatePaymentConfiguration" title="Add Payment Configuration">
+                        <i class="fa fa-plus"></i> Add Configuration
+                    </button>
+                </div>
+
+                @if (isLoadingPaymentConfigs)
+                {
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ml-2">Loading payment configurations...</span>
+                    </div>
+                }
+                else if (paymentConfigurations?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Default</th>
+                                    <th>Created Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var config in paymentConfigurations)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@config.Provider.Name</strong>
+                                            @if (!string.IsNullOrEmpty(config.Url))
+                                            {
+                                                <br />
+                                                <small class="text-muted">@config.Url</small>
+                                            }
+                                        </td>
+                                        <td>@config.Description</td>
+                                        <td>
+                                            @if (config.IsActive)
+                                            {
+                                                <span class="badge badge-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (config.IsDefault)
+                                            {
+                                                <span class="badge badge-info">Default</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">@config.CreatedAt.ToString("yyyy-MM-dd")</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-primary btn-xs" 
+                                                        @onclick="() => OpenEditPaymentConfiguration(config.PaymentProviderConfigurationId)" 
+                                                        title="Edit Configuration">
+                                                    <i class="fa fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i>
+                        No payment provider configurations found for this client.
+                        <button class="btn btn-sm btn-outline-primary ml-2" @onclick="OpenCreatePaymentConfiguration">
+                            <i class="fa fa-plus"></i> Create First Configuration
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <strong>Error!</strong> @errorMessage
+                <button class="btn btn-sm btn-warning ml-2" @onclick="() => LoadClientDetails(currentClientId)">
+                    <i class="fa fa-refresh"></i> Retry
+                </button>
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal clientDetailsModal = null!;
+    private EmailProviderConfigurationCreateModal emailConfigCreateModal = null!;
+    private EmailProviderConfigurationEditModal emailConfigEditModal = null!;
+    private OtpProviderConfigurationCreateModal otpConfigCreateModal = null!;
+    private OtpProviderConfigurationEditModal otpConfigEditModal = null!;
+    private PaymentProviderConfigurationCreateModal paymentConfigCreateModal = null!;
+    private PaymentProviderConfigurationEditModal paymentConfigEditModal = null!;
+    private SmsProviderConfigurationCreateModal smsConfigCreateModal = null!;
+    private SmsProviderConfigurationEditModal smsConfigEditModal = null!;
+    
+    private ClientViewModel? clientDetails;
+    private bool isLoading = false;
+    private bool isLoadingEmailConfigs = false;
+    private bool isLoadingSmsConfigs = false;
+    private bool isLoadingOtpConfigs = false;
+    private bool isLoadingPaymentConfigs = false;
+    private string errorMessage = string.Empty;
+    private Guid currentClientId;
+
+    // Configurations
+    private List<EmailClientProviderConfigurationViewModel> emailConfigurations = new();
+    private List<SMSClientProviderConfigurationViewModel> smsConfigurations = new();
+    private List<OtpClientProviderConfigurationViewModel> otpConfigurations = new();
+    private List<PaymentClientProviderConfigurationViewModel> paymentConfigurations = new();
+
+    public async Task OpenModal(string clientId)
+    {
+        await OpenModal(Guid.Parse(clientId));
+    }
+
+    public async Task OpenModal(Guid clientId)
+    {
+        errorMessage = string.Empty;
+        clientDetails = null;
+        emailConfigurations = new();
+        smsConfigurations = new();
+        otpConfigurations = new();
+        paymentConfigurations = new();
+        currentClientId = clientId;
+        
+        if (clientDetailsModal != null)
+        {
+            await clientDetailsModal.OpenModal();
+            await LoadClientDetails(clientId);
+        }
+        else
+        {
+            Console.WriteLine("❌ clientDetailsModal is null");
+        }
+    }
+
+    private async Task LoadClientDetails(Guid clientId)
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading client details for ID: {clientId}");
+
+            // Load client details
+            var result = await ApiClient.ClientAsync(clientId);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                clientDetails = result.Data;
+                Console.WriteLine($"✅ Loaded client: {clientDetails.Name}");
+
+                // Now load all configurations for this client
+                await Task.WhenAll(
+                    LoadEmailConfigurations(clientDetails.Identifier),
+                    LoadSmsConfigurations(clientDetails.Identifier),
+                    LoadOtpConfigurations(clientDetails.Identifier),
+                    LoadPaymentConfigurations(clientDetails.Identifier)
+                );
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "Failed to load client details.";
+                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading client details: {ex.Message}";
+            Console.WriteLine($"❌ Error loading client details: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadEmailConfigurations(string clientIdentifier)
+    {
+        try
+        {
+            isLoadingEmailConfigs = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading email configurations for client: {clientIdentifier}");
+
+            var result = await ApiClient.ConfigurationsPerClientAsync(clientIdentifier);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                emailConfigurations = result.Data
+                    .Where(c => c.IsActive)
+                    .OrderByDescending(c => c.IsDefault)
+                    .ThenBy(c => c.ProviderName)
+                    .ToList();
+                
+                Console.WriteLine($"✅ Loaded {emailConfigurations.Count} email configurations");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ No email configurations loaded: {result?.Message}");
+                emailConfigurations = new List<EmailClientProviderConfigurationViewModel>();
+            }
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"⚠️ API Exception loading email configurations: {ex.Message}");
+            emailConfigurations = new List<EmailClientProviderConfigurationViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error loading email configurations: {ex.Message}");
+            emailConfigurations = new List<EmailClientProviderConfigurationViewModel>();
+        }
+        finally
+        {
+            isLoadingEmailConfigs = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadSmsConfigurations(string clientIdentifier)
+    {
+        try
+        {
+            isLoadingSmsConfigs = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading SMS configurations for client: {clientIdentifier}");
+
+            var result = await ApiClient.ConfigurationsPerClient4Async(clientIdentifier);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                smsConfigurations = result.Data
+                    .Where(c => c.IsActive)
+                    .OrderByDescending(c => c.IsDefault)
+                    .ThenBy(c => c.ProviderName)
+                    .ToList();
+                
+                Console.WriteLine($"✅ Loaded {smsConfigurations.Count} SMS configurations");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ No SMS configurations loaded: {result?.Message}");
+                smsConfigurations = new List<SMSClientProviderConfigurationViewModel>();
+            }
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"⚠️ API Exception loading SMS configurations: {ex.Message}");
+            smsConfigurations = new List<SMSClientProviderConfigurationViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error loading SMS configurations: {ex.Message}");
+            smsConfigurations = new List<SMSClientProviderConfigurationViewModel>();
+        }
+        finally
+        {
+            isLoadingSmsConfigs = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadOtpConfigurations(string clientIdentifier)
+    {
+        try
+        {
+            isLoadingOtpConfigs = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading OTP configurations for client: {clientIdentifier}");
+
+            var result = await ApiClient.ConfigurationsPerClient2Async(clientIdentifier);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                otpConfigurations = result.Data
+                    .Where(c => c.IsActive)
+                    .OrderByDescending(c => c.IsDefault)
+                    .ThenBy(c => c.ProviderName)
+                    .ToList();
+                
+                Console.WriteLine($"✅ Loaded {otpConfigurations.Count} OTP configurations");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ No OTP configurations loaded: {result?.Message}");
+                otpConfigurations = new List<OtpClientProviderConfigurationViewModel>();
+            }
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"⚠️ API Exception loading OTP configurations: {ex.Message}");
+            otpConfigurations = new List<OtpClientProviderConfigurationViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error loading OTP configurations: {ex.Message}");
+            otpConfigurations = new List<OtpClientProviderConfigurationViewModel>();
+        }
+        finally
+        {
+            isLoadingOtpConfigs = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPaymentConfigurations(string clientIdentifier)
+    {
+        try
+        {
+            isLoadingPaymentConfigs = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading payment configurations for client: {clientIdentifier}");
+
+            var result = await ApiClient.ConfigurationsPerClient3Async(clientIdentifier);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                paymentConfigurations = result.Data
+                    .Where(c => c.IsActive)
+                    .OrderByDescending(c => c.IsDefault)
+                    .ThenBy(c => c.ProviderName)
+                    .ToList();
+                
+                Console.WriteLine($"✅ Loaded {paymentConfigurations.Count} payment configurations");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ No payment configurations loaded: {result?.Message}");
+                paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+            }
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"⚠️ API Exception loading payment configurations: {ex.Message}");
+            paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error loading payment configurations: {ex.Message}");
+            paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+        }
+        finally
+        {
+            isLoadingPaymentConfigs = false;
+            StateHasChanged();
+        }
+    }
+
+    // Action methods for all configuration types
+    private async Task OpenCreateEmailConfiguration()
+    {
+        if (clientDetails != null && emailConfigCreateModal != null)
+        {
+            await clientDetailsModal.CloseModal();
+            await emailConfigCreateModal.OpenModalWithClient(clientDetails.Identifier);
+        }
+    }
+
+    private async Task OpenEditEmailConfiguration(Guid configId)
+    {
+        if (emailConfigEditModal != null)
+        {
+            await clientDetailsModal.CloseModal();
+            await emailConfigEditModal.OpenModal(configId);
+        }
+    }
+
+    private async Task OpenCreateSmsConfiguration()
+    {
+        if (clientDetails != null && smsConfigCreateModal != null)
+        {
+            await clientDetailsModal.CloseModal();
+            await smsConfigCreateModal.OpenModalWithClient(clientDetails.Identifier);
+        }
+    }
+
+    private async Task OpenEditSmsConfiguration(Guid configId)
+    {
+        if (smsConfigEditModal != null)
+        {
+            await clientDetailsModal.CloseModal();
+            await smsConfigEditModal.OpenModal(configId);
+        }
+    }
+
+    private async Task OpenCreateOtpConfiguration()
+    {
+        if (clientDetails != null && otpConfigCreateModal != null)
+        {
+            await clientDetailsModal.CloseModal();
+            await otpConfigCreateModal.OpenModalWithClient(clientDetails.Identifier);
+        }
+    }
+
+    private async Task OpenEditOtpConfiguration(Guid configId)
+    {
+        if (otpConfigEditModal != null)
+        {
+            await clientDetailsModal.CloseModal();
+            await otpConfigEditModal.OpenModal(configId);
+        }
+    }
+
+    private async Task OpenCreatePaymentConfiguration()
+    {
+        if (clientDetails != null && paymentConfigCreateModal != null)
+        {
+            await clientDetailsModal.CloseModal();
+            await paymentConfigCreateModal.OpenModalWithClient(clientDetails.Identifier);
+        }
+    }
+
+    private async Task OpenEditPaymentConfiguration(Guid configId)
+    {
+        if (paymentConfigEditModal != null)
+        {
+            await clientDetailsModal.CloseModal();
+            await paymentConfigEditModal.OpenModal(configId);
+        }
+    }
+
+    // Event handlers for all configuration types
+    private async Task HandleEmailConfigurationCreated(EmailClientProviderConfigurationViewModel createdConfig)
+    {
+        Console.WriteLine($"🔄 Email configuration created: {createdConfig.Description}");
+        if (clientDetails != null)
+        {
+            await LoadEmailConfigurations(clientDetails.Identifier);
+        }
+        await clientDetailsModal.OpenModal();
+    }
+
+    private async Task HandleEmailConfigurationUpdated(EmailClientProviderConfigurationViewModel updatedConfig)
+    {
+        Console.WriteLine($"🔄 Email configuration updated: {updatedConfig.Description}");
+        if (clientDetails != null)
+        {
+            await LoadEmailConfigurations(clientDetails.Identifier);
+        }
+        await clientDetailsModal.OpenModal();
+    }
+
+    private async Task HandleSmsConfigurationCreated(SMSClientProviderConfigurationViewModel createdConfig)
+    {
+        Console.WriteLine($"🔄 SMS configuration created: {createdConfig.Description}");
+        if (clientDetails != null)
+        {
+            await LoadSmsConfigurations(clientDetails.Identifier);
+        }
+        await clientDetailsModal.OpenModal();
+    }
+
+    private async Task HandleSmsConfigurationUpdated(SMSClientProviderConfigurationViewModel updatedConfig)
+    {
+        Console.WriteLine($"🔄 SMS configuration updated: {updatedConfig.Description}");
+        if (clientDetails != null)
+        {
+            await LoadSmsConfigurations(clientDetails.Identifier);
+        }
+        await clientDetailsModal.OpenModal();
+    }
+
+    private async Task HandleOtpConfigurationCreated(OtpClientProviderConfigurationViewModel createdConfig)
+    {
+        Console.WriteLine($"🔄 OTP configuration created: {createdConfig.Description}");
+        if (clientDetails != null)
+        {
+            await LoadOtpConfigurations(clientDetails.Identifier);
+        }
+        await clientDetailsModal.OpenModal();
+    }
+
+    private async Task HandleOtpConfigurationUpdated(OtpClientProviderConfigurationViewModel updatedConfig)
+    {
+        Console.WriteLine($"🔄 OTP configuration updated: {updatedConfig.Description}");
+        if (clientDetails != null)
+        {
+            await LoadOtpConfigurations(clientDetails.Identifier);
+        }
+        await clientDetailsModal.OpenModal();
+    }
+
+    private async Task HandlePaymentConfigurationCreated(PaymentClientProviderConfigurationViewModel createdConfig)
+    {
+        Console.WriteLine($"🔄 Payment configuration created: {createdConfig.Description}");
+        if (clientDetails != null)
+        {
+            await LoadPaymentConfigurations(clientDetails.Identifier);
+        }
+        await clientDetailsModal.OpenModal();
+    }
+
+    private async Task HandlePaymentConfigurationUpdated(PaymentClientProviderConfigurationViewModel updatedConfig)
+    {
+        Console.WriteLine($"🔄 Payment configuration updated: {updatedConfig.Description}");
+        if (clientDetails != null)
+        {
+            await LoadPaymentConfigurations(clientDetails.Identifier);
+        }
+        await clientDetailsModal.OpenModal();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ ClientDetailsModal component rendered");
+        }
+    }
+}

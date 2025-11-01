@@ -1,0 +1,278 @@
+@* OtpConfirmModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="otpConfirmModal"
+               Title="Confirm OTP"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Small"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Confirm OTP"
+               OnSave="@ConfirmOtp"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel">
+
+    <BodyContent>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="mb-3">
+                    <label class="form-label">OTP ID *</label>
+                    <input class="form-control @(string.IsNullOrEmpty(otpIdError) ? "" : "is-invalid")" 
+                           @bind="otpIdString"
+                           @oninput="OnOtpIdInput"
+                           placeholder="Enter OTP ID (GUID)" />
+                    @if (!string.IsNullOrEmpty(otpIdError))
+                    {
+                        <div class="invalid-feedback">@otpIdError</div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">OTP Code *</label>
+                    <input class="form-control @(string.IsNullOrEmpty(otpCodeError) ? "" : "is-invalid")" 
+                           @bind="otpCode"
+                           @oninput="OnOtpCodeInput"
+                           placeholder="Enter OTP code" 
+                           maxlength="6" />
+                    @if (!string.IsNullOrEmpty(otpCodeError))
+                    {
+                        <div class="invalid-feedback">@otpCodeError</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success mt-3">
+                <strong>Success!</strong> @successMessage
+                @if (confirmationResult != null)
+                {
+                    <div class="mt-2">
+                        <strong>Valid:</strong> @(confirmationResult.IsValid ? "Yes" : "No")<br />
+                        <strong>Message:</strong> @confirmationResult.Message
+                    </div>
+                }
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(formError))
+        {
+            <div class="alert alert-danger mt-3">
+                <strong>Error!</strong> @formError
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal otpConfirmModal = null!;
+
+    // Form fields
+    private string otpIdString = string.Empty;
+    private string otpCode = string.Empty;
+
+    private Guid otpId;
+
+    // Validation errors
+    private string otpIdError = string.Empty;
+    private string otpCodeError = string.Empty;
+    private string formError = string.Empty;
+    private string successMessage = string.Empty;
+
+    // Confirmation result
+    private ConfirmOtpResponse? confirmationResult = null;
+
+    [Parameter] public EventCallback<ConfirmOtpResponse> OnOtpConfirmed { get; set; }
+
+    public async Task OpenModal()
+    {
+        // Reset form fields and messages
+        otpIdString = string.Empty;
+        otpCode = string.Empty;
+        
+        otpIdError = string.Empty;
+        otpCodeError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        confirmationResult = null;
+
+        if (otpConfirmModal != null)
+        {
+            await otpConfirmModal.OpenModal();
+        }
+    }
+
+    public async Task OpenModalWithOtpId(string predefinedOtpId)
+    {
+        otpIdString = predefinedOtpId;
+        otpId = Guid.Parse(predefinedOtpId);
+        otpIdError = string.Empty;
+        
+        await OpenModal();
+    }
+
+    private void OnOtpIdInput(ChangeEventArgs e)
+    {
+        otpIdError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        otpIdString = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            otpIdError = "OTP ID is required";
+        }
+        else if (!Guid.TryParse(value, out otpId))
+        {
+            otpIdError = "Please enter a valid GUID";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnOtpCodeInput(ChangeEventArgs e)
+    {
+        otpCodeError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        otpCode = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            otpCodeError = "OTP Code is required";
+        }
+        else if (value.Length < 4)
+        {
+            otpCodeError = "OTP Code must be at least 4 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task ConfirmOtp()
+    {
+        try
+        {
+            // Clear previous messages
+            formError = string.Empty;
+            successMessage = string.Empty;
+            confirmationResult = null;
+            
+            // Validate all fields
+            var isValid = ValidateForm();
+            
+            if (!isValid)
+            {
+                formError = "Please fix the validation errors before confirming OTP.";
+                return;
+            }
+
+            Console.WriteLine($"✅ Confirming OTP: {otpId}");
+
+            // Create the confirmation request
+            var confirmRequest = new ConfirmOtpRequest
+            {
+                OtpId = otpId,
+                OtpCode = otpCode.Trim()
+            };
+
+            Console.WriteLine("🔄 Calling ConfirmAsync...");
+
+            // Call the ConfirmAsync method
+            var result = await ApiClient.ConfirmAsync(confirmRequest);
+
+            Console.WriteLine($"✅ API Response Success: {result?.Success}");
+            Console.WriteLine($"✅ API Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                confirmationResult = result.Data;
+                successMessage = result.Message ?? "OTP confirmation completed!";
+                Console.WriteLine("✅ OTP confirmed successfully");
+                
+                // Notify parent component
+                await OnOtpConfirmed.InvokeAsync(confirmationResult);
+                
+                // Don't close modal immediately - let user see the result
+                await Task.Delay(3000);
+                await otpConfirmModal.CloseModal();
+            }
+            else
+            {
+                formError = result?.Message ?? "Failed to confirm OTP. Please try again.";
+                Console.WriteLine($"❌ OTP confirmation failed: {formError}");
+            }
+        }
+        // catch (ApiException<ApiErrorResponse> apiEx)
+        // {
+        //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
+        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
+        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        // }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"❌ API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error confirming OTP: {ex.Message}";
+            Console.WriteLine($"❌ Exception: {ex}");
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate OTP ID
+        if (string.IsNullOrWhiteSpace(otpIdString))
+        {
+            otpIdError = "OTP ID is required";
+            isValid = false;
+        }
+        else if (!Guid.TryParse(otpIdString, out otpId))
+        {
+            otpIdError = "Please enter a valid GUID";
+            isValid = false;
+        }
+        else
+        {
+            otpIdError = string.Empty;
+        }
+
+        // Validate OTP Code
+        if (string.IsNullOrWhiteSpace(otpCode))
+        {
+            otpCodeError = "OTP Code is required";
+            isValid = false;
+        }
+        else if (otpCode.Length < 4)
+        {
+            otpCodeError = "OTP Code must be at least 4 characters";
+            isValid = false;
+        }
+        else
+        {
+            otpCodeError = string.Empty;
+        }
+
+        return isValid;
+    }
+}

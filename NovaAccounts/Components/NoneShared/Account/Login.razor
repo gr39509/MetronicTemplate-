@@ -1,8 +1,11 @@
 @page "/Account/Login"
 @using NovaAccounts.Components.Layout
 @layout AccountLayout
-<body class=" login">
-    <!-- BEGIN : LOGIN PAGE 5-1 -->
+@rendermode InteractiveServer
+
+
+<!-- Remove the <body> tag entirely - use only divs -->
+<div class="login-page-wrapper">
     <div class="user-login-5">
         <div class="row bs-reset">
             <div class="col-md-6 bs-reset mt-login-5-bsfix">
@@ -43,10 +46,7 @@
                                 <button class="btn green" type="submit">Log In</button>
                             </div>
                         </div>
-
                     </form>
-                       
-                    
                 </div>
                 <div class="login-footer">
                     <div class="row bs-reset">
@@ -79,6 +79,4 @@
             </div>
         </div>
     </div>
-  
-</body>
-
+</div>

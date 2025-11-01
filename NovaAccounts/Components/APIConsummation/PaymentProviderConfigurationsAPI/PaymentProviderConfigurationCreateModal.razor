@@ -1,0 +1,593 @@
+@* PaymentProviderConfigurationCreateModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@using NovaAccounts.SharedModels.QuickNav
+@inject ApiClient ApiClient
+
+<ReusableQuickNav NavItems="@navigationItems" 
+                  NavId="paymentConfigNav" 
+                  ActiveUrl="@currentUrl" />
+
+<ReusableModal @ref="paymentConfigCreateModal"
+               Title="Create Payment Provider Configuration"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Create Configuration"
+               OnSave="@CreatePaymentConfiguration"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel">
+
+    <BodyContent>
+        @if (isLoadingClients || isLoadingProviders)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading data...</p>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Client *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(clientError) ? "" : "is-invalid")" 
+                                value="@selectedClientIdString"
+                                @onchange="HandleClientChange">
+                            <option value="">-- Select Client --</option>
+                            @foreach (var client in clients)
+                            {
+                                <option value="@client.ClientId">@client.Name (@client.Identifier)</option>
+                            }
+                        </select>
+                        @if (!string.IsNullOrEmpty(clientError))
+                        {
+                            <div class="invalid-feedback">@clientError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Payment Provider *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(providerError) ? "" : "is-invalid")" 
+                                value="@selectedProviderIdString"
+                                @onchange="HandleProviderChange">
+                            <option value="">-- Select Payment Provider --</option>
+                            @foreach (var provider in paymentProviders)
+                            {
+                                <option value="@provider.ProviderId">@provider.Name</option>
+                            }
+                        </select>
+                        @if (!string.IsNullOrEmpty(providerError))
+                        {
+                            <div class="invalid-feedback">@providerError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(descriptionError) ? "" : "is-invalid")" 
+                               @bind="description" 
+                               @oninput="OnDescriptionInput"
+                               placeholder="Enter configuration description" />
+                        @if (!string.IsNullOrEmpty(descriptionError))
+                        {
+                            <div class="invalid-feedback">@descriptionError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" @bind="isDefault" />
+                        <label class="form-check-label">Set as default configuration</label>
+                        <small class="form-text text-muted d-block">This configuration will be used when no specific configuration is selected</small>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <!-- Payment Specific Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">Payment Settings</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Default Currency</label>
+                                <select class="form-control" @bind="defaultCurrency">
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                    <option value="GBP">GBP - British Pound</option>
+                                    <option value="KES">KES - Kenyan Shilling</option>
+                                    <option value="GHS">GHS - Ghanaian Cedi</option>
+                                    <option value="NGN">NGN - Nigerian Naira</option>
+                                </select>
+                                <small class="form-text text-muted">Default currency for payments</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Transaction Timeout (minutes)</label>
+                                <input type="number" class="form-control" @bind="transactionTimeout" min="1" max="60" />
+                                <small class="form-text text-muted">How long to wait for payment confirmation</small>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" @bind="enableWebhooks" />
+                                <label class="form-check-label">Enable webhook notifications</label>
+                                <small class="form-text text-muted d-block">Receive payment status updates via webhooks</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Credentials Section -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Provider Credentials</h5>
+                            <small class="text-muted">Add required credentials for the selected provider</small>
+                        </div>
+                        <div class="card-body">
+                            @if (availableCredentialTypes.Any())
+                            {
+                                @foreach (var credType in availableCredentialTypes)
+                                {
+                                    <div class="mb-2">
+                                        <label class="form-label">@credType.DisplayName</label>
+                                        <input type="password" 
+                                               class="form-control" 
+                                               placeholder="Enter @credType.DisplayName"
+                                               value="@GetCredentialValue(credType.CredentialTypeName)"
+                                               @oninput="@(e => OnCredentialInput(credType.CredentialTypeName, e))" />
+                                        <small class="form-text text-muted">@credType.CredentialTypeName</small>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted">Select a provider to see required credentials</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3">
+                    <strong>Success!</strong> @successMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger mt-3">
+                    <strong>Error!</strong> @formError
+                </div>
+            }
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private string currentUrl = "/payment-configurations";
+    private ReusableModal paymentConfigCreateModal = null!;
+    
+    private List<NavItem> navigationItems = new();
+
+    // Data collections
+    private List<ClientViewModel> clients = new();
+    private List<ProviderViewModel> paymentProviders = new();
+    private List<CredentialTypeViewModel> availableCredentialTypes = new();
+
+    // Form fields
+    private string selectedClientIdString = string.Empty;
+    private string selectedProviderIdString = string.Empty;
+    private Guid? selectedClientId = null;
+    private Guid? selectedProviderId = null;
+    private string description = string.Empty;
+    private bool isDefault = false;
+    private string defaultCurrency = "USD";
+    private int transactionTimeout = 30;
+    private bool enableWebhooks = true;
+    private Dictionary<string, string> credentials = new();
+
+    // Validation errors
+    private string clientError = string.Empty;
+    private string providerError = string.Empty;
+    private string descriptionError = string.Empty;
+    private string formError = string.Empty;
+    private string successMessage = string.Empty;
+
+    // Loading states
+    private bool isLoadingClients = false;
+    private bool isLoadingProviders = false;
+
+    [Parameter] public EventCallback<PaymentClientProviderConfigurationViewModel> OnPaymentConfigurationCreated { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        navigationItems = new()
+        {
+            new NavItem
+            {
+                Text = "Create Payment Configuration",
+                Url = "/payment-configurations",
+                IconClass = "icon-credit-card",
+                OnClick = async () => await OpenModal(),
+                PreventNavigation = true
+            },
+            new NavItem
+            {
+                Text = "View Configurations",
+                Url = "/payment-configurations",
+                IconClass = "icon-list"
+            }
+        };
+
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        await LoadClients();
+        await LoadPaymentProviders();
+    }
+
+    private async Task LoadClients()
+    {
+        try
+        {
+            isLoadingClients = true;
+            StateHasChanged();
+
+            var result = await ApiClient.AllAsync();
+            if (result?.Success == true && result.Data != null)
+            {
+                clients = result.Data.ToList();
+                Console.WriteLine($"✅ Loaded {clients.Count} clients for payment configuration");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingClients = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPaymentProviders()
+    {
+        try
+        {
+            isLoadingProviders = true;
+            StateHasChanged();
+
+            // Get Payment providers (providerType = "Payment")
+            var result = await ApiClient.Provider2Async("Payment");
+            if (result?.Success == true && result.Data != null)
+            {
+                paymentProviders = result.Data.ToList();
+                Console.WriteLine($"✅ Loaded {paymentProviders.Count} payment providers");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading payment providers: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingProviders = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadCredentialTypes()
+    {
+        try
+        {
+            var result = await ApiClient.All2Async();
+            if (result?.Success == true && result.Data != null)
+            {
+                availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
+                Console.WriteLine($"✅ Loaded {availableCredentialTypes.Count} credential types for payment");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading credential types: {ex.Message}");
+        }
+    }
+
+    public async Task OpenModal()
+    {
+        // Reset form fields and messages
+        selectedClientIdString = string.Empty;
+        selectedProviderIdString = string.Empty;
+        selectedClientId = null;
+        selectedProviderId = null;
+        description = string.Empty;
+        isDefault = false;
+        defaultCurrency = "USD";
+        transactionTimeout = 30;
+        enableWebhooks = true;
+        credentials.Clear();
+        
+        clientError = string.Empty;
+        providerError = string.Empty;
+        descriptionError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+
+        // Load credential types when opening modal
+        await LoadCredentialTypes();
+
+        if (paymentConfigCreateModal != null)
+        {
+            await paymentConfigCreateModal.OpenModal();
+        }
+    }
+    
+    public async Task OpenModalWithClient(string clientIdentifier)
+    {
+        // Reset form first
+        await OpenModal();
+    
+        // Find and pre-select the client
+        var client = clients.FirstOrDefault(c => c.Identifier == clientIdentifier);
+        if (client != null)
+        {
+            selectedClientId = client.ClientId;
+            selectedClientIdString = client.ClientId.ToString();
+            StateHasChanged();
+        }
+    }
+
+    private void HandleClientChange(ChangeEventArgs e)
+    {
+        clientError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString();
+        selectedClientIdString = value ?? string.Empty;
+        
+        if (string.IsNullOrEmpty(value))
+        {
+            selectedClientId = null;
+        }
+        else
+        {
+            selectedClientId = Guid.Parse(value);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void HandleProviderChange(ChangeEventArgs e)
+    {
+        providerError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString();
+        selectedProviderIdString = value ?? string.Empty;
+        
+        if (string.IsNullOrEmpty(value))
+        {
+            selectedProviderId = null;
+        }
+        else
+        {
+            selectedProviderId = Guid.Parse(value);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnDescriptionInput(ChangeEventArgs e)
+    {
+        descriptionError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        description = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            descriptionError = "Description is required";
+        }
+        else if (value.Length > 200)
+        {
+            descriptionError = "Description cannot exceed 200 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnCredentialInput(string credentialTypeName, ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? string.Empty;
+        credentials[credentialTypeName] = value;
+        
+        StateHasChanged();
+    }
+
+    private string GetCredentialValue(string credentialTypeName)
+    {
+        return credentials.ContainsKey(credentialTypeName) ? credentials[credentialTypeName] : string.Empty;
+    }
+
+    private async Task CreatePaymentConfiguration()
+{
+    try
+    {
+        // Clear previous messages
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        // Validate all fields
+        var isValid = ValidateForm();
+        
+        if (!isValid)
+        {
+            formError = "Please fix the validation errors before creating the configuration.";
+            return;
+        }
+
+        Console.WriteLine($"📝 Creating payment configuration for client: {selectedClientId}");
+
+        // Get client identifier
+        var client = clients.FirstOrDefault(c => c.ClientId == selectedClientId);
+        if (client == null)
+        {
+            formError = "Selected client not found.";
+            return;
+        }
+
+        // Create credentials list
+        var clientProviderCredentials = credentials
+            .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value))
+            .Select(kvp => new CreateClientProviderCredentialDto
+            {
+                CredentialTypeName = kvp.Key,
+                CredentialKey = kvp.Value
+            })
+            .ToList();
+
+        // Create the configuration DTO
+        var createCommand = new CreatePaymentProviderConfigurationDto
+        {
+            ClientIdentifier = client.Identifier,
+            Description = description.Trim(),
+            ProviderId = selectedProviderId.Value,
+            ClientProviderCredentials = clientProviderCredentials,
+            IsDefault = isDefault
+        };
+
+        Console.WriteLine("🔄 Calling Create4Async for Payment...");
+        Console.WriteLine($"📤 Request DTO: {Newtonsoft.Json.JsonConvert.SerializeObject(createCommand, Newtonsoft.Json.Formatting.Indented)}");
+
+        // Enable response reading as string to see the raw response
+        ApiClient.ReadResponseAsString = true;
+
+        // Call the Create4Async method (for Payment)
+        var result = await ApiClient.Create4Async(createCommand);
+
+        Console.WriteLine($"✅ API Response Success: {result?.Success}");
+        Console.WriteLine($"✅ API Message: {result?.Message}");
+
+        if (result?.Success == true && result.Data != null)
+        {
+            successMessage = result.Message ?? "Payment configuration created successfully!";
+            Console.WriteLine("✅ Payment configuration created successfully");
+            
+            // Clear form after successful creation
+            ResetForm();
+            
+            // Notify parent component and wait for it to complete
+            await OnPaymentConfigurationCreated.InvokeAsync(result.Data);
+            
+            // Close modal after parent is notified
+            await paymentConfigCreateModal.CloseModal();
+        }
+        else
+        {
+            formError = result?.Message ?? "Failed to create payment configuration. Please try again.";
+            Console.WriteLine($"❌ Payment configuration creation failed: {formError}");
+        }
+    }
+    catch (ApiException ex)
+    {
+        formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+        Console.WriteLine($"❌ API Exception: {ex}");
+        Console.WriteLine($"❌ Response Content: {ex.Response}");
+    }
+    catch (Exception ex)
+    {
+        formError = $"Error creating payment configuration: {ex.Message}";
+        Console.WriteLine($"❌ Exception: {ex}");
+    }
+    finally
+    {
+        // Reset the response reading setting
+        ApiClient.ReadResponseAsString = false;
+    }
+    
+    StateHasChanged();
+}
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Client
+        if (!selectedClientId.HasValue)
+        {
+            clientError = "Please select a client";
+            isValid = false;
+        }
+        else
+        {
+            clientError = string.Empty;
+        }
+
+        // Validate Provider
+        if (!selectedProviderId.HasValue)
+        {
+            providerError = "Please select a payment provider";
+            isValid = false;
+        }
+        else
+        {
+            providerError = string.Empty;
+        }
+
+        // Validate Description
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            descriptionError = "Description is required";
+            isValid = false;
+        }
+        else if (description.Length > 200)
+        {
+            descriptionError = "Description cannot exceed 200 characters";
+            isValid = false;
+        }
+        else
+        {
+            descriptionError = string.Empty;
+        }
+
+        return isValid;
+    }
+
+    private void ResetForm()
+    {
+        selectedClientIdString = string.Empty;
+        selectedProviderIdString = string.Empty;
+        selectedClientId = null;
+        selectedProviderId = null;
+        description = string.Empty;
+        isDefault = false;
+        defaultCurrency = "USD";
+        transactionTimeout = 30;
+        enableWebhooks = true;
+        credentials.Clear();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ PaymentProviderConfigurationCreateModal component rendered");
+        }
+    }
+}

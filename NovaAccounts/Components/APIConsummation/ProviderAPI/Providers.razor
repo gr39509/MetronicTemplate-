@@ -1,0 +1,272 @@
+@page "/providers"
+@using Microsoft.AspNetCore.Authorization
+@using NovaAccounts.SharedModels.DataFields
+@using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@layout MainLayout
+
+<PageTitle>Morpheus Provider Types</PageTitle>
+
+@* Provider Type Modals *@
+<ProviderTypeDetailsModal @ref="providerTypeDetailsModal" />
+
+<h1 class="page-title">
+    Morpheus Provider Types Management
+    <small>View and manage provider types</small>
+</h1>
+
+<!-- Loading State -->
+@if (isLoading)
+{
+    <div class="portlet light bordered">
+        <div class="portlet-body text-center" style="padding: 50px 0;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-3">Loading provider types...</p>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+            <span>&times;</span>
+        </button>
+        <strong>Error!</strong> @errorMessage
+        <button class="btn btn-sm btn-warning" @onclick="LoadProviderTypes" style="margin-left: 10px;">
+            <i class="fa fa-refresh"></i> Retry
+        </button>
+    </div>
+}
+else
+{
+    <div class="portlet">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-tag font-dark"></i>
+                <span class="caption-subject bold uppercase">Provider Types</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadProviderTypes" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <ReusableDataTable TItem="ProviderTypeViewModel"
+                               Data="@providerTypes"
+                               Columns="@providerTypeColumns"
+                               Options="@providerTypeOptions"
+                               OnRowClick="OnProviderTypeRowClick"/>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProviderTypeViewModel> providerTypes = new();
+    private List<DataTableColumn> providerTypeColumns = new();
+    private DataTableOptions providerTypeOptions = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private ProviderTypeDetailsModal providerTypeDetailsModal = null!;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("🔍 OnAfterRenderAsync - First render for provider types");
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+            
+            if (providerTypeDetailsModal == null)
+            {
+                Console.WriteLine("❌ ProviderTypeDetailsModal component is NULL after first render");
+            }
+            else
+            {
+                Console.WriteLine("✅ ProviderTypeDetailsModal component reference is set");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task ViewProviderType(string providerTypeName)
+    {
+        Console.WriteLine($"🔍 ViewProviderType called with providerTypeName: {providerTypeName}");
+        
+        try
+        {
+            if (providerTypeDetailsModal == null)
+            {
+                Console.WriteLine("❌ providerTypeDetailsModal is null - modal component not found");
+                return;
+            }
+    
+            Console.WriteLine("✅ Modal reference found, calling OpenModal...");
+            await providerTypeDetailsModal.OpenModal(providerTypeName);
+            Console.WriteLine("✅ OpenModal completed");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error in ViewProviderType: {ex.Message}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureProviderTypesTable();
+        await LoadProviderTypes();
+    }
+
+    private async Task LoadProviderTypes()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            // Call the All5Async method from ApiClient to get all provider types
+            var result = await ApiClient.All5Async();
+
+            if (result?.Success == true && result.Data != null)
+            {
+                providerTypes = result.Data.ToList();
+                Console.WriteLine($"✅ Loaded {providerTypes.Count} provider types");
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "No provider types data received from server.";
+                providerTypes = new List<ProviderTypeViewModel>();
+                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = $"Server error ({apiEx.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception loading provider types: {apiEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load provider types. Please try again.";
+            Console.WriteLine($"❌ Error loading provider types: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfigureProviderTypesTable()
+    {
+        providerTypeColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "PROVIDER TYPE NAME",
+                PropertyName = nameof(ProviderTypeViewModel.ProviderTypeName),
+                CustomRenderer = (item) =>
+                    $"<strong class='text-primary'>{((ProviderTypeViewModel)item).ProviderTypeName}</strong>"
+            },
+            new()
+            {
+                Header = "DISPLAY NAME",
+                PropertyName = nameof(ProviderTypeViewModel.DisplayName),
+                CustomRenderer = (item) =>
+                {
+                    var displayName = ((ProviderTypeViewModel)item).DisplayName;
+                    return string.IsNullOrEmpty(displayName)
+                        ? "<span class='text-muted'>No display name</span>"
+                        : displayName;
+                }
+            },
+            new()
+            {
+                Header = "STATUS",
+                PropertyName = nameof(ProviderTypeViewModel.Active),
+                CustomRenderer = (item) =>
+                {
+                    var isActive = ((ProviderTypeViewModel)item).Active;
+                    return isActive
+                        ? "<span class='badge badge-success'>Active</span>"
+                        : "<span class='badge badge-danger'>Inactive</span>";
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 100,
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var providerType = (ProviderTypeViewModel)item;
+                    return $@"
+        <div class='btn-group btn-group-sm' role='group'>
+            <button type='button' class='btn btn-primary btn-xs' onclick='viewProviderType(""{providerType.ProviderTypeName}"")' title='View Providers'>
+                <i class='fa fa-eye'></i> View Providers
+            </button>
+        </div>";
+                }
+            }
+        };
+
+        providerTypeOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            LengthMenu = new[] { 10, 25, 50 },
+            LengthMenuLabels = new[] { "10", "25", "50" },
+            SearchPlaceholder = "Search Provider Types",
+            TableId = "providerTypesTable",
+            TableCssClass = "table table-striped table-bordered table-hover",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 0, "asc" } } // Order by ProviderTypeName ascending
+            }
+        };
+    }
+    
+    private async Task OnProviderTypeRowClick(ProviderTypeViewModel providerType)
+    {
+        Console.WriteLine($"Provider type clicked: {providerType.ProviderTypeName}");
+        await ViewProviderType(providerType.ProviderTypeName);
+    }
+}
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.viewProviderType = function(providerTypeName) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ViewProviderType', providerTypeName)
+                .catch(err => {
+                    console.error('Error calling ViewProviderType:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+</script>

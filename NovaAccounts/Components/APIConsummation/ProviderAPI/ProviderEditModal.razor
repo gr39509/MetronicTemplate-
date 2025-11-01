@@ -1,0 +1,458 @@
+@* ProviderEditModal.razor *@
+
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="providerEditModal"
+               Title="Edit Provider"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Save Changes"
+               OnSave="@SaveChanges"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading provider details...</p>
+            </div>
+        }
+        else if (providerEditModel != null)
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Provider ID</label>
+                        <input class="form-control" value="@providerEditModel.ProviderId" disabled />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Provider Name *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(nameError) ? "" : "is-invalid")" 
+                               @bind="providerEditModel.Name" 
+                               @oninput="OnNameInput" />
+                        @if (!string.IsNullOrEmpty(nameError))
+                        {
+                            <div class="invalid-feedback">@nameError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Provider Type *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(typeError) ? "" : "is-invalid")" 
+                                value="@providerEditModel.ProviderTypeName"
+                                @onchange="OnTypeChange"
+                                disabled>
+                            <option value="">Select Provider Type</option>
+                            @foreach (var providerType in providerTypes)
+                            {
+                                <option value="@providerType.ProviderTypeName">@providerType.DisplayName</option>
+                            }
+                        </select>
+                        @if (!string.IsNullOrEmpty(typeError))
+                        {
+                            <div class="invalid-feedback">@typeError</div>
+                        }
+                        <small class="form-text text-muted">Provider type cannot be changed after creation.</small>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Provider URL *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(urlError) ? "" : "is-invalid")" 
+                               @bind="providerEditModel.Url" 
+                               @oninput="OnUrlInput" />
+                        @if (!string.IsNullOrEmpty(urlError))
+                        {
+                            <div class="invalid-feedback">@urlError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control @(string.IsNullOrEmpty(descriptionError) ? "" : "is-invalid")" 
+                                  @bind="providerEditModel.Description" 
+                                  @oninput="OnDescriptionInput"
+                                  rows="3"
+                                  placeholder="Enter provider description (optional)"></textarea>
+                        @if (!string.IsNullOrEmpty(descriptionError))
+                        {
+                            <div class="invalid-feedback">@descriptionError</div>
+                        }
+                        <small class="form-text text-muted">Optional description for the provider</small>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger mt-3">
+                    <strong>Error!</strong> @formError
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <strong>Error!</strong> @errorMessage
+                <button class="btn btn-sm btn-warning ml-2" @onclick="() => LoadProvider(currentProviderId)">
+                    <i class="fa fa-refresh"></i> Retry
+                </button>
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal providerEditModal = null!;
+    private UpdateProviderDto? providerEditModel;
+    private List<ProviderTypeViewModel> providerTypes = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private string formError = string.Empty;
+    private string nameError = string.Empty;
+    private string descriptionError = string.Empty;
+    private string urlError = string.Empty;
+    private string typeError = string.Empty;
+    private Guid currentProviderId;
+
+    [Parameter] public EventCallback<UpdateProviderDto> OnProviderUpdated { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProviderTypes();
+    }
+
+    private async Task LoadProviderTypes()
+    {
+        try
+        {
+            var result = await ApiClient.All5Async();
+            if (result?.Success == true && result.Data != null)
+            {
+                providerTypes = result.Data.ToList();
+                Console.WriteLine($"✅ Loaded {providerTypes.Count} provider types");
+            }
+            else
+            {
+                Console.WriteLine($"❌ Failed to load provider types: {result?.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading provider types: {ex.Message}");
+        }
+    }
+
+    public async Task OpenModal(string providerId)
+    {
+        await OpenModal(Guid.Parse(providerId));
+    }
+
+    public async Task OpenModal(Guid providerId)
+    {
+        errorMessage = string.Empty;
+        formError = string.Empty;
+        nameError = string.Empty;
+        descriptionError = string.Empty;
+        urlError = string.Empty;
+        typeError = string.Empty;
+        providerEditModel = null;
+        currentProviderId = providerId;
+        
+        if (providerEditModal != null)
+        {
+            await providerEditModal.OpenModal();
+            await LoadProvider(providerId);
+        }
+        else
+        {
+            Console.WriteLine("❌ providerEditModal is null");
+        }
+    }
+
+    private async Task LoadProvider(Guid providerId)
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading provider for edit: {providerId}");
+
+            // Load provider details using the ProviderAsync method
+            var result = await ApiClient.ProviderAsync(providerId);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                var provider = result.Data;
+                providerEditModel = new UpdateProviderDto
+                {
+                    ProviderId = provider.ProviderId,
+                    Name = provider.Name ?? string.Empty,
+                    Description = provider.Description ?? string.Empty,
+                    Url = provider.Url ?? string.Empty,
+                    ProviderTypeName = provider.ProviderTypeName ?? string.Empty
+                };
+                
+                Console.WriteLine($"✅ Loaded provider for edit: {provider.Name}");
+                Console.WriteLine($"✅ Provider Type: {provider.ProviderTypeName}");
+                Console.WriteLine($"✅ Provider URL: {provider.Url}");
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "Failed to load provider data.";
+                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading provider: {ex.Message}";
+            Console.WriteLine($"❌ Error loading provider: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnNameInput(ChangeEventArgs e)
+    {
+        nameError = string.Empty;
+        formError = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            nameError = "Provider name is required";
+        }
+        else if (value.Length > 100)
+        {
+            nameError = "Provider name cannot exceed 100 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnDescriptionInput(ChangeEventArgs e)
+    {
+        descriptionError = string.Empty;
+        formError = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        
+        if (value?.Length > 500)
+        {
+            descriptionError = "Description cannot exceed 500 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnUrlInput(ChangeEventArgs e)
+    {
+        urlError = string.Empty;
+        formError = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            urlError = "Provider URL is required";
+        }
+        else if (value.Length > 500)
+        {
+            urlError = "Provider URL cannot exceed 500 characters";
+        }
+        else if (!Uri.IsWellFormedUriString(value, UriKind.Absolute))
+        {
+            urlError = "Please enter a valid URL";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnTypeChange(ChangeEventArgs e)
+    {
+        typeError = string.Empty;
+        formError = string.Empty;
+        
+        if (providerEditModel != null)
+        {
+            providerEditModel.ProviderTypeName = e.Value?.ToString() ?? string.Empty;
+            
+            if (string.IsNullOrWhiteSpace(providerEditModel.ProviderTypeName))
+            {
+                typeError = "Provider type is required";
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            // Clear previous errors
+            formError = string.Empty;
+            
+            // Validate all fields
+            var isValid = ValidateForm();
+            
+            if (!isValid)
+            {
+                formError = "Please fix the validation errors before saving.";
+                return;
+            }
+
+            if (providerEditModel == null)
+            {
+                formError = "Provider data is null";
+                return;
+            }
+
+            Console.WriteLine($"📝 Saving changes for provider: {providerEditModel.ProviderId}");
+            Console.WriteLine($"📝 Name: {providerEditModel.Name}");
+            Console.WriteLine($"📝 Type: {providerEditModel.ProviderTypeName}");
+            Console.WriteLine($"📝 URL: {providerEditModel.Url}");
+
+            // Create the update command with trimmed values
+            var updateCommand = new UpdateProviderDto
+            {
+                ProviderId = providerEditModel.ProviderId,
+                Name = providerEditModel.Name?.Trim() ?? string.Empty,
+                Description = providerEditModel.Description?.Trim() ?? string.Empty,
+                Url = providerEditModel.Url?.Trim() ?? string.Empty,
+                ProviderTypeName = providerEditModel.ProviderTypeName?.Trim() ?? string.Empty
+            };
+
+            Console.WriteLine("🔄 Calling Update5Async...");
+
+            // Call the Update5Async method
+            var result = await ApiClient.Update5Async(updateCommand);
+
+            Console.WriteLine($"✅ API Response Success: {result?.Success}");
+            Console.WriteLine($"✅ API Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                Console.WriteLine("✅ Provider updated successfully");
+                await providerEditModal.CloseModal();
+                await OnProviderUpdated.InvokeAsync(updateCommand);
+            }
+            else
+            {
+                formError = result?.Message ?? "Update failed. Please try again.";
+                Console.WriteLine($"❌ Update failed: {formError}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"❌ API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error saving provider: {ex.Message}";
+            Console.WriteLine($"❌ Exception: {ex}");
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Name (required)
+        if (string.IsNullOrWhiteSpace(providerEditModel?.Name))
+        {
+            nameError = "Provider name is required";
+            isValid = false;
+        }
+        else if (providerEditModel.Name.Length > 100)
+        {
+            nameError = "Provider name cannot exceed 100 characters";
+            isValid = false;
+        }
+        else
+        {
+            nameError = string.Empty;
+        }
+
+        // Validate URL (required)
+        if (string.IsNullOrWhiteSpace(providerEditModel?.Url))
+        {
+            urlError = "Provider URL is required";
+            isValid = false;
+        }
+        else if (providerEditModel.Url.Length > 500)
+        {
+            urlError = "Provider URL cannot exceed 500 characters";
+            isValid = false;
+        }
+        else if (!Uri.IsWellFormedUriString(providerEditModel.Url, UriKind.Absolute))
+        {
+            urlError = "Please enter a valid URL";
+            isValid = false;
+        }
+        else
+        {
+            urlError = string.Empty;
+        }
+
+        // Validate Provider Type (required)
+        if (string.IsNullOrWhiteSpace(providerEditModel?.ProviderTypeName))
+        {
+            typeError = "Provider type is required";
+            isValid = false;
+        }
+        else
+        {
+            typeError = string.Empty;
+        }
+
+        // Validate Description (optional)
+        if (providerEditModel?.Description?.Length > 500)
+        {
+            descriptionError = "Description cannot exceed 500 characters";
+            isValid = false;
+        }
+        else
+        {
+            descriptionError = string.Empty;
+        }
+
+        return isValid;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ ProviderEditModal component rendered");
+        }
+    }
+}

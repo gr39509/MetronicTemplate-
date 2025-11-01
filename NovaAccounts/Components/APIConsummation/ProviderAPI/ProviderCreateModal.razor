@@ -1,0 +1,427 @@
+@* ProviderCreateModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="providerCreateModal"
+               Title="Create New Provider"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Create Provider"
+               OnSave="@CreateProvider"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel">
+
+    <BodyContent>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Provider Name *</label>
+                    <input class="form-control @(string.IsNullOrEmpty(nameError) ? "" : "is-invalid")" 
+                           @bind="providerName" 
+                           @oninput="OnNameInput"
+                           placeholder="Enter provider name" />
+                    @if (!string.IsNullOrEmpty(nameError))
+                    {
+                        <div class="invalid-feedback">@nameError</div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Provider Type *</label>
+                    <select class="form-control @(string.IsNullOrEmpty(typeError) ? "" : "is-invalid")" 
+                            value="@selectedProviderType"
+                            @onchange="OnTypeChange"
+                            disabled="@isProviderTypeLocked">
+                        <option value="">Select Provider Type</option>
+                        @foreach (var providerType in providerTypes)
+                        {
+                            <option value="@providerType.ProviderTypeName">@providerType.DisplayName</option>
+                        }
+                    </select>
+                    @if (!string.IsNullOrEmpty(typeError))
+                    {
+                        <div class="invalid-feedback">@typeError</div>
+                    }
+                    @if (isProviderTypeLocked)
+                    {
+                        <small class="form-text text-muted">Provider type is pre-selected from the parent view.</small>
+                    }
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Provider URL *</label>
+                    <input class="form-control @(string.IsNullOrEmpty(urlError) ? "" : "is-invalid")" 
+                           @bind="providerUrl" 
+                           @oninput="OnUrlInput"
+                           placeholder="Enter provider URL" />
+                    @if (!string.IsNullOrEmpty(urlError))
+                    {
+                        <div class="invalid-feedback">@urlError</div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control @(string.IsNullOrEmpty(descriptionError) ? "" : "is-invalid")" 
+                              @bind="providerDescription" 
+                              @oninput="OnDescriptionInput"
+                              rows="3"
+                              placeholder="Enter provider description (optional)"></textarea>
+                    @if (!string.IsNullOrEmpty(descriptionError))
+                    {
+                        <div class="invalid-feedback">@descriptionError</div>
+                    }
+                    <small class="form-text text-muted">Optional description for the provider</small>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success mt-3">
+                <strong>Success!</strong> @successMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(formError))
+        {
+            <div class="alert alert-danger mt-3">
+                <strong>Error!</strong> @formError
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal providerCreateModal = null!;
+    
+    private List<ProviderTypeViewModel> providerTypes = new();
+
+    // Form fields
+    private string providerName = string.Empty;
+    private string providerDescription = string.Empty;
+    private string providerUrl = string.Empty;
+    private string selectedProviderType = string.Empty;
+    private bool isProviderTypeLocked = false;
+
+    // Validation errors
+    private string nameError = string.Empty;
+    private string descriptionError = string.Empty;
+    private string urlError = string.Empty;
+    private string typeError = string.Empty;
+    private string formError = string.Empty;
+    private string successMessage = string.Empty;
+
+    [Parameter] public EventCallback<ProviderViewModel> OnProviderCreated { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProviderTypes();
+    }
+
+    private async Task LoadProviderTypes()
+    {
+        try
+        {
+            var result = await ApiClient.All5Async();
+            if (result?.Success == true && result.Data != null)
+            {
+                providerTypes = result.Data.ToList();
+                Console.WriteLine($"✅ Loaded {providerTypes.Count} provider types");
+            }
+            else
+            {
+                Console.WriteLine($"❌ Failed to load provider types: {result?.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error loading provider types: {ex.Message}");
+        }
+    }
+
+    public async Task OpenModal()
+    {
+        // Reset form fields and messages
+        providerName = string.Empty;
+        providerDescription = string.Empty;
+        providerUrl = string.Empty;
+        selectedProviderType = string.Empty;
+        isProviderTypeLocked = false;
+        nameError = string.Empty;
+        descriptionError = string.Empty;
+        urlError = string.Empty;
+        typeError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+
+        if (providerCreateModal != null)
+        {
+            await providerCreateModal.OpenModal();
+        }
+    }
+
+    public async Task OpenModalWithProviderType(string providerTypeName)
+    {
+        // Set the provider type and lock it
+        selectedProviderType = providerTypeName;
+        isProviderTypeLocked = true;
+        
+        // Reset other form fields and messages
+        providerName = string.Empty;
+        providerDescription = string.Empty;
+        providerUrl = string.Empty;
+        nameError = string.Empty;
+        descriptionError = string.Empty;
+        urlError = string.Empty;
+        typeError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+
+        if (providerCreateModal != null)
+        {
+            await providerCreateModal.OpenModal();
+        }
+    }
+
+    private void OnNameInput(ChangeEventArgs e)
+    {
+        nameError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        providerName = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            nameError = "Provider name is required";
+        }
+        else if (value.Length > 100)
+        {
+            nameError = "Provider name cannot exceed 100 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnDescriptionInput(ChangeEventArgs e)
+    {
+        descriptionError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        providerDescription = value;
+        
+        if (value?.Length > 500)
+        {
+            descriptionError = "Description cannot exceed 500 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnUrlInput(ChangeEventArgs e)
+    {
+        urlError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        providerUrl = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            urlError = "Provider URL is required";
+        }
+        else if (value.Length > 500)
+        {
+            urlError = "Provider URL cannot exceed 500 characters";
+        }
+        else if (!Uri.IsWellFormedUriString(value, UriKind.Absolute))
+        {
+            urlError = "Please enter a valid URL";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnTypeChange(ChangeEventArgs e)
+    {
+        typeError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        selectedProviderType = e.Value?.ToString() ?? string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(selectedProviderType))
+        {
+            typeError = "Provider type is required";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task CreateProvider()
+    {
+        try
+        {
+            // Clear previous messages
+            formError = string.Empty;
+            successMessage = string.Empty;
+            
+            // Validate all fields
+            var isValid = ValidateForm();
+            
+            if (!isValid)
+            {
+                formError = "Please fix the validation errors before creating the provider.";
+                return;
+            }
+
+            Console.WriteLine($"📝 Creating new provider: {providerName}");
+            Console.WriteLine($"📝 Provider Type: {selectedProviderType}");
+            Console.WriteLine($"📝 URL: {providerUrl}");
+
+            // Create the provider DTO
+            var createCommand = new CreateProviderDto
+            {
+                Name = providerName.Trim(),
+                Description = providerDescription?.Trim() ?? string.Empty,
+                Url = providerUrl.Trim(),
+                ProviderTypeName = selectedProviderType
+            };
+
+            Console.WriteLine("🔄 Calling Create5Async...");
+
+            // Call the Create5Async method
+            var result = await ApiClient.Create5Async(createCommand);
+
+            Console.WriteLine($"✅ API Response Success: {result?.Success}");
+            Console.WriteLine($"✅ API Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                successMessage = result.Message ?? "Provider created successfully!";
+                Console.WriteLine("✅ Provider created successfully");
+                
+                // Notify parent component
+                await OnProviderCreated.InvokeAsync(result.Data);
+                
+                // Clear form after successful creation
+                providerName = string.Empty;
+                providerDescription = string.Empty;
+                providerUrl = string.Empty;
+                selectedProviderType = string.Empty;
+                isProviderTypeLocked = false;
+                
+                // Close modal after 2 seconds
+                await Task.Delay(2000);
+                await providerCreateModal.CloseModal();
+            }
+            else
+            {
+                formError = result?.Message ?? "Failed to create provider. Please try again.";
+                Console.WriteLine($"❌ Provider creation failed: {formError}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"❌ API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error creating provider: {ex.Message}";
+            Console.WriteLine($"❌ Exception: {ex}");
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Name
+        if (string.IsNullOrWhiteSpace(providerName))
+        {
+            nameError = "Provider name is required";
+            isValid = false;
+        }
+        else if (providerName.Length > 100)
+        {
+            nameError = "Provider name cannot exceed 100 characters";
+            isValid = false;
+        }
+        else
+        {
+            nameError = string.Empty;
+        }
+
+        // Validate URL
+        if (string.IsNullOrWhiteSpace(providerUrl))
+        {
+            urlError = "Provider URL is required";
+            isValid = false;
+        }
+        else if (providerUrl.Length > 500)
+        {
+            urlError = "Provider URL cannot exceed 500 characters";
+            isValid = false;
+        }
+        else if (!Uri.IsWellFormedUriString(providerUrl, UriKind.Absolute))
+        {
+            urlError = "Please enter a valid URL";
+            isValid = false;
+        }
+        else
+        {
+            urlError = string.Empty;
+        }
+
+        // Validate Provider Type
+        if (string.IsNullOrWhiteSpace(selectedProviderType))
+        {
+            typeError = "Provider type is required";
+            isValid = false;
+        }
+        else
+        {
+            typeError = string.Empty;
+        }
+
+        // Validate Description
+        if (providerDescription?.Length > 500)
+        {
+            descriptionError = "Description cannot exceed 500 characters";
+            isValid = false;
+        }
+        else
+        {
+            descriptionError = string.Empty;
+        }
+
+        return isValid;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ ProviderCreateModal component rendered");
+        }
+    }
+}

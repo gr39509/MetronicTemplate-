@@ -1,0 +1,352 @@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+@* Provider Modals *@
+<ProviderCreateModal @ref="providerCreateModal" OnProviderCreated="HandleProviderCreated" />
+<ProviderEditModal @ref="providerEditModal" OnProviderUpdated="HandleProviderUpdated"/>
+
+<ReusableModal @ref="providerTypeDetailsModal"
+               Title="Provider Type Details"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="false"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoadingProviderType)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading provider type details...</p>
+            </div>
+        }
+        else if (currentProviderType != null)
+        {
+            <!-- Provider Type Information -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Provider Type Name:</label>
+                        <span class="detail-value">@currentProviderType.ProviderTypeName</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Display Name:</label>
+                        <span class="detail-value">@currentProviderType.DisplayName</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Status:</label>
+                        @if (currentProviderType.Active)
+                        {
+                            <span class="badge badge-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger">Inactive</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Providers Section -->
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="icon-settings"></i>
+                        Providers for @currentProviderType.DisplayName
+                    </h5>
+                    <button class="btn btn-sm btn-primary" @onclick="OpenCreateProvider" title="Add New Provider">
+                        <i class="fa fa-plus"></i> Add Provider
+                    </button>
+                </div>
+
+                @if (isLoadingProviders)
+                {
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ml-2">Loading providers...</span>
+                    </div>
+                }
+                else if (providers?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Provider Code</th>
+                                    <th>Provider Name</th>
+                                    <th>Description</th>
+                                    <th>URL</th>
+                                    <th>Status</th>
+                                    <th>Created Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var provider in providers)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@provider.Code</strong>
+                                        </td>
+                                        <td>
+                                            <strong>@provider.Name</strong>
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(provider.Description))
+                                            {
+                                                <span title="@provider.Description">@provider.Description</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">No description</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(provider.Url))
+                                            {
+                                                <a href="@provider.Url" target="_blank" class="text-primary" title="@provider.Url">
+                                                    <i class="fa fa-external-link"></i> Link
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">No URL</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (provider.IsActive)
+                                            {
+                                                <span class="badge badge-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">@provider.CreatedAt.ToString("yyyy-MM-dd")</small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-info btn-xs" 
+                                                        @onclick="() => OpenEditProvider(provider.ProviderId)" 
+                                                        title="Edit Provider">
+                                                    <i class="fa fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i>
+                        No providers found for this provider type.
+                        <button class="btn btn-sm btn-outline-primary ml-2" @onclick="OpenCreateProvider">
+                            <i class="fa fa-plus"></i> Create First Provider
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <strong>Error!</strong> @errorMessage
+                <button class="btn btn-sm btn-warning ml-2" @onclick="() => LoadProviderTypeDetails(currentProviderTypeName)">
+                    <i class="fa fa-refresh"></i> Retry
+                </button>
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal providerTypeDetailsModal = null!;
+    private ProviderCreateModal providerCreateModal = null!;
+    private ProviderEditModal providerEditModal = null!;
+    
+    private ProviderTypeViewModel? currentProviderType;
+    private List<ProviderViewModel> providers = new();
+    private bool isLoadingProviderType = false;
+    private bool isLoadingProviders = false;
+    private string errorMessage = string.Empty;
+    private string currentProviderTypeName = string.Empty;
+
+    public async Task OpenModal(string providerTypeName)
+    {
+        errorMessage = string.Empty;
+        currentProviderType = null;
+        providers = new();
+        currentProviderTypeName = providerTypeName;
+        
+        if (providerTypeDetailsModal != null)
+        {
+            await providerTypeDetailsModal.OpenModal();
+            await LoadProviderTypeDetails(providerTypeName);
+        }
+        else
+        {
+            Console.WriteLine("❌ providerTypeDetailsModal is null");
+        }
+    }
+
+    private async Task LoadProviderTypeDetails(string providerTypeName)
+    {
+        try
+        {
+            isLoadingProviderType = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading provider type details: {providerTypeName}");
+
+            // First, load all provider types to get the current one
+            var providerTypesResult = await ApiClient.All5Async();
+
+            if (providerTypesResult?.Success == true && providerTypesResult.Data != null)
+            {
+                currentProviderType = providerTypesResult.Data
+                    .FirstOrDefault(pt => pt.ProviderTypeName == providerTypeName);
+                
+                if (currentProviderType != null)
+                {
+                    Console.WriteLine($"✅ Loaded provider type: {currentProviderType.DisplayName}");
+
+                    // Now load providers for this provider type
+                    await LoadProviders(providerTypeName);
+                }
+                else
+                {
+                    errorMessage = $"Provider type '{providerTypeName}' not found.";
+                    Console.WriteLine($"❌ Provider type not found: {providerTypeName}");
+                }
+            }
+            else
+            {
+                errorMessage = providerTypesResult?.Message ?? "Failed to load provider types.";
+                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading provider type details: {ex.Message}";
+            Console.WriteLine($"❌ Error loading provider type details: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingProviderType = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadProviders(string providerTypeName)
+    {
+        try
+        {
+            isLoadingProviders = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading providers for type: {providerTypeName}");
+
+            // Call the Provider2Async method with the provider type name
+            var result = await ApiClient.Provider2Async(providerTypeName);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                providers = result.Data.ToList();
+                Console.WriteLine($"✅ Loaded {providers.Count} providers for type: {providerTypeName}");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️ No providers loaded: {result?.Message}");
+                providers = new List<ProviderViewModel>();
+            }
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"⚠️ API Exception loading providers: {ex.Message}");
+            providers = new List<ProviderViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error loading providers: {ex.Message}");
+            providers = new List<ProviderViewModel>();
+        }
+        finally
+        {
+            isLoadingProviders = false;
+            StateHasChanged();
+        }
+    }
+
+    // Action methods for providers
+    private async Task OpenCreateProvider()
+    {
+        if (currentProviderType != null && providerCreateModal != null)
+        {
+            await providerTypeDetailsModal.CloseModal();
+            await providerCreateModal.OpenModalWithProviderType(currentProviderType.ProviderTypeName);
+        }
+    }
+
+    private async Task OpenEditProvider(Guid providerId)
+    {
+        if (providerEditModal != null)
+        {
+            await providerTypeDetailsModal.CloseModal();
+            await providerEditModal.OpenModal(providerId);
+        }
+    }
+
+    // Event handlers for provider operations
+    private async Task HandleProviderCreated(ProviderViewModel createdProvider)
+    {
+        Console.WriteLine($"🔄 Provider created: {createdProvider.Name}");
+        if (!string.IsNullOrEmpty(currentProviderTypeName))
+        {
+            await LoadProviders(currentProviderTypeName);
+        }
+        await providerTypeDetailsModal.OpenModal();
+    }
+
+    private async Task HandleProviderUpdated(UpdateProviderDto updatedProvider)
+    {
+        Console.WriteLine($"🔄 Provider updated: {updatedProvider.Name}");
+        if (!string.IsNullOrEmpty(currentProviderTypeName))
+        {
+            await LoadProviders(currentProviderTypeName);
+        }
+        await providerTypeDetailsModal.OpenModal();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ ProviderTypeDetailsModal component rendered");
+        }
+    }
+}

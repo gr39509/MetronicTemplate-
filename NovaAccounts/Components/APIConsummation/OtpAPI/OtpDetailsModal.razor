@@ -1,0 +1,231 @@
+@* OtpDetailsModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="otpDetailsModal"
+               Title="OTP Details"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Default"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="false"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Loading OTP details...</p>
+            </div>
+        }
+        else if (otpRecord != null)
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">OTP ID:</label>
+                        <span class="detail-value"><code>@otpRecord.OtpId</code></span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">User ID:</label>
+                        <span class="detail-value"><code>@otpRecord.UserId</code></span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">OTP Type:</label>
+                        <span class="detail-value">
+                            <span class="badge @GetOtpTypeBadgeClass(otpRecord.OtpType)">@otpRecord.OtpType</span>
+                        </span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Purpose:</label>
+                        <span class="detail-value">
+                            <span class="badge @GetPurposeBadgeClass(otpRecord.Purpose)">@otpRecord.Purpose</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Status:</label>
+                        <span class="detail-value">
+                            @if (otpRecord.IsUsed == true)
+                            {
+                                <span class="badge badge-success">Used</span>
+                            }
+                            else if (otpRecord.ExpireAt < DateTimeOffset.Now)
+                            {
+                                <span class="badge badge-danger">Expired</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-warning">Active</span>
+                            }
+                        </span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Created:</label>
+                        <span class="detail-value">@otpRecord.CreatedAt.ToString("yyyy-MM-dd HH:mm")</span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Expires:</label>
+                        <span class="detail-value @(otpRecord.ExpireAt < DateTimeOffset.Now ? "text-danger" : "text-success")">
+                            @otpRecord.ExpireAt.ToString("yyyy-MM-dd HH:mm")
+                        </span>
+                    </div>
+                    <div class="detail-group">
+                        <label class="detail-label">Used At:</label>
+                        <span class="detail-value">
+                            @(otpRecord.UsedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Not used")
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Contact:</label>
+                        <span class="detail-value">
+                            @(string.IsNullOrEmpty(otpRecord.ContactValue) ? "N/A" : otpRecord.ContactValue)
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-group">
+                        <label class="detail-label">Email:</label>
+                        <span class="detail-value">
+                            @(string.IsNullOrEmpty(otpRecord.EmailValue) ? "N/A" : otpRecord.EmailValue)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(otpRecord.IpAddress))
+            {
+                <div class="detail-group mt-3">
+                    <label class="detail-label">IP Address:</label>
+                    <span class="detail-value">@otpRecord.IpAddress</span>
+                </div>
+            }
+
+            @if (otpRecord.IsUsed != true && otpRecord.ExpireAt > DateTimeOffset.Now)
+            {
+                <div class="alert alert-info mt-3">
+                    <strong>Note:</strong> This OTP is still active and can be confirmed.
+                    <button class="btn btn-sm btn-success ml-2" @onclick="ConfirmThisOtp">
+                        <i class="fa fa-check"></i> Confirm This OTP
+                    </button>
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <strong>Error!</strong> @errorMessage
+                <button class="btn btn-sm btn-warning ml-2" @onclick="() => LoadOtpDetails(currentOtpId)">
+                    <i class="fa fa-refresh"></i> Retry
+                </button>
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal otpDetailsModal = null!;
+    private OtpCodes? otpRecord;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private Guid currentOtpId;
+
+    [Parameter] public EventCallback<string> OnConfirmOtpRequested { get; set; }
+
+    public async Task OpenModal(string otpId)
+    {
+        errorMessage = string.Empty;
+        otpRecord = null;
+        currentOtpId = Guid.Parse(otpId);
+        
+        if (otpDetailsModal != null)
+        {
+            await otpDetailsModal.OpenModal();
+            await LoadOtpDetails(currentOtpId);
+        }
+    }
+
+    private async Task LoadOtpDetails(Guid otpId)
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            // Since we don't have a direct API to get single OTP by ID,
+            // we'll load all and filter, or you might need to implement this API
+            var result = await ApiClient.All4Async();
+
+            if (result?.Success == true && result.Data != null)
+            {
+                otpRecord = result.Data.FirstOrDefault(o => o.OtpId == otpId);
+                if (otpRecord == null)
+                {
+                    errorMessage = "OTP record not found.";
+                }
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "Failed to load OTP details.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading OTP details: {ex.Message}";
+            Console.WriteLine($"❌ Error loading OTP details: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetOtpTypeBadgeClass(OtpType otpType)
+    {
+        return otpType switch
+        {
+            OtpType._0 => "badge-info",
+            OtpType._1 => "badge-primary",
+            OtpType._2 => "badge-secondary",
+            _ => "badge-light"
+        };
+    }
+
+    private string GetPurposeBadgeClass(OtpPurpose purpose)
+    {
+        return purpose switch
+        {
+            OtpPurpose._0 => "badge-success",
+            OtpPurpose._1 => "badge-warning",
+            OtpPurpose._2 => "badge-danger",
+            _ => "badge-light"
+        };
+    }
+
+    private async Task ConfirmThisOtp()
+    {
+        if (otpRecord != null)
+        {
+            await otpDetailsModal.CloseModal();
+            await OnConfirmOtpRequested.InvokeAsync(otpRecord.OtpId.ToString());
+        }
+    }
+}

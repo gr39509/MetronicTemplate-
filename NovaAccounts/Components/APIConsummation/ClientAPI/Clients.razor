@@ -1,0 +1,412 @@
+@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using NovaAccounts.SharedModels.DataFields
+@using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@layout MainLayout
+
+<PageTitle>Morpheus Clients</PageTitle>
+
+@* The below codes are very important for the modals to open *@
+
+<ClientEditModal @ref="clientEditModal" OnClientUpdated="HandleClientUpdated"/>
+<ClientEmailModal @ref="clientEmailModal" />
+<ClientCreateModal @ref="clientCreateModal" OnClientCreated="HandleClientCreated" />
+<ClientDetailsModal @ref="clientDetailsModal" />
+
+<h1 class="page-title">
+    Morpheus Clients Management
+    <small>View Morpheus client information</small>
+</h1>
+
+<!-- Loading State -->
+@if (isLoading)
+{
+    <div class="portlet light bordered">
+        <div class="portlet-body text-center" style="padding: 50px 0;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-3">Loading Morpheus clients...</p>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+            <span>&times;</span>
+        </button>
+        <strong>Error!</strong> @errorMessage
+        <button class="btn btn-sm btn-warning" @onclick="LoadClients" style="margin-left: 10px;">
+            <i class="fa fa-refresh"></i> Retry
+        </button>
+    </div>
+}
+else
+{
+    <div class="portlet">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-user font-dark"></i>
+                <span class="caption-subject bold uppercase">Morpheus Clients</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadClients" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <ReusableDataTable TItem="ClientViewModel"
+                               Data="@clients"
+                               Columns="@cbsColumns"
+                               Options="@cbsOptions"
+                                OnRowClick="OnCbsClientRowClick"/>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ClientViewModel> clients = new();
+    private List<DataTableColumn> cbsColumns = new();
+    private DataTableOptions cbsOptions = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private ClientDetailsModal clientDetailsModal = null!;
+    private ClientEditModal clientEditModal = null!;
+    private ClientEmailModal clientEmailModal = null!;
+    private ClientCreateModal clientCreateModal = null!;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("🔍 OnAfterRenderAsync - First render");
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+            
+            // Check if modal components are initialized
+            if (clientDetailsModal == null)
+            {
+                Console.WriteLine("❌ ClientDetailsModal component is NULL after first render");
+            }
+            else
+            {
+                Console.WriteLine("✅ ClientDetailsModal component reference is set");
+            }
+
+            if (clientEmailModal == null)
+            {
+                Console.WriteLine("❌ ClientEmailModal component is NULL after first render");
+            }
+            else
+            {
+                Console.WriteLine("✅ ClientEmailModal component reference is set");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task EditClient(string clientId)
+    {
+        Console.WriteLine($"📝 EditClient called with clientId: {clientId}");
+    
+        if (clientEditModal == null)
+        {
+            Console.WriteLine("❌ clientEditModal is null");
+            return;
+        }
+    
+        await clientEditModal.OpenModal(clientId);
+    }
+
+    [JSInvokable]
+    public async Task SendEmailToClient(string clientId)
+    {
+        Console.WriteLine($"📧 SendEmailToClient called with clientId: {clientId}");
+    
+        if (clientEmailModal == null)
+        {
+            Console.WriteLine("❌ clientEmailModal is null");
+            return;
+        }
+    
+        await clientEmailModal.OpenModal(clientId);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureCbsClientsTable();
+        await LoadClients();
+    }
+    
+    [JSInvokable]
+    public async Task ViewClient(string clientId)
+    {
+        Console.WriteLine($"🔍 ViewClient called with clientId: {clientId}");
+        
+        try
+        {
+            if (clientDetailsModal == null)
+            {
+                Console.WriteLine("❌ clientDetailsModal is null - modal component not found");
+                return;
+            }
+    
+            Console.WriteLine("✅ Modal reference found, calling OpenModal...");
+            await clientDetailsModal.OpenModal(clientId);
+            Console.WriteLine("✅ OpenModal completed");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error in ViewClient: {ex.Message}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+        }
+    }
+    
+   
+
+    private async Task LoadClients()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            // Call the AllAsync method from ApiClient
+            var result = await ApiClient.AllAsync();
+
+            if (result?.Success == true && result.Data != null)
+            {
+                clients = result.Data.ToList();
+                Console.WriteLine($"✅ Loaded {clients.Count} clients");
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "No clients data received from server.";
+                clients = new List<ClientViewModel>();
+                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = $"Server error ({apiEx.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception loading clients: {apiEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load clients. Please try again.";
+            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfigureCbsClientsTable()
+    {
+        cbsColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "CLIENT ID",
+                PropertyName = nameof(ClientViewModel.Identifier),
+                CssClass = "text-center"
+            },
+            new()
+            {
+                Header = "CLIENT NAME",
+                PropertyName = nameof(ClientViewModel.Name),
+                CustomRenderer = (item) =>
+                    $"<strong class='text-primary'>{((ClientViewModel)item).Name}</strong>"
+            },
+            new()
+            {
+                Header = "DESCRIPTION",
+                PropertyName = nameof(ClientViewModel.Description),
+                CustomRenderer = (item) =>
+                {
+                    var description = ((ClientViewModel)item).Description;
+                    return string.IsNullOrEmpty(description)
+                        ? "<span class='text-muted'>No description</span>"
+                        : description;
+                }
+            },
+            new()
+            {
+                Header = "CREATED DATE",
+                PropertyName = nameof(ClientViewModel.CreatedAt),
+                CustomRenderer = (item) =>
+                {
+                    var createdAt = ((ClientViewModel)item).CreatedAt;
+                    return createdAt.ToString("yyyy-MM-dd HH:mm");
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 180, // Increased width to accommodate new button
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var client = (ClientViewModel)item;
+                    return $@"
+        <div class='btn-group btn-group-sm' role='group'>
+            <button type='button' class='btn btn-primary btn-xs' onclick='viewClient(""{client.ClientId}"")' title='View Details'>
+                <i class='fa fa-eye'></i>
+            </button>
+            <button type='button' class='btn btn-info btn-xs' onclick='editClient(""{client.ClientId}"")' title='Edit Client'>
+                <i class='fa fa-edit'></i>
+            </button>
+            <button type='button' class='btn btn-success btn-xs' onclick='sendEmailToClient(""{client.ClientId}"")' title='Send Email'>
+                <i class='fa fa-envelope'></i>
+            </button>
+        </div>";
+                }
+            }
+        };
+
+        cbsOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            LengthMenu = new[] { 10, 25, 50 },
+            LengthMenuLabels = new[] { "10", "25", "50" },
+            SearchPlaceholder = "Search Morpheus Clients",
+            TableId = "cbsClientsTable",
+            TableCssClass = "table table-striped table-bordered table-hover",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 3, "desc" } } // Order by CreatedAt descending
+            }
+        };
+    }
+    
+    // THIS METHOD TO HANDLE CLIENT UPDATES
+    private async Task HandleClientUpdated(UpdateClientDto updatedClient)
+    {
+        Console.WriteLine($"🔄 Handling client update for ID: {updatedClient.ClientId}");
+        
+        try
+        {
+            // Show loading state briefly
+            isLoading = true;
+            StateHasChanged();
+            
+            // Small delay to ensure smooth UI transition
+            await Task.Delay(300);
+            
+            // Reload the clients from server to get fresh data
+            await LoadClients();
+            
+            Console.WriteLine("✅ Client list refreshed after update");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error refreshing client list: {ex.Message}");
+            errorMessage = "Client was updated but couldn't refresh the list. Please refresh the page.";
+            StateHasChanged();
+        }
+    }
+    
+    
+    private async Task HandleClientCreated(ClientViewModel createdClient)
+    {
+        Console.WriteLine($"🔄 Handling new client creation: {createdClient.Name}");
+        
+        try
+        {
+            // Show loading state briefly
+            isLoading = true;
+            StateHasChanged();
+            
+            // Small delay to ensure smooth UI transition
+            await Task.Delay(300);
+            
+            // Reload the clients from server to get fresh data including the new client
+            await LoadClients();
+            
+            Console.WriteLine("✅ Client list refreshed after creation");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error refreshing client list: {ex.Message}");
+            errorMessage = "Client was created but couldn't refresh the list. Please refresh the page.";
+            StateHasChanged();
+        }
+    }
+    
+    private async Task OnCbsClientRowClick(ClientViewModel client)
+    {
+        Console.WriteLine($"CBS Client clicked: {client.Name}");
+        await ViewClient(client.ClientId.ToString());
+    }
+}
+
+
+<script>
+    // Make the DotNet reference available globally
+    window.dotNetReference = null;
+
+    // Set the DotNet reference when the component is initialized
+    window.setDotNetReference = (reference) => {
+        window.dotNetReference = reference;
+    };
+
+    window.viewClient = function(clientId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ViewClient', clientId)
+                .catch(err => {
+                    console.error('Error calling ViewClient:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.editClient = function (clientId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditClient', clientId)
+                .catch(err => {
+                    console.error('Error calling EditClient:', err);
+                });
+        } else {
+            console.error('DotNet reference not available for editClient');
+        }
+    };
+
+    window.sendEmailToClient = function (clientId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('SendEmailToClient', clientId)
+                .catch(err => {
+                    console.error('Error calling SendEmailToClient:', err);
+                });
+        } else {
+            console.error('DotNet reference not available for sendEmailToClient');
+        }
+    };
+    
+    window.viewTransactions = function (clientId) {
+        console.log('View Client Transactions:', clientId);
+        // Navigate to transactions page or open transactions modal
+        window.location.href = '/clients/transactions/' + clientId;
+    };
+</script>

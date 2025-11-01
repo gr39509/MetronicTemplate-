@@ -1,0 +1,447 @@
+@* $1$ OtpGenerateModal.razor #1# *@
+@* @using NovaAccounts.Components.Shared *@
+@* @using NovaAccounts.SharedModels.ApiService *@
+@* @using NovaAccounts.SharedModels.ModalFields *@
+@* @inject ApiClient ApiClient *@
+@* *@
+@* <ReusableModal @ref="otpGenerateModal" *@
+@*                Title="Generate OTP" *@
+@*                TriggerButtonText="" *@
+@*                ShowTriggerButton="false" *@
+@*                Size="ModalSize.Large" *@
+@*                TitleFontSize="1.2rem" *@
+@*                TitleColor="#007bff" *@
+@*                BodyFontSize="0.95rem" *@
+@*                HeaderClass="leadBold bg-blue-chambray font-white" *@
+@*                BodyColor="#333" *@
+@*                ShowSaveButton="true" *@
+@*                SaveButtonText="Generate OTP" *@
+@*                OnSave="@GenerateOtp" *@
+@*                ShowCancelButton="true" *@
+@*                CancelButtonText="Cancel"> *@
+@* *@
+@*     <BodyContent> *@
+@*         <div class="row"> *@
+@*             <div class="col-md-12"> *@
+@*                 <div class="mb-3"> *@
+@*                     <label class="form-label">Client Code</label> *@
+@*                     <input class="form-control"  *@
+@*                            @bind="clientCode"  *@
+@*                            placeholder="Enter client code (optional)" /> *@
+@*                     <small class="form-text text-muted">Optional client identifier</small> *@
+@*                 </div> *@
+@* *@
+@*                 <div class="mb-3"> *@
+@*                     <label class="form-label">User ID *</label> *@
+@*                     <input class="form-control @(string.IsNullOrEmpty(userIdError) ? "" : "is-invalid")"  *@
+@*                            @bind="userIdString" *@
+@*                            @oninput="OnUserIdInput" *@
+@*                            placeholder="Enter user ID (GUID)" /> *@
+@*                     @if (!string.IsNullOrEmpty(userIdError)) *@
+@*                     { *@
+@*                         <div class="invalid-feedback">@userIdError</div> *@
+@*                     } *@
+@*                 </div> *@
+@* *@
+@*                 <div class="mb-3"> *@
+@*                     <label class="form-label">OTP Type *</label> *@
+@*                     <select class="form-control @(string.IsNullOrEmpty(otpTypeError) ? "" : "is-invalid")"  *@
+@*                             @bind="selectedOtpTypeString" *@
+@*                             @onchange="HandleOtpTypeChange"> *@
+@*                         <option value="">-- Select OTP Type --</option> *@
+@*                         <option value="0">SMS Only</option> *@
+@*                         <option value="1">Email Only</option> *@
+@*                         <option value="2">SMS and Email</option> *@
+@*                     </select> *@
+@*                     @if (!string.IsNullOrEmpty(otpTypeError)) *@
+@*                     { *@
+@*                         <div class="invalid-feedback">@otpTypeError</div> *@
+@*                     } *@
+@*                 </div> *@
+@* *@
+@*                 <div class="mb-3"> *@
+@*                     <label class="form-label">OTP Purpose *</label> *@
+@*                     <select class="form-control @(string.IsNullOrEmpty(otpPurposeError) ? "" : "is-invalid")"  *@
+@*                             @bind="selectedOtpPurposeString" *@
+@*                             @onchange="HandleOtpPurposeChange"> *@
+@*                         <option value="">-- Select OTP Purpose --</option> *@
+@*                         <option value="0">Authentication</option> *@
+@*                         <option value="1">Verification</option> *@
+@*                         <option value="2">Password Reset</option> *@
+@*                     </select> *@
+@*                     @if (!string.IsNullOrEmpty(otpPurposeError)) *@
+@*                     { *@
+@*                         <div class="invalid-feedback">@otpPurposeError</div> *@
+@*                     } *@
+@*                 </div> *@
+@* *@
+@*                 <div class="mb-3"> *@
+@*                     <label class="form-label">Phone Number</label> *@
+@*                     <input class="form-control @(string.IsNullOrEmpty(phoneError) ? "" : "is-invalid")"  *@
+@*                            @bind="phoneNumber"  *@
+@*                            @oninput="OnPhoneInput" *@
+@*                            placeholder="Enter phone number (optional)" /> *@
+@*                     @if (!string.IsNullOrEmpty(phoneError)) *@
+@*                     { *@
+@*                         <div class="invalid-feedback">@phoneError</div> *@
+@*                     } *@
+@*                     <small class="form-text text-muted">Required if OTP type includes SMS</small> *@
+@*                 </div> *@
+@* *@
+@*                 <div class="mb-3"> *@
+@*                     <label class="form-label">Email Address</label> *@
+@*                     <input class="form-control @(string.IsNullOrEmpty(emailError) ? "" : "is-invalid")"  *@
+@*                            @bind="emailAddress"  *@
+@*                            @oninput="OnEmailInput" *@
+@*                            placeholder="Enter email address (optional)" /> *@
+@*                     @if (!string.IsNullOrEmpty(emailError)) *@
+@*                     { *@
+@*                         <div class="invalid-feedback">@emailError</div> *@
+@*                     } *@
+@*                     <small class="form-text text-muted">Required if OTP type includes Email</small> *@
+@*                 </div> *@
+@*             </div> *@
+@*         </div> *@
+@* *@
+@*         @if (!string.IsNullOrEmpty(successMessage)) *@
+@*         { *@
+@*             <div class="alert alert-success mt-3"> *@
+@*                 <strong>Success!</strong> @successMessage *@
+@*                 @if (generatedOtp != null) *@
+@*                 { *@
+@*                     <div class="mt-2"> *@
+@*                         <strong>OTP Code:</strong> <code>@generatedOtp.OtpCode</code><br /> *@
+@*                         <strong>Expires:</strong> @generatedOtp.ExpireAt.ToString("yyyy-MM-dd HH:mm")<br /> *@
+@*                         <strong>SMS Sent:</strong> @(generatedOtp.IsSmsSend == true ? "Yes" : "No")<br /> *@
+@*                         <strong>Email Sent:</strong> @(generatedOtp.IsEmailSend == true ? "Yes" : "No") *@
+@*                     </div> *@
+@*                 } *@
+@*             </div> *@
+@*         } *@
+@* *@
+@*         @if (!string.IsNullOrEmpty(formError)) *@
+@*         { *@
+@*             <div class="alert alert-danger mt-3"> *@
+@*                 <strong>Error!</strong> @formError *@
+@*             </div> *@
+@*         } *@
+@*     </BodyContent> *@
+@* </ReusableModal> *@
+@* *@
+@* @code { *@
+@*     private ReusableModal otpGenerateModal = null!; *@
+@* *@
+@*     // Form fields *@
+@*     private string clientCode = string.Empty; *@
+@*     private string userIdString = string.Empty; *@
+@*     private string selectedOtpTypeString = string.Empty; *@
+@*     private string selectedOtpPurposeString = string.Empty; *@
+@*     private string phoneNumber = string.Empty; *@
+@*     private string emailAddress = string.Empty; *@
+@* *@
+@*     private Guid userId; *@
+@*     private OtpType? otpType = null; *@
+@*     private OtpPurpose? otpPurpose = null; *@
+@* *@
+@*     // Validation errors *@
+@*     private string userIdError = string.Empty; *@
+@*     private string otpTypeError = string.Empty; *@
+@*     private string otpPurposeError = string.Empty; *@
+@*     private string phoneError = string.Empty; *@
+@*     private string emailError = string.Empty; *@
+@*     private string formError = string.Empty; *@
+@*     private string successMessage = string.Empty; *@
+@* *@
+@*     // Generated OTP *@
+@*     private OtpResponse? generatedOtp = null; *@
+@* *@
+@*     [Parameter] public EventCallback<OtpResponse> OnOtpGenerated { get; set; } *@
+@* *@
+@*     public async Task OpenModal() *@
+@*     { *@
+@*         // Reset form fields and messages *@
+@*         clientCode = string.Empty; *@
+@*         userIdString = string.Empty; *@
+@*         selectedOtpTypeString = string.Empty; *@
+@*         selectedOtpPurposeString = string.Empty; *@
+@*         phoneNumber = string.Empty; *@
+@*         emailAddress = string.Empty; *@
+@*          *@
+@*         userIdError = string.Empty; *@
+@*         otpTypeError = string.Empty; *@
+@*         otpPurposeError = string.Empty; *@
+@*         phoneError = string.Empty; *@
+@*         emailError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         generatedOtp = null; *@
+@* *@
+@*         if (otpGenerateModal != null) *@
+@*         { *@
+@*             await otpGenerateModal.OpenModal(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void OnUserIdInput(ChangeEventArgs e) *@
+@*     { *@
+@*         userIdError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         userIdString = value; *@
+@*          *@
+@*         if (string.IsNullOrWhiteSpace(value)) *@
+@*         { *@
+@*             userIdError = "User ID is required"; *@
+@*         } *@
+@*         else if (!Guid.TryParse(value, out _)) *@
+@*         { *@
+@*             userIdError = "Please enter a valid GUID"; *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void HandleOtpTypeChange(ChangeEventArgs e) *@
+@*     { *@
+@*         otpTypeError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString(); *@
+@*         selectedOtpTypeString = value ?? string.Empty; *@
+@*          *@
+@*         if (string.IsNullOrEmpty(value)) *@
+@*         { *@
+@*             otpType = null; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             otpType = (OtpType)int.Parse(value); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void HandleOtpPurposeChange(ChangeEventArgs e) *@
+@*     { *@
+@*         otpPurposeError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString(); *@
+@*         selectedOtpPurposeString = value ?? string.Empty; *@
+@*          *@
+@*         if (string.IsNullOrEmpty(value)) *@
+@*         { *@
+@*             otpPurpose = null; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             otpPurpose = (OtpPurpose)int.Parse(value); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void OnPhoneInput(ChangeEventArgs e) *@
+@*     { *@
+@*         phoneError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         phoneNumber = value; *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void OnEmailInput(ChangeEventArgs e) *@
+@*     { *@
+@*         emailError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         emailAddress = value; *@
+@*          *@
+@*         if (!string.IsNullOrWhiteSpace(value) && !IsValidEmail(value)) *@
+@*         { *@
+@*             emailError = "Please enter a valid email address"; *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private async Task GenerateOtp() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             // Clear previous messages *@
+@*             formError = string.Empty; *@
+@*             successMessage = string.Empty; *@
+@*             generatedOtp = null; *@
+@*              *@
+@*             // Validate all fields *@
+@*             var isValid = ValidateForm(); *@
+@*              *@
+@*             if (!isValid) *@
+@*             { *@
+@*                 formError = "Please fix the validation errors before generating OTP."; *@
+@*                 return; *@
+@*             } *@
+@* *@
+@*             Console.WriteLine($"🔑 Generating OTP for user: {userId}"); *@
+@* *@
+@*             // Create the OTP request *@
+@*             var otpRequest = new OtpRequest *@
+@*             { *@
+@*                 ClientCode = string.IsNullOrWhiteSpace(clientCode) ? null : clientCode.Trim(), *@
+@*                 PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim(), *@
+@*                 Email = string.IsNullOrWhiteSpace(emailAddress) ? null : emailAddress.Trim(), *@
+@*                 UserId = userId, *@
+@*                 OtpType = otpType.Value, *@
+@*                 OtpPurpose = otpPurpose.Value *@
+@*             }; *@
+@* *@
+@*             Console.WriteLine("🔄 Calling GenerateAsync..."); *@
+@* *@
+@*             // Call the GenerateAsync method *@
+@*             var result = await ApiClient.GenerateAsync(otpRequest); *@
+@* *@
+@*             Console.WriteLine($"✅ API Response Success: {result?.Success}"); *@
+@*             Console.WriteLine($"✅ API Message: {result?.Message}"); *@
+@* *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 generatedOtp = result.Data; *@
+@*                 successMessage = result.Message ?? "OTP generated successfully!"; *@
+@*                 Console.WriteLine("✅ OTP generated successfully"); *@
+@*                  *@
+@*                 // Notify parent component *@
+@*                 await OnOtpGenerated.InvokeAsync(generatedOtp); *@
+@*                  *@
+@*                 // Don't close modal immediately - let user see the OTP details *@
+@*                 // They can close it manually or we can auto-close after a delay *@
+@*                 await Task.Delay(5000); *@
+@*                 await otpGenerateModal.CloseModal(); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 formError = result?.Message ?? "Failed to generate OTP. Please try again."; *@
+@*                 Console.WriteLine($"❌ OTP generation failed: {formError}"); *@
+@*             } *@
+@*         } *@
+@*         // catch (ApiException<ApiErrorResponse> apiEx) *@
+@*         // { *@
+@*         //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}"; *@
+@*         //     Console.WriteLine($"❌ API Exception Details: {apiEx}"); *@
+@*         //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}"); *@
+@*         // } *@
+@*         catch (ApiException ex) *@
+@*         { *@
+@*             formError = $"Server error ({ex.StatusCode}): {ex.Message}"; *@
+@*             Console.WriteLine($"❌ API Exception: {ex}"); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             formError = $"Error generating OTP: {ex.Message}"; *@
+@*             Console.WriteLine($"❌ Exception: {ex}"); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private bool ValidateForm() *@
+@*     { *@
+@*         var isValid = true; *@
+@* *@
+@*         // Validate User ID *@
+@*         if (string.IsNullOrWhiteSpace(userIdString)) *@
+@*         { *@
+@*             userIdError = "User ID is required"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else if (!Guid.TryParse(userIdString, out userId)) *@
+@*         { *@
+@*             userIdError = "Please enter a valid GUID"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             userIdError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate OTP Type *@
+@*         if (!otpType.HasValue) *@
+@*         { *@
+@*             otpTypeError = "OTP Type is required"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             otpTypeError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate OTP Purpose *@
+@*         if (!otpPurpose.HasValue) *@
+@*         { *@
+@*             otpPurposeError = "OTP Purpose is required"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             otpPurposeError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate contact methods based on OTP type *@
+@*         if (otpType.HasValue) *@
+@*         { *@
+@*             switch (otpType.Value) *@
+@*             { *@
+@*                 case OtpType._0: // SMS Only *@
+@*                     if (string.IsNullOrWhiteSpace(phoneNumber)) *@
+@*                     { *@
+@*                         phoneError = "Phone number is required for SMS OTP"; *@
+@*                         isValid = false; *@
+@*                     } *@
+@*                     break; *@
+@*                 case OtpType._1: // Email Only *@
+@*                     if (string.IsNullOrWhiteSpace(emailAddress)) *@
+@*                     { *@
+@*                         emailError = "Email address is required for Email OTP"; *@
+@*                         isValid = false; *@
+@*                     } *@
+@*                     break; *@
+@*                 case OtpType._2: // SMS and Email *@
+@*                     if (string.IsNullOrWhiteSpace(phoneNumber) && string.IsNullOrWhiteSpace(emailAddress)) *@
+@*                     { *@
+@*                         phoneError = "At least one contact method is required"; *@
+@*                         emailError = "At least one contact method is required"; *@
+@*                         isValid = false; *@
+@*                     } *@
+@*                     break; *@
+@*             } *@
+@*         } *@
+@* *@
+@*         return isValid; *@
+@*     } *@
+@* *@
+@*     private bool IsValidEmail(string email) *@
+@*     { *@
+@*         if (string.IsNullOrWhiteSpace(email)) *@
+@*             return false; *@
+@* *@
+@*         try *@
+@*         { *@
+@*             var addr = new System.Net.Mail.MailAddress(email); *@
+@*             return addr.Address == email; *@
+@*         } *@
+@*         catch *@
+@*         { *@
+@*             return false; *@
+@*         } *@
+@*     } *@
+@* } *@

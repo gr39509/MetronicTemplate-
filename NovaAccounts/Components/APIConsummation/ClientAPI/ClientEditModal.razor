@@ -1,0 +1,327 @@
+@* ClientEditModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="clientEditModal"
+               Title="Edit Client"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Save Changes"
+               OnSave="@SaveChanges"
+               ShowCancelButton="true"
+               CancelButtonText="Close">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading client details...</p>
+            </div>
+        }
+        else if (clientEditModel != null)
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Client ID</label>
+                        <input class="form-control" value="@clientEditModel.ClientId" disabled />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Client Name *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(nameError) ? "" : "is-invalid")" 
+                               @bind="clientEditModel.Name" 
+                               @oninput="OnNameInput" />
+                        @if (!string.IsNullOrEmpty(nameError))
+                        {
+                            <div class="invalid-feedback">@nameError</div>
+                        }
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control @(string.IsNullOrEmpty(descriptionError) ? "" : "is-invalid")" 
+                                  @bind="clientEditModel.Description" 
+                                  @oninput="OnDescriptionInput"
+                                  rows="3"
+                                  placeholder="Enter client description (optional)"></textarea>
+                        @if (!string.IsNullOrEmpty(descriptionError))
+                        {
+                            <div class="invalid-feedback">@descriptionError</div>
+                        }
+                        <small class="form-text text-muted">Optional description for the client</small>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger mt-3">
+                    <strong>Error!</strong> @formError
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <strong>Error!</strong> @errorMessage
+                <button class="btn btn-sm btn-warning ml-2" @onclick="() => LoadClient(currentClientId)">
+                    <i class="fa fa-refresh"></i> Retry
+                </button>
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal clientEditModal = null!;
+    private UpdateClientDto? clientEditModel;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private string formError = string.Empty;
+    private string nameError = string.Empty;
+    private string descriptionError = string.Empty;
+    private Guid currentClientId;
+
+    [Parameter] public EventCallback<UpdateClientDto> OnClientUpdated { get; set; }
+
+    public async Task OpenModal(string clientId)
+    {
+        await OpenModal(Guid.Parse(clientId));
+    }
+
+    public async Task OpenModal(Guid clientId)
+    {
+        errorMessage = string.Empty;
+        formError = string.Empty;
+        nameError = string.Empty;
+        descriptionError = string.Empty;
+        clientEditModel = null;
+        currentClientId = clientId;
+        
+        if (clientEditModal != null)
+        {
+            await clientEditModal.OpenModal();
+            await LoadClient(clientId);
+        }
+        else
+        {
+            Console.WriteLine("❌ clientEditModal is null");
+        }
+    }
+
+    private async Task LoadClient(Guid clientId)
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading client for edit: {clientId}");
+
+            // Load client details using the ClientAsync method
+            var result = await ApiClient.ClientAsync(clientId);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                var client = result.Data;
+                clientEditModel = new UpdateClientDto
+                {
+                    ClientId = client.ClientId,
+                    Name = client.Name ?? string.Empty,
+                    Description = client.Description ?? string.Empty
+                };
+                
+                Console.WriteLine($"✅ Loaded client for edit: {client.Name}");
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "Failed to load client data.";
+                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+            }
+        }
+        // catch (ApiException<ApiErrorResponse> apiEx)
+        // {
+        //     errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+        //     Console.WriteLine($"❌ API Error loading client: {apiEx.Message}");
+        // }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading client: {ex.Message}";
+            Console.WriteLine($"❌ Error loading client: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnNameInput(ChangeEventArgs e)
+    {
+        nameError = string.Empty;
+        formError = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            nameError = "Client name is required";
+        }
+        else if (value.Length > 100)
+        {
+            nameError = "Client name cannot exceed 100 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnDescriptionInput(ChangeEventArgs e)
+    {
+        descriptionError = string.Empty;
+        formError = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        
+        if (value?.Length > 500)
+        {
+            descriptionError = "Description cannot exceed 500 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            // Clear previous errors
+            formError = string.Empty;
+            
+            // Validate all fields
+            var isValid = ValidateForm();
+            
+            if (!isValid)
+            {
+                formError = "Please fix the validation errors before saving.";
+                return;
+            }
+
+            if (clientEditModel == null)
+            {
+                formError = "Client data is null";
+                return;
+            }
+
+            Console.WriteLine($"📝 Saving changes for client: {clientEditModel.ClientId}");
+            Console.WriteLine($"📝 Name: {clientEditModel.Name}");
+            Console.WriteLine($"📝 Description: {clientEditModel.Description}");
+
+            // Create the update command with trimmed values
+            var updateCommand = new UpdateClientDto
+            {
+                ClientId = clientEditModel.ClientId,
+                Name = clientEditModel.Name?.Trim() ?? string.Empty,
+                Description = clientEditModel.Description?.Trim() ?? string.Empty
+            };
+
+            Console.WriteLine("🔄 Calling UpdateAsync...");
+
+            // Call the UpdateAsync method
+            var result = await ApiClient.UpdateAsync(updateCommand);
+
+            Console.WriteLine($"✅ API Response Success: {result?.Success}");
+            Console.WriteLine($"✅ API Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                Console.WriteLine("✅ Client updated successfully");
+                await clientEditModal.CloseModal();
+                await OnClientUpdated.InvokeAsync(updateCommand);
+            }
+            else
+            {
+                formError = result?.Message ?? "Update failed. Please try again.";
+                Console.WriteLine($"❌ Update failed: {formError}");
+            }
+        }
+        // catch (ApiException<ApiErrorResponse> apiEx)
+        // {
+        //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
+        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
+        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        // }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"❌ API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error saving client: {ex.Message}";
+            Console.WriteLine($"❌ Exception: {ex}");
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Name (required)
+        if (string.IsNullOrWhiteSpace(clientEditModel?.Name))
+        {
+            nameError = "Client name is required";
+            isValid = false;
+        }
+        else if (clientEditModel.Name.Length > 100)
+        {
+            nameError = "Client name cannot exceed 100 characters";
+            isValid = false;
+        }
+        else
+        {
+            nameError = string.Empty;
+        }
+
+        // Validate Description (optional)
+        if (clientEditModel?.Description?.Length > 500)
+        {
+            descriptionError = "Description cannot exceed 500 characters";
+            isValid = false;
+        }
+        else
+        {
+            descriptionError = string.Empty;
+        }
+
+        return isValid;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ ClientEditModal component rendered");
+        }
+    }
+}

@@ -1,0 +1,589 @@
+@* ClientEmailModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="clientEmailModal"
+               Title="Send Email to Client"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Send Email"
+               OnSave="@SendEmail"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel">
+
+    <BodyContent>
+        @if (isLoadingClient)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading client information...</p>
+            </div>
+        }
+        else if (currentClient != null)
+        {
+            <div class="alert alert-info mb-4">
+                <strong>Client:</strong> @currentClient.Name <br />
+                <strong>Client ID:</strong> @currentClient.Identifier
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <!-- Email Configuration Dropdown -->
+                    <div class="mb-3">
+                        <label class="form-label">Email Configuration Provider</label>
+                        <select class="form-control @(string.IsNullOrEmpty(configError) ? "" : "is-invalid")" 
+                                @bind="selectedConfigIdString"
+                                @bind:after="HandleConfigChangeAfterBind">
+                            <option value="">-- Select Email Provider (Optional) --</option>
+                            @if (isLoadingConfigs)
+                            {
+                                <option value="" disabled>Loading configurations...</option>
+                            }
+                            else if (emailConfigs.Any())
+                            {
+                                @foreach (var config in emailConfigs)
+                                {
+                                    <option value="@config.EmailProviderConfigurationId">@config.ProviderName - @config.Description</option>
+                                }
+                            }
+                            else
+                            {
+                                <option value="" disabled>No email configurations available</option>
+                            }
+                        </select>
+                        @if (!string.IsNullOrEmpty(configError))
+                        {
+                            <div class="invalid-feedback">@configError</div>
+                        }
+                        <small class="form-text text-muted">
+                            Choose the email service provider to use for sending (optional - system will use default if not selected)
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Recipient Email Address *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(emailError) ? "" : "is-invalid")" 
+                               @bind="recipientEmail" 
+                               @oninput="OnEmailInput"
+                               placeholder="Enter recipient email address" />
+                        @if (!string.IsNullOrEmpty(emailError))
+                        {
+                            <div class="invalid-feedback">@emailError</div>
+                        }
+                        <small class="form-text text-muted">Enter the email address where you want to send this message</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Subject *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(subjectError) ? "" : "is-invalid")" 
+                               @bind="emailSubject" 
+                               @oninput="OnSubjectInput"
+                               placeholder="Enter email subject" />
+                        @if (!string.IsNullOrEmpty(subjectError))
+                        {
+                            <div class="invalid-feedback">@subjectError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Message Body *</label>
+                        <textarea class="form-control @(string.IsNullOrEmpty(messageError) ? "" : "is-invalid")" 
+                                  @bind="emailMessage" 
+                                  @oninput="OnMessageInput"
+                                  rows="8"
+                                  placeholder="Enter your email message here..."></textarea>
+                        @if (!string.IsNullOrEmpty(messageError))
+                        {
+                            <div class="invalid-feedback">@messageError</div>
+                        }
+                        <small class="form-text text-muted">Write the content of your email message</small>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3">
+                    <strong>Success!</strong> @successMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger mt-3">
+                    <strong>Error!</strong> @formError
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <strong>Error!</strong> @errorMessage
+                <button class="btn btn-sm btn-warning ml-2" @onclick="ReloadData">
+                    <i class="fa fa-refresh"></i> Retry
+                </button>
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal clientEmailModal = null!;
+    private ClientViewModel? currentClient;
+    private bool isLoadingClient = false;
+    private bool isLoadingConfigs = false;
+    private string errorMessage = string.Empty;
+    private string formError = string.Empty;
+    private string successMessage = string.Empty;
+    private Guid currentClientId;
+
+    // Form fields
+    private string recipientEmail = string.Empty;
+    private string emailSubject = string.Empty;
+    private string emailMessage = string.Empty;
+    private Guid? selectedConfigId = null;
+    private string selectedConfigIdString = string.Empty; // String binding for dropdown
+
+    // Validation errors
+    private string emailError = string.Empty;
+    private string subjectError = string.Empty;
+    private string messageError = string.Empty;
+    private string configError = string.Empty;
+
+    // Email configurations
+    private List<EmailClientProviderConfigurationViewModel> emailConfigs = new();
+
+    public async Task OpenModal(string clientId)
+    {
+        await OpenModal(Guid.Parse(clientId));
+    }
+
+    public async Task OpenModal(Guid clientId)
+    {
+        errorMessage = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        currentClient = null;
+        currentClientId = clientId;
+        
+        // Reset form fields
+        recipientEmail = string.Empty;
+        emailSubject = string.Empty;
+        emailMessage = string.Empty;
+        selectedConfigId = null;
+        selectedConfigIdString = string.Empty;
+        emailError = string.Empty;
+        subjectError = string.Empty;
+        messageError = string.Empty;
+        configError = string.Empty;
+        
+        if (clientEmailModal != null)
+        {
+            await clientEmailModal.OpenModal();
+            await LoadInitialData(clientId);
+        }
+        else
+        {
+            Console.WriteLine("❌ clientEmailModal is null");
+        }
+    }
+
+    private async Task LoadInitialData(Guid clientId)
+    {
+        try
+        {
+            // Load client and email configs in parallel
+            var loadClientTask = LoadClient(clientId);
+            var loadConfigsTask = LoadEmailConfigs(clientId);
+
+            await Task.WhenAll(loadClientTask, loadConfigsTask);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+            Console.WriteLine($"❌ Error loading initial data: {ex.Message}");
+        }
+    }
+
+    private async Task LoadClient(Guid clientId)
+    {
+        try
+        {
+            isLoadingClient = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading client for email: {clientId}");
+
+            var result = await ApiClient.ClientAsync(clientId);
+
+            if (result?.Success == true && result.Data != null)
+            {
+                currentClient = result.Data;
+                Console.WriteLine($"✅ Loaded client for email: {currentClient.Name}");
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "Failed to load client data.";
+                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+            }
+        }
+        // catch (ApiException<ApiErrorResponse> apiEx)
+        // {
+        //     errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
+        //     Console.WriteLine($"❌ API Error loading client: {apiEx.Message}");
+        // }
+        catch (ApiException ex)
+        {
+            errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading client: {ex.Message}";
+            Console.WriteLine($"❌ Error loading client: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingClient = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadEmailConfigs(Guid clientId)
+    {
+        try
+        {
+            isLoadingConfigs = true;
+            StateHasChanged();
+
+            Console.WriteLine($"🔍 Loading email configurations for client: {clientId}");
+
+            // First get the client details to get the identifier
+            var clientResult = await ApiClient.ClientAsync(clientId);
+            if (clientResult?.Success == true && clientResult.Data != null)
+            {
+                var clientIdentifier = clientResult.Data.Identifier;
+                Console.WriteLine($"🔍 Client identifier: {clientIdentifier}");
+
+                // Use the ConfigurationsPerClientAsync method with client code
+                var result = await ApiClient.ConfigurationsPerClientAsync(clientIdentifier);
+
+                if (result?.Success == true && result.Data != null)
+                {
+                    emailConfigs = result.Data
+                        .Where(c => c.IsActive) // Only show active configurations
+                        .ToList();
+                    
+                    Console.WriteLine($"✅ Loaded {emailConfigs.Count} email configurations");
+                    
+                    // If there's a default configuration, pre-select it
+                    var defaultConfig = emailConfigs.FirstOrDefault(c => c.IsDefault);
+                    if (defaultConfig != null)
+                    {
+                        selectedConfigId = defaultConfig.EmailProviderConfigurationId;
+                        selectedConfigIdString = defaultConfig.EmailProviderConfigurationId.ToString();
+                        Console.WriteLine($"✅ Pre-selected default configuration: {defaultConfig.ProviderName}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"⚠️ No email configurations loaded: {result?.Message}");
+                    emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
+                }
+            }
+            else
+            {
+                Console.WriteLine("⚠️ Could not load client details for configurations");
+                emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
+            }
+        }
+        // catch (ApiException<ApiErrorResponse> apiEx)
+        // {
+        //     Console.WriteLine($"⚠️ API Error loading email configurations: {apiEx.Message}");
+        //     emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
+        // }
+        catch (ApiException ex)
+        {
+            Console.WriteLine($"⚠️ API Exception loading email configurations: {ex.Message}");
+            emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error loading email configurations: {ex.Message}");
+            emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
+        }
+        finally
+        {
+            isLoadingConfigs = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleConfigChangeAfterBind()
+    {
+        configError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        if (string.IsNullOrEmpty(selectedConfigIdString))
+        {
+            selectedConfigId = null;
+        }
+        else
+        {
+            selectedConfigId = Guid.Parse(selectedConfigIdString);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnEmailInput(ChangeEventArgs e)
+    {
+        emailError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        recipientEmail = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            emailError = "Email address is required";
+        }
+        else if (!IsValidEmail(value))
+        {
+            emailError = "Please enter a valid email address";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnSubjectInput(ChangeEventArgs e)
+    {
+        subjectError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        emailSubject = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            subjectError = "Subject is required";
+        }
+        else if (value.Length > 200)
+        {
+            subjectError = "Subject cannot exceed 200 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnMessageInput(ChangeEventArgs e)
+    {
+        messageError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        emailMessage = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            messageError = "Message body is required";
+        }
+        else if (value.Length > 5000)
+        {
+            messageError = "Message body cannot exceed 5000 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task SendEmail()
+    {
+        try
+        {
+            // Clear previous messages
+            formError = string.Empty;
+            successMessage = string.Empty;
+            
+            // Validate all fields
+            var isValid = ValidateForm();
+            
+            if (!isValid)
+            {
+                formError = "Please fix the validation errors before sending.";
+                return;
+            }
+
+            if (currentClient == null)
+            {
+                formError = "Client data is not loaded.";
+                return;
+            }
+
+            Console.WriteLine($"📧 Sending email to client: {currentClient.Name}");
+            Console.WriteLine($"📧 Recipient: {recipientEmail}");
+            Console.WriteLine($"📧 Subject: {emailSubject}");
+            Console.WriteLine($"📧 Using Config: {selectedConfigId}");
+
+            // Create the email request
+            var emailRequest = new SendEmailRequest
+            {
+                Subject = emailSubject.Trim(),
+                MessageBody = emailMessage.Trim(),
+                EmailRecipients = new List<string> { recipientEmail.Trim() },
+                EmailClientProviderConfigurationId = selectedConfigId
+            };
+
+            Console.WriteLine("🔄 Calling SendAsync...");
+
+            // Call the SendAsync method with client code
+            var result = await ApiClient.SendAsync(
+                client_Code: currentClient.Identifier,
+                body: emailRequest
+            );
+
+            Console.WriteLine($"✅ API Response Success: {result?.Success}");
+            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"✅ API Data: {result?.Data}");
+
+            if (result?.Success == true)
+            {
+                successMessage = result.Message ?? "Email sent successfully!";
+                Console.WriteLine("✅ Email sent successfully");
+                
+                // Clear form after successful send
+                recipientEmail = string.Empty;
+                emailSubject = string.Empty;
+                emailMessage = string.Empty;
+                selectedConfigId = null;
+                selectedConfigIdString = string.Empty;
+                
+                // Close modal after 2 seconds
+                await Task.Delay(2000);
+                await clientEmailModal.CloseModal();
+            }
+            else
+            {
+                formError = result?.Message ?? "Failed to send email. Please try again.";
+                Console.WriteLine($"❌ Email sending failed: {formError}");
+            }
+        }
+        // catch (ApiException<ApiErrorResponse> apiEx)
+        // {
+        //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
+        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
+        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        // }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"❌ API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error sending email: {ex.Message}";
+            Console.WriteLine($"❌ Exception: {ex}");
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Email
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+        {
+            emailError = "Email address is required";
+            isValid = false;
+        }
+        else if (!IsValidEmail(recipientEmail))
+        {
+            emailError = "Please enter a valid email address";
+            isValid = false;
+        }
+        else
+        {
+            emailError = string.Empty;
+        }
+
+        // Validate Subject
+        if (string.IsNullOrWhiteSpace(emailSubject))
+        {
+            subjectError = "Subject is required";
+            isValid = false;
+        }
+        else if (emailSubject.Length > 200)
+        {
+            subjectError = "Subject cannot exceed 200 characters";
+            isValid = false;
+        }
+        else
+        {
+            subjectError = string.Empty;
+        }
+
+        // Validate Message
+        if (string.IsNullOrWhiteSpace(emailMessage))
+        {
+            messageError = "Message body is required";
+            isValid = false;
+        }
+        else if (emailMessage.Length > 5000)
+        {
+            messageError = "Message body cannot exceed 5000 characters";
+            isValid = false;
+        }
+        else
+        {
+            messageError = string.Empty;
+        }
+
+        // Email configuration is optional, so no validation needed
+
+        return isValid;
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task ReloadData()
+    {
+        errorMessage = string.Empty;
+        await LoadInitialData(currentClientId);
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ ClientEmailModal component rendered");
+        }
+    }
+}

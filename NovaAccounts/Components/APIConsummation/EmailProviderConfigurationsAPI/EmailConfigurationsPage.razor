@@ -1,0 +1,407 @@
+@page "/email-configurations"
+@using Microsoft.AspNetCore.Authorization
+@using NovaAccounts.SharedModels.DataFields
+@using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@layout MainLayout
+
+<PageTitle>Email Configurations</PageTitle>
+
+@* Modals *@
+<EmailProviderConfigurationCreateModal @ref="emailConfigCreateModal" OnEmailConfigurationCreated="HandleEmailConfigurationCreated" />
+@* <EmailProviderConfigurationEditModal @ref="emailConfigEditModal" OnEmailConfigurationUpdated="HandleEmailConfigurationUpdated" /> *@
+@* <EmailProviderConfigurationDetailsModal @ref="emailConfigDetailsModal" /> *@
+
+<h1 class="page-title">
+    Email Provider Configurations
+    <small>Manage email service provider configurations</small>
+</h1>
+
+<!-- Loading State -->
+@if (isLoading)
+{
+    <div class="portlet light bordered">
+        <div class="portlet-body text-center" style="padding: 50px 0;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-3">Loading email configurations...</p>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+            <span>&times;</span>
+        </button>
+        <strong>Error!</strong> @errorMessage
+        <button class="btn btn-sm btn-warning" @onclick="LoadEmailConfigurations" style="margin-left: 10px;">
+            <i class="fa fa-refresh"></i> Retry
+        </button>
+    </div>
+}
+else
+{
+    <div class="portlet">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-envelope font-dark"></i>
+                <span class="caption-subject bold uppercase">Email Configurations</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadEmailConfigurations" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="CreateNewEmailConfiguration" title="Add New Configuration">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <ReusableDataTable TItem="EmailClientProviderConfigurationViewModel"
+                               Data="@emailConfigurations"
+                               Columns="@emailConfigColumns"
+                               Options="@emailConfigOptions"
+                               />
+        </div>
+    </div>
+}
+
+@code {
+    private List<EmailClientProviderConfigurationViewModel> emailConfigurations = new();
+    private List<DataTableColumn> emailConfigColumns = new();
+    private DataTableOptions emailConfigOptions = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    
+    // Modal references
+    private EmailProviderConfigurationCreateModal emailConfigCreateModal = null!;
+    // private EmailProviderConfigurationEditModal emailConfigEditModal = null!;
+    // private EmailProviderConfigurationDetailsModal emailConfigDetailsModal = null!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("🔍 OnAfterRenderAsync - First render");
+            await JSRuntime.InvokeVoidAsync("setDotNetReference", 
+                DotNetObjectReference.Create(this));
+        }
+    }
+
+    // [JSInvokable]
+    // public async Task EditEmailConfiguration(string configId)
+    // {
+    //     Console.WriteLine($"📝 EditEmailConfiguration called with configId: {configId}");
+    //
+    //     if (emailConfigEditModal == null)
+    //     {
+    //         Console.WriteLine("❌ emailConfigEditModal is null");
+    //         return;
+    //     }
+    //
+    //     await emailConfigEditModal.OpenModal(configId);
+    // }
+
+    // [JSInvokable]
+    // public async Task ViewEmailConfiguration(string configId)
+    // {
+    //     Console.WriteLine($"🔍 ViewEmailConfiguration called with configId: {configId}");
+    //     
+    //     try
+    //     {
+    //         if (emailConfigDetailsModal == null)
+    //         {
+    //             Console.WriteLine("❌ emailConfigDetailsModal is null");
+    //             return;
+    //         }
+    //
+    //         await emailConfigDetailsModal.OpenModal(configId);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Console.WriteLine($"❌ Error in ViewEmailConfiguration: {ex.Message}");
+    //     }
+    // }
+
+    [JSInvokable]
+    public async Task CreateNewEmailConfiguration()
+    {
+        Console.WriteLine("📝 CreateNewEmailConfiguration called from JavaScript");
+        
+        if (emailConfigCreateModal == null)
+        {
+            Console.WriteLine("❌ emailConfigCreateModal is null");
+            return;
+        }
+    
+        await emailConfigCreateModal.OpenModal();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureEmailConfigurationsTable();
+        await LoadEmailConfigurations();
+    }
+
+    private async Task LoadEmailConfigurations()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            // Note: You might need to implement a method to get all email configurations
+            // For now, we'll use the existing method with a specific client code
+            // You may need to adjust this based on your API
+            
+            // This is a placeholder - you'll need to implement the actual API call
+            // var result = await ApiClient.GetAllEmailConfigurationsAsync();
+            
+            // For demonstration, let's create some mock data or use an existing method
+            errorMessage = "API method for getting all email configurations needs to be implemented.";
+            emailConfigurations = new List<EmailClientProviderConfigurationViewModel>();
+            
+            // Alternatively, if you have a method to get configs for a specific client,
+            // you could loop through clients and aggregate their configurations
+            
+            Console.WriteLine($"⚠️ LoadEmailConfigurations needs implementation");
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = $"Server error ({apiEx.StatusCode}). Please try again.";
+            Console.WriteLine($"❌ API Exception loading email configurations: {apiEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load email configurations. Please try again.";
+            Console.WriteLine($"❌ Error loading email configurations: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfigureEmailConfigurationsTable()
+    {
+        emailConfigColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "CLIENT",
+                PropertyName = nameof(EmailClientProviderConfigurationViewModel.ClientIdentifier),
+                CssClass = "text-center"
+            },
+            new()
+            {
+                Header = "PROVIDER",
+                PropertyName = nameof(EmailClientProviderConfigurationViewModel.ProviderName),
+                CustomRenderer = (item) =>
+                    $"<strong class='text-primary'>{((EmailClientProviderConfigurationViewModel)item).ProviderName}</strong>"
+            },
+            new()
+            {
+                Header = "DESCRIPTION",
+                PropertyName = nameof(EmailClientProviderConfigurationViewModel.Description),
+                CustomRenderer = (item) =>
+                {
+                    var description = ((EmailClientProviderConfigurationViewModel)item).Description;
+                    return string.IsNullOrEmpty(description)
+                        ? "<span class='text-muted'>No description</span>"
+                        : description;
+                }
+            },
+            new()
+            {
+                Header = "STATUS",
+                PropertyName = nameof(EmailClientProviderConfigurationViewModel.IsActive),
+                CustomRenderer = (item) =>
+                {
+                    var isActive = ((EmailClientProviderConfigurationViewModel)item).IsActive;
+                    return isActive 
+                        ? "<span class='badge badge-success'>Active</span>"
+                        : "<span class='badge badge-danger'>Inactive</span>";
+                }
+            },
+            new()
+            {
+                Header = "DEFAULT",
+                PropertyName = nameof(EmailClientProviderConfigurationViewModel.IsDefault),
+                CustomRenderer = (item) =>
+                {
+                    var isDefault = ((EmailClientProviderConfigurationViewModel)item).IsDefault;
+                    return isDefault 
+                        ? "<span class='badge badge-info'>Default</span>"
+                        : "<span class='text-muted'>No</span>";
+                }
+            },
+            new()
+            {
+                Header = "CREATED",
+                PropertyName = nameof(EmailClientProviderConfigurationViewModel.CreatedAt),
+                CustomRenderer = (item) =>
+                {
+                    var createdAt = ((EmailClientProviderConfigurationViewModel)item).CreatedAt;
+                    return createdAt.ToString("yyyy-MM-dd");
+                }
+            },
+            new()
+            {
+                Header = "ACTIONS",
+                PropertyName = "",
+                Sortable = false,
+                Searchable = false,
+                Width = 180,
+                CssClass = "text-center",
+                CustomRenderer = (item) => 
+                {
+                    var config = (EmailClientProviderConfigurationViewModel)item;
+                    return $@"
+        <div class='btn-group btn-group-sm' role='group'>
+            <button type='button' class='btn btn-primary btn-xs' onclick='viewEmailConfiguration(""{config.EmailProviderConfigurationId}"")' title='View Details'>
+                <i class='fa fa-eye'></i>
+            </button>
+            <button type='button' class='btn btn-info btn-xs' onclick='editEmailConfiguration(""{config.EmailProviderConfigurationId}"")' title='Edit Configuration'>
+                <i class='fa fa-edit'></i>
+            </button>
+            <button type='button' class='btn btn-success btn-xs' onclick='testEmailConfiguration(""{config.EmailProviderConfigurationId}"")' title='Test Configuration'>
+                <i class='fa fa-paper-plane'></i>
+            </button>
+        </div>";
+                }
+            }
+        };
+
+        emailConfigOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            LengthMenu = new[] { 10, 25, 50 },
+            LengthMenuLabels = new[] { "10", "25", "50" },
+            SearchPlaceholder = "Search Email Configurations",
+            TableId = "emailConfigsTable",
+            TableCssClass = "table table-striped table-bordered table-hover",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            ShowSearch = true,
+            ShowPaging = true,
+            ShowInfo = true,
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["order"] = new object[] { new object[] { 5, "desc" } } // Order by CreatedAt descending
+            }
+        };
+    }
+    
+    // Handle new configuration creation
+    private async Task HandleEmailConfigurationCreated(EmailClientProviderConfigurationViewModel createdConfig)
+    {
+        Console.WriteLine($"🔄 Handling new email configuration creation: {createdConfig.Description}");
+        
+        try
+        {
+            // Show loading state briefly
+            isLoading = true;
+            StateHasChanged();
+            
+            // Small delay to ensure smooth UI transition
+            await Task.Delay(300);
+            
+            // Reload the configurations from server to get fresh data including the new configuration
+            await LoadEmailConfigurations();
+            
+            Console.WriteLine("✅ Email configurations list refreshed after creation");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error refreshing configurations list: {ex.Message}");
+            errorMessage = "Configuration was created but couldn't refresh the list. Please refresh the page.";
+            StateHasChanged();
+        }
+    }
+
+    // Handle configuration update
+    private async Task HandleEmailConfigurationUpdated(EmailClientProviderConfigurationViewModel updatedConfig)
+    {
+        Console.WriteLine($"🔄 Handling email configuration update: {updatedConfig.Description}");
+        
+        try
+        {
+            // Show loading state briefly
+            isLoading = true;
+            StateHasChanged();
+            
+            // Small delay to ensure smooth UI transition
+            await Task.Delay(300);
+            
+            // Reload the configurations from server to get fresh data
+            await LoadEmailConfigurations();
+            
+            Console.WriteLine("✅ Email configurations list refreshed after update");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error refreshing configurations list: {ex.Message}");
+            errorMessage = "Configuration was updated but couldn't refresh the list. Please refresh the page.";
+            StateHasChanged();
+        }
+    }
+    
+    // private async Task OnEmailConfigRowClick(EmailClientProviderConfigurationViewModel config)
+    // {
+    //     Console.WriteLine($"Email Configuration clicked: {config.Description}");
+    //     await ViewEmailConfiguration(config.EmailProviderConfigurationId.ToString());
+    // }
+}
+
+<script>
+
+    // Add these to your existing JavaScript
+    window.viewEmailConfiguration = function(configId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('ViewEmailConfiguration', configId)
+                .catch(err => {
+                    console.error('Error calling ViewEmailConfiguration:', err);
+                });
+        } else {
+            console.error('DotNet reference not available');
+        }
+    };
+
+    window.editEmailConfiguration = function (configId) {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('EditEmailConfiguration', configId)
+                .catch(err => {
+                    console.error('Error calling EditEmailConfiguration:', err);
+                });
+        } else {
+            console.error('DotNet reference not available for editEmailConfiguration');
+        }
+    };
+
+    window.createNewEmailConfiguration = function () {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('CreateNewEmailConfiguration')
+                .catch(err => {
+                    console.error('Error calling CreateNewEmailConfiguration:', err);
+                });
+        } else {
+            console.error('DotNet reference not available for createNewEmailConfiguration');
+        }
+    };
+
+    window.testEmailConfiguration = function (configId) {
+        console.log('Test Email Configuration:', configId);
+        // You can implement test functionality here
+        alert('Test functionality for configuration: ' + configId);
+    };
+</script>

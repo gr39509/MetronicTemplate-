@@ -1,0 +1,294 @@
+@* ClientCreateModal.razor *@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@using NovaAccounts.SharedModels.QuickNav
+@inject ApiClient ApiClient
+
+<ReusableQuickNav NavItems="@navigationItems" 
+                  NavId="clientsNav" 
+                  ActiveUrl="@currentUrl" />
+
+<ReusableModal @ref="clientCreateModal"
+               Title="Create New Client"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Create Client"
+               OnSave="@CreateClient"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel">
+
+    <BodyContent>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="mb-3">
+                    <label class="form-label">Client Name *</label>
+                    <input class="form-control @(string.IsNullOrEmpty(nameError) ? "" : "is-invalid")" 
+                           @bind="clientName" 
+                           @oninput="OnNameInput"
+                           placeholder="Enter client name" />
+                    @if (!string.IsNullOrEmpty(nameError))
+                    {
+                        <div class="invalid-feedback">@nameError</div>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control @(string.IsNullOrEmpty(descriptionError) ? "" : "is-invalid")" 
+                              @bind="clientDescription" 
+                              @oninput="OnDescriptionInput"
+                              rows="3"
+                              placeholder="Enter client description (optional)"></textarea>
+                    @if (!string.IsNullOrEmpty(descriptionError))
+                    {
+                        <div class="invalid-feedback">@descriptionError</div>
+                    }
+                    <small class="form-text text-muted">Optional description for the client</small>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success mt-3">
+                <strong>Success!</strong> @successMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(formError))
+        {
+            <div class="alert alert-danger mt-3">
+                <strong>Error!</strong> @formError
+            </div>
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private string currentUrl = "/clients";
+    private ReusableModal clientCreateModal = null!;
+    
+    private List<NavItem> navigationItems = new();
+
+    // Form fields
+    private string clientName = string.Empty;
+    private string clientDescription = string.Empty;
+
+    // Validation errors
+    private string nameError = string.Empty;
+    private string descriptionError = string.Empty;
+    private string formError = string.Empty;
+    private string successMessage = string.Empty;
+
+    [Parameter] public EventCallback<ClientViewModel> OnClientCreated { get; set; }
+
+    protected override void OnInitialized()
+    {
+        navigationItems = new()
+        {
+            new NavItem
+            {
+                Text = "Create New Client",
+                Url = "/clients",
+                IconClass = "icon-user",
+                OnClick = async () => await OpenModal(),
+                PreventNavigation = true
+            }
+            
+        };
+    }
+
+    private async Task OpenModal()
+    {
+        // Reset form fields and messages
+        clientName = string.Empty;
+        clientDescription = string.Empty;
+        nameError = string.Empty;
+        descriptionError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+
+        if (clientCreateModal != null)
+        {
+            await clientCreateModal.OpenModal();
+        }
+    }
+
+    private void OnNameInput(ChangeEventArgs e)
+    {
+        nameError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        clientName = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            nameError = "Client name is required";
+        }
+        else if (value.Length > 100)
+        {
+            nameError = "Client name cannot exceed 100 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnDescriptionInput(ChangeEventArgs e)
+    {
+        descriptionError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        clientDescription = value;
+        
+        if (value?.Length > 500)
+        {
+            descriptionError = "Description cannot exceed 500 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task CreateClient()
+    {
+        try
+        {
+            // Clear previous messages
+            formError = string.Empty;
+            successMessage = string.Empty;
+            
+            // Validate all fields
+            var isValid = ValidateForm();
+            
+            if (!isValid)
+            {
+                formError = "Please fix the validation errors before creating the client.";
+                return;
+            }
+
+            Console.WriteLine($"📝 Creating new client: {clientName}");
+
+            // Create the client DTO
+            var createCommand = new CreateClientDto
+            {
+                Name = clientName.Trim(),
+                Description = clientDescription?.Trim() ?? string.Empty
+            };
+
+            Console.WriteLine("🔄 Calling CreateAsync...");
+
+            // Call the CreateAsync method
+            var result = await ApiClient.CreateAsync(createCommand);
+
+            Console.WriteLine($"✅ API Response Success: {result?.Success}");
+            Console.WriteLine($"✅ API Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                successMessage = result.Message ?? "Client created successfully!";
+                Console.WriteLine("✅ Client created successfully");
+                
+                // Notify parent component
+                await OnClientCreated.InvokeAsync(result.Data);
+                
+                // Clear form after successful creation
+                clientName = string.Empty;
+                clientDescription = string.Empty;
+                
+                // Close modal after 2 seconds
+                await Task.Delay(2000);
+                await clientCreateModal.CloseModal();
+            }
+            else
+            {
+                formError = result?.Message ?? "Failed to create client. Please try again.";
+                Console.WriteLine($"❌ Client creation failed: {formError}");
+            }
+        }
+        // catch (ApiException<ApiErrorResponse> apiEx)
+        // {
+        //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
+        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
+        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        // }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"❌ API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error creating client: {ex.Message}";
+            Console.WriteLine($"❌ Exception: {ex}");
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Name
+        if (string.IsNullOrWhiteSpace(clientName))
+        {
+            nameError = "Client name is required";
+            isValid = false;
+        }
+        else if (clientName.Length > 100)
+        {
+            nameError = "Client name cannot exceed 100 characters";
+            isValid = false;
+        }
+        else
+        {
+            nameError = string.Empty;
+        }
+
+        // Validate Description
+        if (clientDescription?.Length > 500)
+        {
+            descriptionError = "Description cannot exceed 500 characters";
+            isValid = false;
+        }
+        else
+        {
+            descriptionError = string.Empty;
+        }
+
+        return isValid;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("✅ ClientCreateModal component rendered");
+        }
+    }
+}
+
+<script>
+   
+    window.createNewClient = function () {
+        if (window.dotNetReference) {
+            window.dotNetReference.invokeMethodAsync('CreateNewClient')
+                .catch(err => {
+                    console.error('Error calling CreateNewClient:', err);
+                });
+        } else {
+            console.error('DotNet reference not available for createNewClient');
+        }
+    };
+</script>
