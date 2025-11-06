@@ -25,23 +25,23 @@ public class AuthHeaderHandler : DelegatingHandler
                 
                 if (!string.IsNullOrEmpty(token))
                 {
-                    Console.WriteLine($"🔑 Adding Bearer token to request: {request.RequestUri}");
+                    Console.WriteLine($"Adding Bearer token to request: {request.RequestUri}");
                     // Add the authorization header
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 }
                 else
                 {
-                    Console.WriteLine("❌ No token found in claims for authenticated user");
+                    Console.WriteLine("No token found in claims for authenticated user");
                 }
             }
             else
             {
-                Console.WriteLine("❌ User is not authenticated");
+                Console.WriteLine("User is not authenticated");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error adding auth header: {ex.Message}");
+            Console.WriteLine($"Error adding auth header: {ex.Message}");
         }
 
         return await base.SendAsync(request, cancellationToken);

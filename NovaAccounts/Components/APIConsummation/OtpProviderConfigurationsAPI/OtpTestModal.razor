@@ -1,0 +1,713 @@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="otpTestModal"
+               Title="Test OTP Configuration"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Generate OTP"
+               OnSave="@GenerateOtp"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel"
+               SaveButtonDisabled="@isGenerating">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading OTP configurations...</p>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label text-primary">This is for testing the OTP Configuration.</label>
+                    <div class="mb-3">
+                        <label class="form-label">OTP Configuration *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(configurationError) ? "" : "is-invalid")"
+                                value="@selectedConfigurationIdString"
+                                @onchange="HandleConfigurationChange">
+                            <option value="">-- Select OTP Configuration --</option>
+                            @foreach (var config in otpConfigurations)
+                            {
+                                <option value="@config.ClientProviderConfigurationId">@config.Provider.Name - @config.Description</option>
+                            }
+                        </select>
+                        @if (!string.IsNullOrEmpty(configurationError))
+                        {
+                            <div class="invalid-feedback">@configurationError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">OTP Type *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(otpTypeError) ? "" : "is-invalid")"
+                                value="@selectedOtpType"
+                                @onchange="HandleOtpTypeChange">
+                            <option value="">-- Select OTP Type --</option>
+                            <option value="0">SMS</option>
+                            <option value="1">Email</option>
+                            <option value="2">Both (SMS & Email)</option>
+                        </select>
+                        @if (!string.IsNullOrEmpty(otpTypeError))
+                        {
+                            <div class="invalid-feedback">@otpTypeError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">OTP Purpose *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(otpPurposeError) ? "" : "is-invalid")"
+                                value="@selectedOtpPurpose"
+                                @onchange="HandleOtpPurposeChange">
+                            <option value="">-- Select OTP Purpose --</option>
+                            <option value="0">Registration</option>
+                            <option value="1">Login</option>
+                            <option value="2">Password Reset</option>
+                        </select>
+                        @if (!string.IsNullOrEmpty(otpPurposeError))
+                        {
+                            <div class="invalid-feedback">@otpPurposeError</div>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">User ID *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(userIdError) ? "" : "is-invalid")" 
+                               @bind="userId" 
+                               placeholder="Enter user ID (GUID format)"
+                               maxlength="36" />
+                        @if (!string.IsNullOrEmpty(userIdError))
+                        {
+                            <div class="invalid-feedback">@userIdError</div>
+                        }
+                        <small class="form-text text-muted">Format: 00000000-0000-0000-0000-000000000000</small>
+                    </div>
+
+                    <div class="mb-3" style="@(ShowPhoneNumberField ? "display:block" : "display:none")">
+                        <label class="form-label">Phone Number</label>
+                        <input class="form-control @(string.IsNullOrEmpty(phoneNumberError) ? "" : "is-invalid")" 
+                               @bind="phoneNumber" 
+                               placeholder="Enter phone number for SMS OTP"
+                               maxlength="15" />
+                        @if (!string.IsNullOrEmpty(phoneNumberError))
+                        {
+                            <div class="invalid-feedback">@phoneNumberError</div>
+                        }
+                        <small class="form-text text-muted">Required for SMS OTP. Format: +1234567890</small>
+                    </div>
+
+                    <div class="mb-3" style="@(ShowEmailField ? "display:block" : "display:none")">
+                        <label class="form-label">Email Address</label>
+                        <input class="form-control @(string.IsNullOrEmpty(emailError) ? "" : "is-invalid")" 
+                               @bind="email" 
+                               placeholder="Enter email address for Email OTP"
+                               maxlength="100" />
+                        @if (!string.IsNullOrEmpty(emailError))
+                        {
+                            <div class="invalid-feedback">@emailError</div>
+                        }
+                        <small class="form-text text-muted">Required for Email OTP</small>
+                    </div>
+                </div>
+            </div>
+
+            @if (isGenerating)
+            {
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm mr-2" role="status"></div>
+                        <span>Generating OTP...</span>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3">
+                    <strong>Success!</strong> @successMessage
+                    @if (otpResponse != null)
+                    {
+                        <div class="mt-2">
+                            <strong>OTP Details:</strong>
+                            <ul class="mb-0">
+                                <li>OTP ID: @otpResponse.OtpId</li>
+                                <li>OTP Code: <strong class="text-primary">@otpResponse.OtpCode</strong></li>
+                                <li>Expires At: @otpResponse.ExpireAt.ToString("yyyy-MM-dd HH:mm:ss")</li>
+                                <li>SMS Sent: @(otpResponse.IsSmsSend == true ? "Yes" : "No")</li>
+                                <li>Email Sent: @(otpResponse.IsEmailSend == true ? "Yes" : "No")</li>
+                            </ul>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger mt-3">
+                    <strong>Error!</strong> @formError
+                </div>
+            }
+
+            <!-- OTP Verification Section -->
+            @if (otpResponse != null && !string.IsNullOrEmpty(otpResponse.OtpCode))
+            {
+                <div class="card mt-3">
+                    <div class="card-header bg-warning">
+                        <h6 class="card-title mb-0 text-dark">Verify OTP</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Enter OTP Code to Verify</label>
+                                    <input class="form-control @(string.IsNullOrEmpty(verifyOtpError) ? "" : "is-invalid")" 
+                                           @bind="otpCodeToVerify" 
+                                           placeholder="Enter the OTP code received"
+                                           maxlength="10" />
+                                    @if (!string.IsNullOrEmpty(verifyOtpError))
+                                    {
+                                        <div class="invalid-feedback">@verifyOtpError</div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div>
+                                        <button type="button" class="btn btn-success w-100" 
+                                                @onclick="VerifyOtp"
+                                                disabled="@isVerifying">
+                                            @if (isVerifying)
+                                            {
+                                                <span class="spinner-border spinner-border-sm mr-2" role="status"></span>
+                                            }
+                                            Verify OTP
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(verifySuccessMessage))
+                        {
+                            <div class="alert alert-success mt-2">
+                                <strong>Verification Success!</strong> @verifySuccessMessage
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(verifyErrorMessage))
+                        {
+                            <div class="alert alert-danger mt-2">
+                                <strong>Verification Failed!</strong> @verifyErrorMessage
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal otpTestModal = null!;
+    
+    private List<OtpClientProviderConfigurationViewModel> otpConfigurations = new();
+    private string selectedConfigurationIdString = string.Empty;
+    private Guid? selectedConfigurationId = null;
+    private string selectedOtpType = string.Empty;
+    private string selectedOtpPurpose = string.Empty;
+    private string userId = string.Empty;
+    private string phoneNumber = string.Empty;
+    private string email = string.Empty;
+    private string otpCodeToVerify = string.Empty;
+    
+    private OtpResponse? otpResponse = null;
+    
+    private string configurationError = string.Empty;
+    private string otpTypeError = string.Empty;
+    private string otpPurposeError = string.Empty;
+    private string userIdError = string.Empty;
+    private string phoneNumberError = string.Empty;
+    private string emailError = string.Empty;
+    private string verifyOtpError = string.Empty;
+    private string formError = string.Empty;
+    private string successMessage = string.Empty;
+    private string verifySuccessMessage = string.Empty;
+    private string verifyErrorMessage = string.Empty;
+    
+    private bool isLoading = false;
+    private bool isGenerating = false;
+    private bool isVerifying = false;
+
+    [Parameter]
+    public string ClientIdentifier { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnOtpTested { get; set; }
+
+    private bool ShowPhoneNumberField => selectedOtpType == "0" || selectedOtpType == "2"; // SMS or Both
+    private bool ShowEmailField => selectedOtpType == "1" || selectedOtpType == "2"; // Email or Both
+
+    protected override void OnParametersSet()
+    {
+        Console.WriteLine($"OtpTestModal received ClientIdentifier: {ClientIdentifier}");
+    }
+
+    private async Task LoadOtpConfigurations()
+    {
+        try
+        {
+            isLoading = true;
+            formError = string.Empty;
+            StateHasChanged();
+
+            if (string.IsNullOrEmpty(ClientIdentifier))
+            {
+                formError = "Client identifier is required. Please ensure the parent component is properly loaded.";
+                Console.WriteLine("ClientIdentifier is null or empty");
+                return;
+            }
+
+            Console.WriteLine($"Loading OTP configurations for client: {ClientIdentifier}");
+
+            var result = await ApiClient.ConfigurationsPerClient2Async(ClientIdentifier);
+            if (result?.Success == true && result.Data != null)
+            {
+                otpConfigurations = result.Data
+                    .Where(c => c.IsActive)
+                    .OrderByDescending(c => c.IsDefault)
+                    .ThenBy(c => c.ProviderName)
+                    .ToList();
+                
+                Console.WriteLine($"Loaded {otpConfigurations.Count} OTP configurations for testing");
+                
+                // Auto-select the default configuration if available
+                var defaultConfig = otpConfigurations.FirstOrDefault(c => c.IsDefault);
+                if (defaultConfig != null)
+                {
+                    selectedConfigurationId = defaultConfig.ClientProviderConfigurationId;
+                    selectedConfigurationIdString = defaultConfig.ClientProviderConfigurationId.ToString();
+                    Console.WriteLine($"Auto-selected default configuration: {defaultConfig.Description}");
+                }
+            }
+            else
+            {
+                formError = result?.Message ?? "No active OTP configurations found for this client.";
+                otpConfigurations = new List<OtpClientProviderConfigurationViewModel>();
+                Console.WriteLine($"No OTP configurations loaded: {formError}");
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error loading OTP configurations: {ex.Message}";
+            Console.WriteLine($"Error loading OTP configurations: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    public async Task OpenModalWithConfiguration(OtpClientProviderConfigurationViewModel config)
+    {
+        // Reset form
+        selectedConfigurationIdString = string.Empty;
+        selectedConfigurationId = null;
+        selectedOtpType = string.Empty;
+        selectedOtpPurpose = string.Empty;
+        userId = string.Empty;
+        phoneNumber = string.Empty;
+        email = string.Empty;
+        otpCodeToVerify = string.Empty;
+        otpResponse = null;
+        
+        configurationError = string.Empty;
+        otpTypeError = string.Empty;
+        otpPurposeError = string.Empty;
+        userIdError = string.Empty;
+        phoneNumberError = string.Empty;
+        emailError = string.Empty;
+        verifyOtpError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        verifySuccessMessage = string.Empty;
+        verifyErrorMessage = string.Empty;
+        
+        isGenerating = false;
+        isVerifying = false;
+
+        Console.WriteLine($"Opening OTP Test Modal for client: {ClientIdentifier}");
+        Console.WriteLine($"Pre-selecting configuration: {config.Description} (ID: {config.ClientProviderConfigurationId})");
+
+        // Load configurations first
+        await LoadOtpConfigurations();
+
+        // Pre-select the specific configuration
+        if (otpConfigurations.Any(c => c.ClientProviderConfigurationId == config.ClientProviderConfigurationId))
+        {
+            selectedConfigurationId = config.ClientProviderConfigurationId;
+            selectedConfigurationIdString = config.ClientProviderConfigurationId.ToString();
+            Console.WriteLine($"Successfully pre-selected configuration: {config.Provider.Name} - {config.Description}");
+        }
+        else
+        {
+            Console.WriteLine($"Configuration {config.ClientProviderConfigurationId} not found in loaded configurations");
+            // Fallback: try to select by provider name
+            var similarConfig = otpConfigurations.FirstOrDefault(c => 
+                c.Provider.Name == config.Provider.Name || 
+                c.ClientProviderConfigurationId == config.ClientProviderConfigurationId);
+            
+            if (similarConfig != null)
+            {
+                selectedConfigurationId = similarConfig.ClientProviderConfigurationId;
+                selectedConfigurationIdString = similarConfig.ClientProviderConfigurationId.ToString();
+                Console.WriteLine($"Selected similar configuration: {similarConfig.Provider.Name} - {similarConfig.Description}");
+            }
+        }
+
+        if (otpTestModal != null)
+        {
+            await otpTestModal.OpenModal();
+        }
+        else
+        {
+            Console.WriteLine("otpTestModal is null");
+        }
+    }
+
+    private void HandleConfigurationChange(ChangeEventArgs e)
+    {
+        configurationError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString();
+        selectedConfigurationIdString = value ?? string.Empty;
+        
+        if (string.IsNullOrEmpty(value))
+        {
+            selectedConfigurationId = null;
+        }
+        else
+        {
+            selectedConfigurationId = Guid.Parse(value);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void HandleOtpTypeChange(ChangeEventArgs e)
+    {
+        otpTypeError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString();
+        selectedOtpType = value ?? string.Empty;
+        
+        // Clear dependent fields when type changes
+        if (selectedOtpType != "0" && selectedOtpType != "2") // Not SMS or Both
+        {
+            phoneNumber = string.Empty;
+            phoneNumberError = string.Empty;
+        }
+        if (selectedOtpType != "1" && selectedOtpType != "2") // Not Email or Both
+        {
+            email = string.Empty;
+            emailError = string.Empty;
+        }
+        
+        StateHasChanged();
+    }
+
+    private void HandleOtpPurposeChange(ChangeEventArgs e)
+    {
+        otpPurposeError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString();
+        selectedOtpPurpose = value ?? string.Empty;
+        
+        StateHasChanged();
+    }
+
+    private async Task GenerateOtp()
+    {
+        try
+        {
+            // Clear previous messages
+            formError = string.Empty;
+            successMessage = string.Empty;
+            verifySuccessMessage = string.Empty;
+            verifyErrorMessage = string.Empty;
+            otpResponse = null;
+            
+            // Validate form
+            if (!ValidateGenerateForm())
+            {
+                return;
+            }
+
+            isGenerating = true;
+            StateHasChanged();
+
+            // Parse OTP type and purpose
+            var otpType = (OtpType)Enum.Parse(typeof(OtpType), selectedOtpType);
+            var otpPurpose = (OtpPurpose)Enum.Parse(typeof(OtpPurpose), selectedOtpPurpose);
+
+            // Create the OTP request
+            var otpRequest = new OtpRequest
+            {
+                ClientCode = ClientIdentifier,
+                PhoneNumber = ShowPhoneNumberField ? phoneNumber.Trim() : null,
+                Email = ShowEmailField ? email.Trim() : null,
+                UserId = Guid.Parse(userId.Trim()),
+                OtpType = otpType,
+                OtpPurpose = otpPurpose
+            };
+
+            Console.WriteLine($"Generating OTP:");
+            Console.WriteLine($"- Configuration: {selectedConfigurationId}");
+            Console.WriteLine($"- Type: {otpType}");
+            Console.WriteLine($"- Purpose: {otpPurpose}");
+            Console.WriteLine($"- User ID: {userId}");
+            Console.WriteLine($"- Phone: {phoneNumber}");
+            Console.WriteLine($"- Email: {email}");
+
+            // Call the GenerateAsync method for OTP
+            var result = await ApiClient.GenerateAsync(otpRequest);
+
+            Console.WriteLine($"OTP Generate Response Success: {result?.Success}");
+            Console.WriteLine($"OTP Generate Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                otpResponse = result.Data;
+                successMessage = result.Message ?? $"OTP generated successfully!";
+                Console.WriteLine("OTP generated successfully");
+                
+                // Notify parent component
+                await OnOtpTested.InvokeAsync();
+            }
+            else
+            {
+                formError = result?.Message ?? "Failed to generate OTP. Please try again.";
+                Console.WriteLine($"OTP generation failed: {formError}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error generating OTP: {ex.Message}";
+            Console.WriteLine($"Exception: {ex}");
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VerifyOtp()
+    {
+        try
+        {
+            // Clear previous verification messages
+            verifySuccessMessage = string.Empty;
+            verifyErrorMessage = string.Empty;
+            verifyOtpError = string.Empty;
+            
+            // Validate OTP code
+            if (string.IsNullOrWhiteSpace(otpCodeToVerify))
+            {
+                verifyOtpError = "Please enter the OTP code to verify";
+                return;
+            }
+
+            if (otpResponse == null)
+            {
+                verifyErrorMessage = "No OTP generated. Please generate an OTP first.";
+                return;
+            }
+
+            isVerifying = true;
+            StateHasChanged();
+
+            // Create the confirm OTP request
+            var confirmRequest = new ConfirmOtpRequest
+            {
+                OtpId = otpResponse.OtpId,
+                OtpCode = otpCodeToVerify.Trim()
+            };
+
+            Console.WriteLine($"Verifying OTP:");
+            Console.WriteLine($"- OTP ID: {otpResponse.OtpId}");
+            Console.WriteLine($"- OTP Code: {otpCodeToVerify}");
+
+            // Call the ConfirmAsync method for OTP verification
+            var result = await ApiClient.ConfirmAsync(confirmRequest);
+
+            Console.WriteLine($"OTP Verify Response Success: {result?.Success}");
+            Console.WriteLine($"OTP Verify Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                if (result.Data.IsValid)
+                {
+                    verifySuccessMessage = result.Data.Message ?? "OTP verified successfully!";
+                    Console.WriteLine("OTP verified successfully");
+                }
+                else
+                {
+                    verifyErrorMessage = result.Data.Message ?? "OTP verification failed!";
+                    Console.WriteLine($"OTP verification failed: {verifyErrorMessage}");
+                }
+            }
+            else
+            {
+                verifyErrorMessage = result?.Message ?? "Failed to verify OTP. Please try again.";
+                Console.WriteLine($"OTP verification failed: {verifyErrorMessage}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            verifyErrorMessage = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            verifyErrorMessage = $"Error verifying OTP: {ex.Message}";
+            Console.WriteLine($"Exception: {ex}");
+        }
+        finally
+        {
+            isVerifying = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool ValidateGenerateForm()
+    {
+        var isValid = true;
+
+        // Validate Configuration
+        if (!selectedConfigurationId.HasValue)
+        {
+            configurationError = "Please select an OTP configuration";
+            isValid = false;
+        }
+        else
+        {
+            configurationError = string.Empty;
+        }
+
+        // Validate OTP Type
+        if (string.IsNullOrWhiteSpace(selectedOtpType))
+        {
+            otpTypeError = "Please select an OTP type";
+            isValid = false;
+        }
+        else
+        {
+            otpTypeError = string.Empty;
+        }
+
+        // Validate OTP Purpose
+        if (string.IsNullOrWhiteSpace(selectedOtpPurpose))
+        {
+            otpPurposeError = "Please select an OTP purpose";
+            isValid = false;
+        }
+        else
+        {
+            otpPurposeError = string.Empty;
+        }
+
+        // Validate User ID
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            userIdError = "Please enter a user ID";
+            isValid = false;
+        }
+        else if (!Guid.TryParse(userId.Trim(), out _))
+        {
+            userIdError = "Please enter a valid GUID format";
+            isValid = false;
+        }
+        else
+        {
+            userIdError = string.Empty;
+        }
+
+        // Validate Phone Number (if required)
+        if (ShowPhoneNumberField && string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            phoneNumberError = "Phone number is required for SMS OTP";
+            isValid = false;
+        }
+        else if (ShowPhoneNumberField && !IsValidPhoneNumber(phoneNumber))
+        {
+            phoneNumberError = "Please enter a valid phone number with country code";
+            isValid = false;
+        }
+        else
+        {
+            phoneNumberError = string.Empty;
+        }
+
+        // Validate Email (if required)
+        if (ShowEmailField && string.IsNullOrWhiteSpace(email))
+        {
+            emailError = "Email address is required for Email OTP";
+            isValid = false;
+        }
+        else if (ShowEmailField && !IsValidEmail(email))
+        {
+            emailError = "Please enter a valid email address";
+            isValid = false;
+        }
+        else
+        {
+            emailError = string.Empty;
+        }
+
+        // Validate Client Identifier
+        if (string.IsNullOrEmpty(ClientIdentifier))
+        {
+            formError = "Client identifier is missing. Please refresh the page and try again.";
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private bool IsValidPhoneNumber(string phone)
+    {
+        // Basic phone number validation
+        return !string.IsNullOrWhiteSpace(phone) && phone.Length >= 10;
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        // Basic email validation
+        return !string.IsNullOrWhiteSpace(email) && email.Contains("@") && email.Contains(".");
+    }
+}

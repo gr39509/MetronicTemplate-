@@ -35,7 +35,7 @@
     @* <script src="//cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"></script> *@
     @* <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script> *@
 
-
+  
 </HeadContent>
 <!-- END HEAD -->
 
@@ -157,58 +157,59 @@
     <div class="clearfix"> </div>
 
 
-   <!-- BEGIN CONTAINER -->
-<div class="page-container">
-    <SideMenu></SideMenu>
+    <!-- BEGIN CONTAINER -->
+    <div class="page-container">
+        <SideMenu></SideMenu>
 
-    <!-- BEGIN CONTENT -->
-    <div class="page-content-wrapper">
-        <!-- BEGIN CONTENT BODY -->
-        <div class="page-content" style="min-height: 90%">
-            <!-- BEGIN PAGE HEADER-->
-            <!-- BEGIN PAGE BAR -->
-            <div class="page-bar">
-                <ul class="page-breadcrumb">
-                    <li>
-                        <a href="/" style="text-decoration:none !important"></a>
-                        <i class="fa fa-circle"></i>
-                    </li>
-                    <li>
-                        <span>Title</span>
-                    </li>
-                    <li>
-                        <span id="pageDetails"></span>
-                    </li>
-                </ul>
-            </div>
+        <!-- BEGIN CONTENT -->
+        <div class="page-content-wrapper">
+            <!-- BEGIN CONTENT BODY -->
+            <div class="page-content" style="min-height: 90%">
+                <!-- BEGIN PAGE HEADER-->
+                <!-- BEGIN PAGE BAR -->
+                <div class="page-bar">
+                    <ul class="page-breadcrumb">
+                        <li>
+                            <a href="/" style="text-decoration:none !important"></a>
+                            <i class="fa fa-circle"></i>
+                        </li>
+                        <li>
+                            <span>Title</span>
+                        </li>
+                        <li>
+                            <span id="pageDetails"></span>
+                        </li>
+                    </ul>
+                </div>
                     
-            <!-- END PAGE BAR -->
-            <!-- BEGIN PAGE TITLE-->
-            <h1 class="page-title">
-                @*<marquee style="color:red;">***Alert!!! This is a Novalotto test platform***</marquee>*@
-                <small></small>
-            </h1>
-            <!-- END PAGE TITLE-->
+                <!-- END PAGE BAR -->
+                <!-- BEGIN PAGE TITLE-->
+                <h1 class="page-title">
+                    @*<marquee style="color:red;">***Alert!!! This is a Novalotto test platform***</marquee>*@
+                    <small></small>
+                </h1>
+                <!-- END PAGE TITLE-->
 
 
 
-            @Body
+                @Body
 
+
+            </div>
+            <!-- END CONTENT BODY -->
+            <script src="_framework/blazor.server.js"></script>
+        </div>
+        <!-- END CONTENT -->
+        <!-- BEGIN QUICK SIDEBAR -->
+        <a href="javascript:;" class="page-quick-sidebar-toggler">
+            <i class="icon-login"></i>
+        </a>
+        <div class="page-quick-sidebar-wrapper" data-close-on-body-click="false" id="activities">
 
         </div>
-        <!-- END CONTENT BODY -->
+        <!-- END QUICK SIDEBAR -->
     </div>
-    <!-- END CONTENT -->
-    <!-- BEGIN QUICK SIDEBAR -->
-    <a href="javascript:;" class="page-quick-sidebar-toggler">
-        <i class="icon-login"></i>
-    </a>
-    <div class="page-quick-sidebar-wrapper" data-close-on-body-click="false" id="activities">
-
-    </div>
-    <!-- END QUICK SIDEBAR -->
-</div>
-<!-- END CONTAINER -->
+    <!-- END CONTAINER -->
 
     <!-- END HEADER & CONTENT DIVIDER -->
 
@@ -225,6 +226,65 @@
     </div>
     <!-- END FOOTER -->
 </div>
+
+
+<script>
+    // Enhanced Blazor circuit recovery
+    (function () {
+        const maxRetries = 3;
+        let retryCount = 0;
+
+        function setupBlazorReconnection() {
+            if (window.Blazor && Blazor.defaultReconnectionHandler) {
+                const originalOnConnectionDown = Blazor.defaultReconnectionHandler.onConnectionDown;
+                const originalOnConnectionUp = Blazor.defaultReconnectionHandler.onConnectionUp;
+                const originalOnConnectionFailed = Blazor.defaultReconnectionHandler._onConnectionFailed;
+
+                Blazor.defaultReconnectionHandler.onConnectionDown = function () {
+                    console.log('🔴 Blazor circuit disconnected');
+                    originalOnConnectionDown.call(this);
+                };
+
+                Blazor.defaultReconnectionHandler.onConnectionUp = function () {
+                    console.log('🟢 Blazor circuit reconnected');
+                    retryCount = 0;
+                    originalOnConnectionUp.call(this);
+                };
+
+                // Enhanced reconnection logic
+                Blazor.defaultReconnectionHandler._onConnectionFailed = function () {
+                    console.log(`🔄 Reconnection attempt ${retryCount + 1}/${maxRetries}`);
+                    
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        setTimeout(() => {
+                            if (Blazor.reconnect) {
+                                Blazor.reconnect();
+                            }
+                        }, 3000 * retryCount); // Exponential backoff
+                    } else {
+                        console.log('❌ Max reconnection attempts reached, reloading page');
+                        window.location.reload();
+                    }
+                };
+            }
+        }
+
+        // Initialize when Blazor is ready
+        if (window.Blazor) {
+            setupBlazorReconnection();
+        } else {
+            window.addEventListener('load', setupBlazorReconnection);
+        }
+
+        // Monitor circuit health
+        setInterval(() => {
+            if (window.Blazor && Blazor.circuit && Blazor.circuit.connected) {
+                console.log('✅ Circuit healthy');
+            }
+        }, 30000);
+    })();
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

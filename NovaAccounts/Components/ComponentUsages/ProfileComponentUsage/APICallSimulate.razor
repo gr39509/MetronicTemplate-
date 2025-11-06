@@ -8,6 +8,15 @@
 @* The image uploads have to be handled by the backend otherwise it will cause redirect problems. *@
 <h3>User Form Example</h3>
 
+<div class="alert @alertClass" role="alert">
+    <h4>Blazor Connection Test</h4>
+    <p>@message</p>
+    <button class="btn btn-sm @testButtonClass" @onclick="TestClick">
+        @buttonText
+    </button>
+    <small class="d-block mt-2">Click count: @clickCount</small>
+</div>
+
 @if (isLoading)
 {
     <div class="text-center my-5">
@@ -75,11 +84,31 @@ else
     private string? loadError = null;
     private string? saveMessage = null;
     private bool saveSuccess = false;
+    
+    
+        
+    private int clickCount = 0;
+    private string message = "Click the button to test Blazor events";
+    private string alertClass = "alert-warning";
+    private string testButtonClass = "btn-warning";
+    private string buttonText = "Test Click Event";
 
     protected override async Task OnInitializedAsync()
     {
         InitializeFormConfiguration();
         await LoadUserData();
+    }
+    
+    private void TestClick()
+    {
+        clickCount++;
+        message = $"✅ SUCCESS! Blazor events are working! Clicked {clickCount} times.";
+        alertClass = "alert-success";
+        testButtonClass = "btn-success";
+        buttonText = "Working! Click again";
+        
+        Console.WriteLine($"🎯 Test button clicked {clickCount} times");
+        StateHasChanged();
     }
 
     private void InitializeFormConfiguration()

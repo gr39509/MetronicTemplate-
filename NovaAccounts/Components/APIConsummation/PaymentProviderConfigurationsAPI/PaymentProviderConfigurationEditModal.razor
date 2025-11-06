@@ -1,4 +1,4 @@
-@* PaymentProviderConfigurationEditModal.razor *@
+
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
@@ -74,9 +74,6 @@
                                 <label class="form-label">Default Currency</label>
                                 <select class="form-control" @bind="defaultCurrency">
                                     <option value="USD">USD - US Dollar</option>
-                                    <option value="EUR">EUR - Euro</option>
-                                    <option value="GBP">GBP - British Pound</option>
-                                    <option value="KES">KES - Kenyan Shilling</option>
                                     <option value="GHS">GHS - Ghanaian Cedi</option>
                                     <option value="NGN">NGN - Nigerian Naira</option>
                                 </select>
@@ -215,7 +212,7 @@
     private string description = string.Empty;
     private bool isDefault = false;
     private bool isActive = true;
-    private string defaultCurrency = "USD";
+    private string defaultCurrency = "GHS";
     private int transactionTimeout = 30;
     private bool enableWebhooks = true;
     private Dictionary<string, string> credentials = new();
@@ -252,12 +249,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
-                Console.WriteLine($"✅ Loaded {availableCredentialTypes.Count} credential types for payment editing");
+                Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types for payment editing");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading credential types: {ex.Message}");
+            Console.WriteLine($"Error loading credential types: {ex.Message}");
         }
         finally
         {
@@ -293,7 +290,7 @@
                             isDefault = configuration.IsDefault;
                             isActive = configuration.IsActive;
 
-                            Console.WriteLine($"✅ Loaded payment configuration: {configuration.Description}");
+                            Console.WriteLine($"Loaded payment configuration: {configuration.Description}");
 
                             // Populate credentials
                             credentials.Clear();
@@ -330,7 +327,7 @@
         catch (Exception ex)
         {
             errorMessage = $"Error loading payment configuration: {ex.Message}";
-            Console.WriteLine($"❌ Error loading payment configuration: {ex.Message}");
+            Console.WriteLine($"Error loading payment configuration: {ex.Message}");
         }
         finally
         {
@@ -363,7 +360,7 @@
                 return;
             }
 
-            Console.WriteLine($"📝 Updating payment configuration: {configuration.PaymentProviderConfigurationId}");
+            Console.WriteLine($"Updating payment configuration: {configuration.PaymentProviderConfigurationId}");
 
             // Create credentials list - include ALL credentials, even empty ones for required fields
             var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
@@ -395,18 +392,18 @@
                 IsDefault = isDefault
             };
 
-            Console.WriteLine("🔄 Calling Update4Async for Payment...");
+            Console.WriteLine("Calling Update4Async for Payment...");
 
             // Call the Update4Async method (for Payment)
             var result = await ApiClient.Update4Async(updateCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 successMessage = result.Message ?? "Payment configuration updated successfully!";
-                Console.WriteLine("✅ Payment configuration updated successfully");
+                Console.WriteLine("Payment configuration updated successfully");
                 
                 // Update local configuration with new data
                 configuration = result.Data;
@@ -421,18 +418,18 @@
             else
             {
                 formError = result?.Message ?? "Failed to update payment configuration. Please try again.";
-                Console.WriteLine($"❌ Payment configuration update failed: {formError}");
+                Console.WriteLine($"Payment configuration update failed: {formError}");
             }
         }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error updating payment configuration: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -535,7 +532,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ PaymentProviderConfigurationEditModal component rendered");
+            Console.WriteLine("PaymentProviderConfigurationEditModal component rendered");
         }
     }
 }

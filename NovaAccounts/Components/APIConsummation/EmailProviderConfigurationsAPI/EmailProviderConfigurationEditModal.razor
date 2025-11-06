@@ -241,12 +241,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
-                Console.WriteLine($"✅ Loaded {availableCredentialTypes.Count} credential types for editing");
+                Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types for editing");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading credential types: {ex.Message}");
+            Console.WriteLine($"Error loading credential types: {ex.Message}");
         }
         finally
         {
@@ -284,7 +284,7 @@
                             isDefault = configuration.IsDefault;
                             isActive = configuration.IsActive;
 
-                            Console.WriteLine($"✅ Loaded configuration - From: '{emailFrom}', FromName: '{emailFromName}'");
+                            Console.WriteLine($"Loaded configuration - From: '{emailFrom}', FromName: '{emailFromName}'");
 
                             // Populate credentials - include existing ones and prepare for new ones
                             credentials.Clear();
@@ -321,7 +321,7 @@
         catch (Exception ex)
         {
             errorMessage = $"Error loading configuration: {ex.Message}";
-            Console.WriteLine($"❌ Error loading configuration: {ex.Message}");
+            Console.WriteLine($"Error loading configuration: {ex.Message}");
         }
         finally
         {
@@ -354,8 +354,8 @@
                 return;
             }
 
-            Console.WriteLine($"📝 Updating email configuration: {configuration.EmailProviderConfigurationId}");
-            Console.WriteLine($"📝 New From Email: '{emailFrom}', New From Name: '{emailFromName}'");
+            Console.WriteLine($"Updating email configuration: {configuration.EmailProviderConfigurationId}");
+            Console.WriteLine($"New From Email: '{emailFrom}', New From Name: '{emailFromName}'");
 
             // Create credentials list - include ALL credentials, even empty ones for required fields
             var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
@@ -389,18 +389,18 @@
                 EmailFromName = string.IsNullOrWhiteSpace(emailFromName) ? null : emailFromName.Trim()
             };
 
-            Console.WriteLine("🔄 Calling Update2Async...");
+            Console.WriteLine("Calling Update2Async...");
 
             // Call the Update2Async method
             var result = await ApiClient.Update2Async(updateCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 successMessage = result.Message ?? "Email configuration updated successfully!";
-                Console.WriteLine("✅ Email configuration updated successfully");
+                Console.WriteLine("Email configuration updated successfully");
                 
                 // Update local configuration with new data
                 configuration = result.Data;
@@ -409,7 +409,7 @@
                 emailFrom = configuration.EmailFrom ?? "";
                 emailFromName = configuration.EmailFromName ?? "";
                 
-                Console.WriteLine($"✅ Updated - From: '{emailFrom}', FromName: '{emailFromName}'");
+                Console.WriteLine($"Updated - From: '{emailFrom}', FromName: '{emailFromName}'");
 
                 // Notify parent component
                 await OnEmailConfigurationUpdated.InvokeAsync(result.Data);
@@ -421,18 +421,18 @@
             else
             {
                 formError = result?.Message ?? "Failed to update email configuration. Please try again.";
-                Console.WriteLine($"❌ Email configuration update failed: {formError}");
+                Console.WriteLine($"Email configuration update failed: {formError}");
             }
         }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error updating email configuration: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -592,7 +592,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ EmailProviderConfigurationEditModal component rendered");
+            Console.WriteLine("EmailProviderConfigurationEditModal component rendered");
         }
     }
 }

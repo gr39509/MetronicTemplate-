@@ -92,34 +92,34 @@
 
                 <div class="col-md-6">
                     <!-- OTP Specific Settings -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">OTP Settings</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Default OTP Length</label>
-                                <select class="form-control" @bind="defaultOtpLength">
-                                    <option value="4">4 digits</option>
-                                    <option value="6" selected>6 digits</option>
-                                    <option value="8">8 digits</option>
-                                </select>
-                                <small class="form-text text-muted">Number of digits in the OTP code</small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Default OTP Expiry (minutes)</label>
-                                <input type="number" class="form-control" @bind="defaultOtpExpiry" min="1" max="60" />
-                                <small class="form-text text-muted">How long the OTP code remains valid</small>
-                            </div>
-
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" @bind="allowAlphanumeric" />
-                                <label class="form-check-label">Allow alphanumeric OTP codes</label>
-                                <small class="form-text text-muted d-block">If enabled, OTP can contain letters and numbers</small>
-                            </div>
-                        </div>
-                    </div>
+                    @* <div class="card"> *@
+                    @*     <div class="card-header"> *@
+                    @*         <h6 class="card-title mb-0">OTP Settings</h6> *@
+                    @*     </div> *@
+                    @*     <div class="card-body"> *@
+                    @*         <div class="mb-3"> *@
+                    @*             <label class="form-label">Default OTP Length</label> *@
+                    @*             <select class="form-control" @bind="defaultOtpLength"> *@
+                    @*                 <option value="4">4 digits</option> *@
+                    @*                 <option value="6" selected>6 digits</option> *@
+                    @*                 <option value="8">8 digits</option> *@
+                    @*             </select> *@
+                    @*             <small class="form-text text-muted">Number of digits in the OTP code</small> *@
+                    @*         </div> *@
+                    @* *@
+                    @*         <div class="mb-3"> *@
+                    @*             <label class="form-label">Default OTP Expiry (minutes)</label> *@
+                    @*             <input type="number" class="form-control" @bind="defaultOtpExpiry" min="1" max="60" /> *@
+                    @*             <small class="form-text text-muted">How long the OTP code remains valid</small> *@
+                    @*         </div> *@
+                    @* *@
+                    @*         <div class="mb-3 form-check"> *@
+                    @*             <input type="checkbox" class="form-check-input" @bind="allowAlphanumeric" /> *@
+                    @*             <label class="form-check-label">Allow alphanumeric OTP codes</label> *@
+                    @*             <small class="form-text text-muted d-block">If enabled, OTP can contain letters and numbers</small> *@
+                    @*         </div> *@
+                    @*     </div> *@
+                    @* </div> *@
 
                     <!-- Credentials Section -->
                     <div class="card mt-3">
@@ -245,12 +245,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 clients = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {clients.Count} clients for OTP configuration");
+                Console.WriteLine($"Loaded {clients.Count} clients for OTP configuration");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
+            Console.WriteLine($"Error loading clients: {ex.Message}");
         }
         finally
         {
@@ -271,12 +271,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 otpProviders = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {otpProviders.Count} OTP providers");
+                Console.WriteLine($"Loaded {otpProviders.Count} OTP providers");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading OTP providers: {ex.Message}");
+            Console.WriteLine($"Error loading OTP providers: {ex.Message}");
         }
         finally
         {
@@ -293,12 +293,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
-                Console.WriteLine($"✅ Loaded {availableCredentialTypes.Count} credential types for OTP");
+                Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types for OTP");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading credential types: {ex.Message}");
+            Console.WriteLine($"Error loading credential types: {ex.Message}");
         }
     }
 
@@ -439,7 +439,7 @@
                 return;
             }
 
-            Console.WriteLine($"📝 Creating OTP configuration for client: {selectedClientId}");
+            Console.WriteLine($"Creating OTP configuration for client: {selectedClientId}");
 
             // Get client identifier
             var client = clients.FirstOrDefault(c => c.ClientId == selectedClientId);
@@ -467,22 +467,22 @@
                 ProviderId = selectedProviderId.Value,
                 ClientProviderCredentials = clientProviderCredentials,
                 IsDefault = isDefault
-                // Note: OTP-specific settings like length and expiry might need to be handled differently
-                // depending on your API requirements
+               
+                
             };
 
-            Console.WriteLine("🔄 Calling Create3Async for OTP...");
+            Console.WriteLine("Calling Create3Async for OTP...");
 
             // Call the Create3Async method (for OTP)
             var result = await ApiClient.Create3Async(createCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 successMessage = result.Message ?? "OTP configuration created successfully!";
-                Console.WriteLine("✅ OTP configuration created successfully");
+                Console.WriteLine("OTP configuration created successfully");
                 
                 // Clear form after successful creation
                 ResetForm();
@@ -496,18 +496,18 @@
             else
             {
                 formError = result?.Message ?? "Failed to create OTP configuration. Please try again.";
-                Console.WriteLine($"❌ OTP configuration creation failed: {formError}");
+                Console.WriteLine($"OTP configuration creation failed: {formError}");
             }
         }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error creating OTP configuration: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -576,7 +576,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ OtpProviderConfigurationCreateModal component rendered");
+            Console.WriteLine("OtpProviderConfigurationCreateModal component rendered");
         }
     }
 }

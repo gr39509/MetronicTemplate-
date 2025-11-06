@@ -1,3 +1,30 @@
+@page "/clienttest/item/{id}"
+@rendermode InteractiveServer
+
+<h3>Client Test Page: </h3>
+<button class="btn btn-primary" @onclick="TestClick">Click me</button>
+<p>Clicked @clickCount times</p>
+
+@code {
+    [Parameter] public string? id { get; set; }
+
+    private int clickCount = 0;
+
+    private void TestClick()
+    {
+        clickCount++;
+    }
+
+    protected override void OnInitialized()
+    {
+        // Use ?? to safely access the id for the log
+        Console.WriteLine("Navigated to this page with id=");
+    }
+}
+
+
+
+
 @* @page "/testclient" *@
 @* @using Microsoft.AspNetCore.Authorization *@
 @* @using NovaAccounts.SharedModels.DataFields *@

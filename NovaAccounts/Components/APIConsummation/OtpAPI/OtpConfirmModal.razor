@@ -181,7 +181,7 @@
                 return;
             }
 
-            Console.WriteLine($"✅ Confirming OTP: {otpId}");
+            Console.WriteLine($"Confirming OTP: {otpId}");
 
             // Create the confirmation request
             var confirmRequest = new ConfirmOtpRequest
@@ -190,19 +190,19 @@
                 OtpCode = otpCode.Trim()
             };
 
-            Console.WriteLine("🔄 Calling ConfirmAsync...");
+            Console.WriteLine("Calling ConfirmAsync...");
 
             // Call the ConfirmAsync method
             var result = await ApiClient.ConfirmAsync(confirmRequest);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 confirmationResult = result.Data;
                 successMessage = result.Message ?? "OTP confirmation completed!";
-                Console.WriteLine("✅ OTP confirmed successfully");
+                Console.WriteLine("OTP confirmed successfully");
                 
                 // Notify parent component
                 await OnOtpConfirmed.InvokeAsync(confirmationResult);
@@ -214,24 +214,24 @@
             else
             {
                 formError = result?.Message ?? "Failed to confirm OTP. Please try again.";
-                Console.WriteLine($"❌ OTP confirmation failed: {formError}");
+                Console.WriteLine($"OTP confirmation failed: {formError}");
             }
         }
         // catch (ApiException<ApiErrorResponse> apiEx)
         // {
         //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
-        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
-        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        //     Console.WriteLine($"API Exception Details: {apiEx}");
+        //     Console.WriteLine($"Status Code: {apiEx.StatusCode}");
         // }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error confirming OTP: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();

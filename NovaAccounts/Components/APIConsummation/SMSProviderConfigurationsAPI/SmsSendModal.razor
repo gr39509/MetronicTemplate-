@@ -1,0 +1,499 @@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="smsSendModal"
+               Title="Send SMS Message"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Send SMS"
+               OnSave="@SendSms"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel"
+               SaveButtonDisabled="@isSending">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading SMS configurations...</p>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label text-primary">This is for testing the SMS Configuration.</label>
+                    <div class="mb-3">
+                        <label class="form-label">SMS Configuration *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(configurationError) ? "" : "is-invalid")"
+                                value="@selectedConfigurationIdString"
+                                @onchange="HandleConfigurationChange">
+                            <option value="">-- Select SMS Configuration --</option>
+                            @foreach (var config in smsConfigurations)
+                            {
+                                <option value="@config.SmsProviderConfigurationId">@config.Provider.Name - @config.Description</option>
+                            }
+                        </select>
+                        @if (!string.IsNullOrEmpty(configurationError))
+                        {
+                            <div class="invalid-feedback">@configurationError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Sender ID *</label>
+                        <input class="form-control"
+                               @bind="senderId"
+                               placeholder="sender name (max 11 chars)"
+                               maxlength="11"/>
+                        <small class="form-text text-muted">Leave empty to use provider default</small>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Phone Numbers *</label>
+                        <textarea class="form-control @(string.IsNullOrEmpty(phoneNumbersError) ? "" : "is-invalid")" 
+                                  @bind="phoneNumbersInput" 
+                                  rows="3"
+                                  placeholder="Enter phone numbers, one per line&#10;Example:&#10;+1234567890&#10;+0987654321"></textarea>
+                        @if (!string.IsNullOrEmpty(phoneNumbersError))
+                        {
+                            <div class="invalid-feedback">@phoneNumbersError</div>
+                        }
+                        <small class="form-text text-muted">Enter one phone number per line. Include country code.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="mb-3">
+                        <label class="form-label">Message *</label>
+                        <textarea class="form-control @(string.IsNullOrEmpty(messageError) ? "" : "is-invalid")" 
+                                  @bind="message" 
+                                  rows="5"
+                                  placeholder="Enter your SMS message here..."
+                                  maxlength="1600"></textarea>
+                        @if (!string.IsNullOrEmpty(messageError))
+                        {
+                            <div class="invalid-feedback">@messageError</div>
+                        }
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="form-text text-muted">
+                                Message length: <span class="@(message.Length > 160 ? "text-warning" : "text-muted")">@message.Length</span> characters
+                                @if (message.Length > 160)
+                                {
+                                    <span class="text-warning"> (Will be split into multiple messages)</span>
+                                }
+                            </small>
+                            <small class="form-text text-muted">Max: 1600 characters</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (isSending)
+            {
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm mr-2" role="status"></div>
+                        <span>Sending SMS messages...</span>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3">
+                    <strong>Success!</strong> @successMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger mt-3">
+                    <strong>Error!</strong> @formError
+                </div>
+            }
+
+            <!-- Preview Section -->
+            @if (!string.IsNullOrEmpty(message) && phoneNumbersList.Any())
+            {
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Preview</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>To:</strong> @phoneNumbersList.Count phone number(s)</p>
+                        <p><strong>Message:</strong> @message</p>
+                        <p><strong>Estimated segments:</strong> @CalculateMessageSegments()</p>
+                    </div>
+                </div>
+            }
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal smsSendModal = null!;
+    
+    private List<SMSClientProviderConfigurationViewModel> smsConfigurations = new();
+    private string selectedConfigurationIdString = string.Empty;
+    private Guid? selectedConfigurationId = null;
+    private string senderId = string.Empty;
+    private string phoneNumbersInput = string.Empty;
+    private string message = string.Empty;
+    
+    private List<string> phoneNumbersList = new();
+    
+    private string configurationError = string.Empty;
+    private string phoneNumbersError = string.Empty;
+    private string messageError = string.Empty;
+    private string formError = string.Empty;
+    private string successMessage = string.Empty;
+    
+    private bool isLoading = false;
+    private bool isSending = false;
+
+    [Parameter]
+    public string ClientIdentifier { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnSmsSent { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Console.WriteLine($"SmsSendModal received ClientIdentifier: {ClientIdentifier}");
+    }
+
+    private async Task LoadSmsConfigurations()
+    {
+        try
+        {
+            isLoading = true;
+            formError = string.Empty;
+            StateHasChanged();
+
+            if (string.IsNullOrEmpty(ClientIdentifier))
+            {
+                formError = "Client identifier is required. Please ensure the parent component is properly loaded.";
+                Console.WriteLine("ClientIdentifier is null or empty");
+                return;
+            }
+
+            Console.WriteLine($"Loading SMS configurations for client: {ClientIdentifier}");
+
+            var result = await ApiClient.ConfigurationsPerClient4Async(ClientIdentifier);
+            if (result?.Success == true && result.Data != null)
+            {
+                smsConfigurations = result.Data
+                    .Where(c => c.IsActive)
+                    .OrderByDescending(c => c.IsDefault)
+                    .ThenBy(c => c.ProviderName)
+                    .ToList();
+                
+                Console.WriteLine($"Loaded {smsConfigurations.Count} SMS configurations for sending");
+                
+                // Auto-select the default configuration if available
+                var defaultConfig = smsConfigurations.FirstOrDefault(c => c.IsDefault);
+                if (defaultConfig != null)
+                {
+                    selectedConfigurationId = defaultConfig.SmsProviderConfigurationId;
+                    selectedConfigurationIdString = defaultConfig.SmsProviderConfigurationId.ToString();
+                    Console.WriteLine($"Auto-selected default configuration: {defaultConfig.Description}");
+                }
+            }
+            else
+            {
+                formError = result?.Message ?? "No active SMS configurations found for this client.";
+                smsConfigurations = new List<SMSClientProviderConfigurationViewModel>();
+                Console.WriteLine($"No SMS configurations loaded: {formError}");
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error loading SMS configurations: {ex.Message}";
+            Console.WriteLine($"Error loading SMS configurations: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+        public async Task OpenModalWithConfiguration(SMSClientProviderConfigurationViewModel config)
+    {
+        // Reset form
+        selectedConfigurationIdString = string.Empty;
+        selectedConfigurationId = null;
+        senderId = string.Empty;
+        phoneNumbersInput = string.Empty;
+        message = string.Empty;
+        phoneNumbersList = new List<string>();
+        
+        configurationError = string.Empty;
+        phoneNumbersError = string.Empty;
+        messageError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        isSending = false;
+
+        Console.WriteLine($"Opening SMS Send Modal for client: {ClientIdentifier}");
+        Console.WriteLine($"Pre-selecting configuration: {config.Description} (ID: {config.SmsProviderConfigurationId})");
+
+        // Load configurations first
+        await LoadSmsConfigurations();
+
+        // Pre-select the specific configuration
+        if (smsConfigurations.Any(c => c.SmsProviderConfigurationId == config.SmsProviderConfigurationId))
+        {
+            selectedConfigurationId = config.SmsProviderConfigurationId;
+            selectedConfigurationIdString = config.SmsProviderConfigurationId.ToString();
+            Console.WriteLine($"Successfully pre-selected configuration: {config.Provider.Name} - {config.Description}");
+        }
+        else
+        {
+            Console.WriteLine($"Configuration {config.SmsProviderConfigurationId} not found in loaded configurations");
+            // Fallback: try to select by provider name
+            var similarConfig = smsConfigurations.FirstOrDefault(c => 
+                c.Provider.Name == config.Provider.Name || 
+                c.SmsProviderConfigurationId == config.SmsProviderConfigurationId);
+            
+            if (similarConfig != null)
+            {
+                selectedConfigurationId = similarConfig.SmsProviderConfigurationId;
+                selectedConfigurationIdString = similarConfig.SmsProviderConfigurationId.ToString();
+                Console.WriteLine($"Selected similar configuration: {similarConfig.Provider.Name} - {similarConfig.Description}");
+            }
+        }
+
+        if (smsSendModal != null)
+        {
+            await smsSendModal.OpenModal();
+        }
+        else
+        {
+            Console.WriteLine("smsSendModal is null");
+        }
+    }
+
+    // public async Task OpenModal()
+    // {
+    //     // Reset form
+    //     selectedConfigurationIdString = string.Empty;
+    //     selectedConfigurationId = null;
+    //     senderId = string.Empty;
+    //     phoneNumbersInput = string.Empty;
+    //     message = string.Empty;
+    //     phoneNumbersList = new List<string>();
+    //     
+    //     configurationError = string.Empty;
+    //     phoneNumbersError = string.Empty;
+    //     messageError = string.Empty;
+    //     formError = string.Empty;
+    //     successMessage = string.Empty;
+    //     
+    //     isSending = false;
+    //
+    //     Console.WriteLine($"Opening SMS Send Modal for client: {ClientIdentifier}");
+    //
+    //     // Load configurations
+    //     await LoadSmsConfigurations();
+    //
+    //     if (smsSendModal != null)
+    //     {
+    //         await smsSendModal.OpenModal();
+    //     }
+    //     else
+    //     {
+    //         Console.WriteLine("smsSendModal is null");
+    //     }
+    // }
+
+    private void HandleConfigurationChange(ChangeEventArgs e)
+    {
+        configurationError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString();
+        selectedConfigurationIdString = value ?? string.Empty;
+        
+        if (string.IsNullOrEmpty(value))
+        {
+            selectedConfigurationId = null;
+        }
+        else
+        {
+            selectedConfigurationId = Guid.Parse(value);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void ParsePhoneNumbers()
+    {
+        phoneNumbersList = phoneNumbersInput
+            .Split(new[] { '\n', '\r', ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Trim())
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct()
+            .ToList();
+    }
+
+    private int CalculateMessageSegments()
+    {
+        if (string.IsNullOrEmpty(message)) return 0;
+        
+        // GSM7 standard: 160 chars per segment
+        int segmentSize = 160;
+        return (int)Math.Ceiling((double)message.Length / segmentSize);
+    }
+
+    private async Task SendSms()
+    {
+        try
+        {
+            // Clear previous messages
+            formError = string.Empty;
+            successMessage = string.Empty;
+            
+            // Validate form
+            if (!ValidateForm())
+            {
+                return;
+            }
+
+            isSending = true;
+            StateHasChanged();
+
+            // Parse phone numbers
+            ParsePhoneNumbers();
+
+            // Create the send request
+            var sendRequest = new SendSmsRequest
+            {
+                SmsClientProviderConfigurationId = selectedConfigurationId,
+                Sender = string.IsNullOrWhiteSpace(senderId) ? null : senderId.Trim(),
+                Message = message.Trim(),
+                PhoneNumbers = phoneNumbersList
+            };
+
+            Console.WriteLine($"Sending SMS to {phoneNumbersList.Count} numbers using configuration: {selectedConfigurationId}");
+            Console.WriteLine($"Using client identifier: {ClientIdentifier}");
+
+            // Call the Send2Async method
+            var result = await ApiClient.Send2Async(ClientIdentifier, sendRequest);
+
+            Console.WriteLine($"SMS Send Response Success: {result?.Success}");
+            Console.WriteLine($"SMS Send Message: {result?.Message}");
+
+            if (result?.Success == true)
+            {
+                successMessage = result.Message ?? $"SMS sent successfully to {phoneNumbersList.Count} number(s)!";
+                Console.WriteLine("SMS sent successfully");
+                
+                // Notify parent component
+                await OnSmsSent.InvokeAsync();
+                
+                // Close modal after a short delay to show success message
+                await Task.Delay(2000);
+                await smsSendModal.CloseModal();
+            }
+            else
+            {
+                formError = result?.Message ?? "Failed to send SMS. Please try again.";
+                Console.WriteLine($"SMS send failed: {formError}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error sending SMS: {ex.Message}";
+            Console.WriteLine($"Exception: {ex}");
+        }
+        finally
+        {
+            isSending = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Configuration
+        if (!selectedConfigurationId.HasValue)
+        {
+            configurationError = "Please select an SMS configuration";
+            isValid = false;
+        }
+        else
+        {
+            configurationError = string.Empty;
+        }
+
+        // Validate Phone Numbers
+        if (string.IsNullOrWhiteSpace(phoneNumbersInput))
+        {
+            phoneNumbersError = "Please enter at least one phone number";
+            isValid = false;
+        }
+        else
+        {
+            ParsePhoneNumbers();
+            if (!phoneNumbersList.Any())
+            {
+                phoneNumbersError = "Please enter valid phone numbers";
+                isValid = false;
+            }
+            else
+            {
+                phoneNumbersError = string.Empty;
+            }
+        }
+
+        // Validate Message
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            messageError = "Please enter a message";
+            isValid = false;
+        }
+        else if (message.Length > 1600)
+        {
+            messageError = "Message cannot exceed 1600 characters";
+            isValid = false;
+        }
+        else
+        {
+            messageError = string.Empty;
+        }
+
+        // Validate Client Identifier
+        if (string.IsNullOrEmpty(ClientIdentifier))
+        {
+            formError = "Client identifier is missing. Please refresh the page and try again.";
+            isValid = false;
+        }
+
+        return isValid;
+    }
+}

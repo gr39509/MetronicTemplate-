@@ -736,49 +736,210 @@
         }
     }
 
-    private async Task LoadPaymentConfigurations(string clientIdentifier)
+   private async Task LoadPaymentConfigurations(string clientIdentifier)
+{
+    try
     {
+        isLoadingPaymentConfigs = true;
+        StateHasChanged();
+
+        Console.WriteLine($"🔍 Loading payment configurations for: {clientIdentifier}");
+
+        // First try: Use the generated client directly
         try
         {
-            isLoadingPaymentConfigs = true;
-            StateHasChanged();
-
-            Console.WriteLine($"🔍 Loading payment configurations for client: {clientIdentifier}");
-
             var result = await ApiClient.ConfigurationsPerClient3Async(clientIdentifier);
-
             if (result?.Success == true && result.Data != null)
             {
-                paymentConfigurations = result.Data
-                    .Where(c => c.IsActive)
-                    .OrderByDescending(c => c.IsDefault)
-                    .ThenBy(c => c.ProviderName)
-                    .ToList();
-                
-                Console.WriteLine($"✅ Loaded {paymentConfigurations.Count} payment configurations");
+                paymentConfigurations = result.Data.ToList();
+                Console.WriteLine($"✅ Generated client worked: {paymentConfigurations.Count} configs");
+                return;
             }
             else
             {
-                Console.WriteLine($"⚠️ No payment configurations loaded: {result?.Message}");
+                Console.WriteLine($"⚠️ Generated client returned no data: {result?.Message}");
+            }
+        }
+        catch (Exception apiEx)
+        {
+            Console.WriteLine($"⚠️ Generated client failed: {apiEx.Message}");
+        }
+
+        // Second try: Use the ApiClient's HttpClient with manual JSON handling
+        Console.WriteLine("🔄 Falling back to manual JSON handling...");
+        await LoadPaymentConfigurationsWithApiClientHttpClient(clientIdentifier);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ All payment config loading failed: {ex.Message}");
+        paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+    }
+    finally
+    {
+        isLoadingPaymentConfigs = false;
+        StateHasChanged();
+    }
+}
+
+private async Task LoadPaymentConfigurationsWithApiClientHttpClient(string clientIdentifier)
+{
+    try
+    {
+        // Use reflection to access the private HttpClient from ApiClient
+        var httpClientField = typeof(ApiClient).GetField("_httpClient", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        if (httpClientField?.GetValue(ApiClient) is HttpClient httpClient)
+        {
+            Console.WriteLine("✅ Retrieved HttpClient from ApiClient");
+            
+            var url = $"api/PaymentProviderConfiguration/ConfigurationsPerClient?clientCode={Uri.EscapeDataString(clientIdentifier)}";
+            Console.WriteLine($"🔍 Making request to: {url}");
+
+            var response = await httpClient.GetAsync(url);
+            var json = await response.Content.ReadAsStringAsync();
+            
+            Console.WriteLine($"✅ Response status: {response.StatusCode}");
+            Console.WriteLine($"📄 Response length: {json.Length} chars");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await ProcessPaymentConfigResponse(json);
+            }
+            else
+            {
+                Console.WriteLine($"❌ HTTP error: {response.StatusCode}");
                 paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
             }
         }
-        catch (ApiException ex)
+        else
         {
-            Console.WriteLine($"⚠️ API Exception loading payment configurations: {ex.Message}");
+            Console.WriteLine("❌ Could not access ApiClient's HttpClient");
             paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"⚠️ Error loading payment configurations: {ex.Message}");
-            paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
-        }
-        finally
-        {
-            isLoadingPaymentConfigs = false;
-            StateHasChanged();
         }
     }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error using ApiClient's HttpClient: {ex.Message}");
+        paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+    }
+}
+
+private async Task ProcessPaymentConfigResponse(string json)
+{
+    try
+    {
+        // Use very relaxed JSON settings
+        var settings = new Newtonsoft.Json.JsonSerializerSettings
+        {
+            NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+            MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Ignore,
+            DateParseHandling = Newtonsoft.Json.DateParseHandling.None,
+            DateFormatHandling = Newtonsoft.Json.DateFormatHandling.IsoDateFormat,
+            FloatParseHandling = Newtonsoft.Json.FloatParseHandling.Decimal
+        };
+
+        // First, try to deserialize with relaxed settings
+        try
+        {
+            var result = Newtonsoft.Json.JsonConvert.DeserializeObject<PaymentClientProviderConfigurationViewModelListApiResult>(json, settings);
+            if (result?.Success == true && result.Data != null)
+            {
+                paymentConfigurations = result.Data.ToList();
+                Console.WriteLine($"✅ Relaxed deserialization worked: {paymentConfigurations.Count} configs");
+                return;
+            }
+        }
+        catch (Exception ex1)
+        {
+            Console.WriteLine($"⚠️ Relaxed deserialization failed: {ex1.Message}");
+        }
+
+        // If that fails, use custom model
+        Console.WriteLine("🔄 Trying custom model deserialization...");
+        await ProcessWithCustomModel(json);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Error processing payment config response: {ex.Message}");
+        paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+    }
+}
+
+private async Task ProcessWithCustomModel(string json)
+{
+    try
+    {
+        var settings = new Newtonsoft.Json.JsonSerializerSettings
+        {
+            NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+            MissingMemberHandling = Newtonsoft.Json.MissingMemberHandling.Ignore
+        };
+
+        var customResult = Newtonsoft.Json.JsonConvert.DeserializeObject<CustomPaymentApiResult>(json, settings);
+        
+        if (customResult?.Success == true && customResult.Data != null)
+        {
+            paymentConfigurations = customResult.Data.Select(custom => new PaymentClientProviderConfigurationViewModel
+            {
+                PaymentProviderConfigurationId = custom.PaymentProviderConfigurationId,
+                IsDefault = custom.IsDefault,
+                ClientProviderConfigurationId = custom.ClientProviderConfigurationId,
+                Description = custom.Description ?? string.Empty,
+                ClientIdentifier = custom.ClientIdentifier ?? string.Empty,
+                ProviderId = custom.ProviderId,
+                ProviderName = custom.ProviderName,
+                Url = custom.Url,
+                // Create a default provider since the API returns null
+                Provider = new ProviderViewModel
+                {
+                    ProviderId = custom.ProviderId != Guid.Empty ? custom.ProviderId : Guid.NewGuid(),
+                    Name = custom.ProviderName ?? "Payment Provider",
+                    Description = "Payment service provider",
+                    IsActive = true,
+                    ProviderTypeName = "Payment",
+                    Url = custom.Url,
+                    CreatedAt = DateTimeOffset.Now,
+                    ProviderType = new ProviderTypeViewModel
+                    {
+                        ProviderTypeName = "Payment",
+                        DisplayName = "Payment Provider", 
+                        Active = true
+                    }
+                },
+                IsActive = custom.IsActive,
+                CreatedAt = custom.CreatedAt,
+                CreatedBy = custom.CreatedBy ?? "SYSTEM",
+                UpdatedAt = custom.UpdatedAt,
+                UpdatedBy = custom.UpdatedBy,
+                ClientProviderCredentials = custom.ClientProviderCredentials?.Select(cred => new ClientProviderCredentialViewModel
+                {
+                    ClientProviderCredentialId = cred.ClientProviderCredentialId,
+                    ClientProviderConfigurationId = cred.ClientProviderConfigurationId,
+                    CredentialType = new CredentialTypeViewModel
+                    {
+                        CredentialTypeName = cred.CredentialType?.CredentialTypeName ?? "UNKNOWN",
+                        DisplayName = cred.CredentialType?.DisplayName ?? "Unknown Credential",
+                        Active = cred.CredentialType?.Active ?? false
+                    },
+                    CredentialKey = cred.CredentialKey ?? string.Empty
+                }).ToList() ?? new List<ClientProviderCredentialViewModel>()
+            }).ToList();
+
+            Console.WriteLine($"✅ Custom model loaded {paymentConfigurations.Count} configurations");
+        }
+        else
+        {
+            Console.WriteLine("❌ Custom model deserialization failed");
+            paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Custom model processing failed: {ex.Message}");
+        paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+    }
+}
 
     // Action methods for all configuration types
     private async Task OpenCreateEmailConfiguration()

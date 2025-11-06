@@ -65,34 +65,34 @@
 
                 <div class="col-md-6">
                     <!-- OTP Specific Settings -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">OTP Settings</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Default OTP Length</label>
-                                <select class="form-control" @bind="defaultOtpLength">
-                                    <option value="4">4 digits</option>
-                                    <option value="6">6 digits</option>
-                                    <option value="8">8 digits</option>
-                                </select>
-                                <small class="form-text text-muted">Number of digits in the OTP code</small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Default OTP Expiry (minutes)</label>
-                                <input type="number" class="form-control" @bind="defaultOtpExpiry" min="1" max="60" />
-                                <small class="form-text text-muted">How long the OTP code remains valid</small>
-                            </div>
-
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" @bind="allowAlphanumeric" />
-                                <label class="form-check-label">Allow alphanumeric OTP codes</label>
-                                <small class="form-text text-muted d-block">If enabled, OTP can contain letters and numbers</small>
-                            </div>
-                        </div>
-                    </div>
+                    @* <div class="card"> *@
+                    @*     <div class="card-header"> *@
+                    @*         <h6 class="card-title mb-0">OTP Settings</h6> *@
+                    @*     </div> *@
+                    @*     <div class="card-body"> *@
+                    @*         <div class="mb-3"> *@
+                    @*             <label class="form-label">Default OTP Length</label> *@
+                    @*             <select class="form-control" @bind="defaultOtpLength"> *@
+                    @*                 <option value="4">4 digits</option> *@
+                    @*                 <option value="6">6 digits</option> *@
+                    @*                 <option value="8">8 digits</option> *@
+                    @*             </select> *@
+                    @*             <small class="form-text text-muted">Number of digits in the OTP code</small> *@
+                    @*         </div> *@
+                    @* *@
+                    @*         <div class="mb-3"> *@
+                    @*             <label class="form-label">Default OTP Expiry (minutes)</label> *@
+                    @*             <input type="number" class="form-control" @bind="defaultOtpExpiry" min="1" max="60" /> *@
+                    @*             <small class="form-text text-muted">How long the OTP code remains valid</small> *@
+                    @*         </div> *@
+                    @* *@
+                    @*         <div class="mb-3 form-check"> *@
+                    @*             <input type="checkbox" class="form-check-input" @bind="allowAlphanumeric" /> *@
+                    @*             <label class="form-check-label">Allow alphanumeric OTP codes</label> *@
+                    @*             <small class="form-text text-muted d-block">If enabled, OTP can contain letters and numbers</small> *@
+                    @*         </div> *@
+                    @*     </div> *@
+                    @* </div> *@
 
                     <!-- Status Toggle -->
                     <div class="mb-3 form-check">
@@ -249,12 +249,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
-                Console.WriteLine($"✅ Loaded {availableCredentialTypes.Count} credential types for OTP editing");
+                Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types for OTP editing");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading credential types: {ex.Message}");
+            Console.WriteLine($"Error loading credential types: {ex.Message}");
         }
         finally
         {
@@ -263,177 +263,257 @@
         }
     }
 
-    private async Task LoadConfiguration(Guid configId)
+   private async Task LoadConfiguration(Guid configId)
+{
+    try
     {
-        try
+        isLoading = true;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        Console.WriteLine($"🔍 Loading OTP configuration with ID: {configId}");
+
+        // Get all clients first to find which client this configuration belongs to
+        var clientsResult = await ApiClient.AllAsync();
+        if (clientsResult?.Success == true && clientsResult.Data != null)
         {
-            isLoading = true;
-            errorMessage = string.Empty;
-            StateHasChanged();
-
-            // Get all clients first to find which client this configuration belongs to
-            var clientsResult = await ApiClient.AllAsync();
-            if (clientsResult?.Success == true && clientsResult.Data != null)
+            Console.WriteLine($"Found {clientsResult.Data.Count} clients");
+            
+            foreach (var client in clientsResult.Data)
             {
-                foreach (var client in clientsResult.Data)
+                Console.WriteLine($"Checking client: {client.Identifier} - {client.Name}");
+                
+                var configsResult = await ApiClient.ConfigurationsPerClient2Async(client.Identifier);
+                if (configsResult?.Success == true && configsResult.Data != null)
                 {
-                    var configsResult = await ApiClient.ConfigurationsPerClient2Async(client.Identifier);
-                    if (configsResult?.Success == true && configsResult.Data != null)
+                    Console.WriteLine($"Found {configsResult.Data.Count} OTP configurations for client {client.Identifier}");
+                    
+                    var config = configsResult.Data.FirstOrDefault(c => c.ClientProviderConfigurationId == configId);
+                    if (config != null)
                     {
-                        var config = configsResult.Data.FirstOrDefault(c => c.ClientProviderConfigurationId == configId);
-                        if (config != null)
+                        configuration = config;
+                        
+                        Console.WriteLine($" SUCCESS: Found OTP configuration:");
+                        Console.WriteLine($"   - Config ID: {config.ClientProviderConfigurationId}");
+                        Console.WriteLine($"   - Description: {config.Description}");
+                        Console.WriteLine($"   - Provider: {config.ProviderName}");
+                        Console.WriteLine($"   - Client: {config.ClientIdentifier}");
+                        Console.WriteLine($"   - IsDefault: {config.IsDefault}");
+                        Console.WriteLine($"   - IsActive: {config.IsActive}");
+                        Console.WriteLine($"   - Credentials Count: {config.ClientProviderCredentials?.Count ?? 0}");
+
+                        // Populate form fields
+                        description = configuration.Description ?? "";
+                        isDefault = configuration.IsDefault;
+                        isActive = configuration.IsActive;
+
+                        // Populate credentials
+                        credentials.Clear();
+                        if (configuration.ClientProviderCredentials != null)
                         {
-                            configuration = config;
-                            
-                            // Populate form fields
-                            description = configuration.Description ?? "";
-                            isDefault = configuration.IsDefault;
-                            isActive = configuration.IsActive;
-
-                            Console.WriteLine($"✅ Loaded OTP configuration: {configuration.Description}");
-
-                            // Populate credentials
-                            credentials.Clear();
-                            if (configuration.ClientProviderCredentials != null)
+                            foreach (var cred in configuration.ClientProviderCredentials)
                             {
-                                foreach (var cred in configuration.ClientProviderCredentials)
+                                if (cred.CredentialType != null && !string.IsNullOrEmpty(cred.CredentialKey))
                                 {
-                                    if (cred.CredentialType != null && !string.IsNullOrEmpty(cred.CredentialKey))
-                                    {
-                                        credentials[cred.CredentialType.CredentialTypeName] = cred.CredentialKey;
-                                    }
+                                    credentials[cred.CredentialType.CredentialTypeName] = cred.CredentialKey;
+                                    Console.WriteLine($"Found credential: {cred.CredentialType.CredentialTypeName}");
                                 }
                             }
-
-                            // Ensure we have entries for all available credential types
-                            foreach (var credType in availableCredentialTypes)
-                            {
-                                if (!credentials.ContainsKey(credType.CredentialTypeName))
-                                {
-                                    credentials[credType.CredentialTypeName] = string.Empty;
-                                }
-                            }
-                            return;
                         }
+
+                        // Ensure we have entries for all available credential types
+                        foreach (var credType in availableCredentialTypes)
+                        {
+                            if (!credentials.ContainsKey(credType.CredentialTypeName))
+                            {
+                                credentials[credType.CredentialTypeName] = string.Empty;
+                            }
+                        }
+                        
+                        Console.WriteLine($"Total credentials loaded: {credentials.Count}");
+                        return;
                     }
                 }
-                errorMessage = "OTP configuration not found in any client.";
-            }
-            else
-            {
-                errorMessage = "Failed to load clients.";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error loading OTP configuration: {ex.Message}";
-            Console.WriteLine($"❌ Error loading OTP configuration: {ex.Message}");
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task UpdateOtpConfiguration()
-    {
-        try
-        {
-            // Clear previous messages
-            formError = string.Empty;
-            successMessage = string.Empty;
-            credentialErrors.Clear();
-            
-            // Validate all fields
-            var isValid = ValidateForm();
-            
-            if (!isValid)
-            {
-                formError = "Please fix the validation errors before updating the configuration.";
-                return;
-            }
-
-            if (configuration == null)
-            {
-                formError = "Configuration data is not loaded.";
-                return;
-            }
-
-            Console.WriteLine($"📝 Updating OTP configuration: {configuration.ClientProviderConfigurationId}");
-
-            // Create credentials list - include ALL credentials, even empty ones for required fields
-            var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
-            
-            foreach (var credType in availableCredentialTypes)
-            {
-                var credentialValue = credentials.ContainsKey(credType.CredentialTypeName) 
-                    ? credentials[credType.CredentialTypeName] 
-                    : string.Empty;
-
-                // Only add if there's a value (empty values will not update existing credentials)
-                if (!string.IsNullOrWhiteSpace(credentialValue))
+                else
                 {
-                    clientProviderCredentials.Add(new CreateClientProviderCredentialDto
-                    {
-                        CredentialTypeName = credType.CredentialTypeName,
-                        CredentialKey = credentialValue
-                    });
+                    Console.WriteLine($"Failed to load configurations for client {client.Identifier}");
                 }
             }
-
-            // Create the update DTO
-            var updateCommand = new UpdateOtpProviderConfigurationDto
-            {
-                Description = description.Trim(),
-                ProviderId = configuration.ProviderId,
-                ClientProviderCredentials = clientProviderCredentials,
-                OtpClientProviderConfigurationId = configuration.ClientProviderConfigurationId,
-                IsDefault = isDefault
-            };
-
-            Console.WriteLine("🔄 Calling Update3Async for OTP...");
-
-            // Call the Update3Async method (for OTP)
-            var result = await ApiClient.Update3Async(updateCommand);
-
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
-
-            if (result?.Success == true && result.Data != null)
-            {
-                successMessage = result.Message ?? "OTP configuration updated successfully!";
-                Console.WriteLine("✅ OTP configuration updated successfully");
-                
-                // Update local configuration with new data
-                configuration = result.Data;
-
-                // Notify parent component
-                await OnOtpConfigurationUpdated.InvokeAsync(result.Data);
-                
-                // Close modal after a brief delay to show success message
-                await Task.Delay(1500);
-                await otpConfigEditModal.CloseModal();
-            }
-            else
-            {
-                formError = result?.Message ?? "Failed to update OTP configuration. Please try again.";
-                Console.WriteLine($"❌ OTP configuration update failed: {formError}");
-            }
+            errorMessage = "OTP configuration not found in any client.";
+            Console.WriteLine($"OTP configuration {configId} not found in any client");
         }
-        catch (ApiException ex)
+        else
         {
-            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            errorMessage = "Failed to load clients.";
+            Console.WriteLine($"Failed to load clients");
         }
-        catch (Exception ex)
-        {
-            formError = $"Error updating OTP configuration: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
-        }
-        
+    }
+    catch (Exception ex)
+    {
+        errorMessage = $"Error loading OTP configuration: {ex.Message}";
+        Console.WriteLine($"Error loading OTP configuration: {ex.Message}");
+        Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+    }
+    finally
+    {
+        isLoading = false;
         StateHasChanged();
     }
+}
+
+private async Task UpdateOtpConfiguration()
+{
+    try
+    {
+        // Clear previous messages
+        formError = string.Empty;
+        successMessage = string.Empty;
+        credentialErrors.Clear();
+        
+        // Validate all fields
+        var isValid = ValidateForm();
+        
+        if (!isValid)
+        {
+            formError = "Please fix the validation errors before updating the configuration.";
+            return;
+        }
+
+        if (configuration == null)
+        {
+            formError = "Configuration data is not loaded.";
+            return;
+        }
+
+        Console.WriteLine($"Updating OTP configuration: {configuration.ClientProviderConfigurationId}");
+        Console.WriteLine($"DEBUG - Configuration details:");
+        Console.WriteLine($"   - ClientProviderConfigurationId: {configuration.ClientProviderConfigurationId}");
+        Console.WriteLine($"   - ProviderId: {configuration.ProviderId}");
+        Console.WriteLine($"   - ProviderName: {configuration.ProviderName}");
+        Console.WriteLine($"   - ClientIdentifier: {configuration.ClientIdentifier}");
+
+        // Create credentials list
+        var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
+        
+        foreach (var credType in availableCredentialTypes)
+        {
+            var credentialValue = credentials.ContainsKey(credType.CredentialTypeName) 
+                ? credentials[credType.CredentialTypeName] 
+                : string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(credentialValue))
+            {
+                clientProviderCredentials.Add(new CreateClientProviderCredentialDto
+                {
+                    CredentialTypeName = credType.CredentialTypeName,
+                    CredentialKey = credentialValue
+                });
+                Console.WriteLine($"Added credential: {credType.CredentialTypeName}");
+            }
+        }
+
+        Console.WriteLine($"Total credentials to update: {clientProviderCredentials.Count}");
+
+        // **CRITICAL FIX: Check if we're using the correct ID property**
+        // The error suggests the backend expects a Payment configuration ID, but we have an OTP configuration
+        // Let's try using ClientProviderConfigurationId directly as OtpClientProviderConfigurationId
+        
+        var updateCommand = new UpdateOtpProviderConfigurationDto
+        {
+            Description = description.Trim(),
+            ProviderId = configuration.ProviderId,
+            ClientProviderCredentials = clientProviderCredentials,
+            OtpClientProviderConfigurationId = configuration.ClientProviderConfigurationId,
+            IsDefault = isDefault
+        };
+
+        Console.WriteLine($"Calling Update3Async for OTP configuration:");
+        Console.WriteLine($"   - OtpClientProviderConfigurationId: {updateCommand.OtpClientProviderConfigurationId}");
+        Console.WriteLine($"   - Description: {updateCommand.Description}");
+        Console.WriteLine($"   - ProviderId: {updateCommand.ProviderId}");
+        Console.WriteLine($"   - IsDefault: {updateCommand.IsDefault}");
+        Console.WriteLine($"   - Credentials Count: {updateCommand.ClientProviderCredentials?.Count ?? 0}");
+
+        // **DEBUG: Let's check what type of configuration this really is**
+        Console.WriteLine($"Configuration Type Check:");
+        Console.WriteLine($"   - Has SmsProviderConfigurationId: {configuration.GetType().GetProperty("SmsProviderConfigurationId") != null}");
+        Console.WriteLine($"   - Has EmailProviderConfigurationId: {configuration.GetType().GetProperty("EmailProviderConfigurationId") != null}");
+        Console.WriteLine($"   - Has PaymentProviderConfigurationId: {configuration.GetType().GetProperty("PaymentProviderConfigurationId") != null}");
+        
+        // Check if this might actually be a Payment configuration misidentified as OTP
+        var configType = configuration.GetType();
+        foreach (var prop in configType.GetProperties())
+        {
+            if (prop.Name.EndsWith("ConfigurationId") && prop.Name != "ClientProviderConfigurationId")
+            {
+                var value = prop.GetValue(configuration);
+                Console.WriteLine($"   - {prop.Name}: {value}");
+            }
+        }
+
+        // Call the Update3Async method (for OTP)
+        var result = await ApiClient.Update3Async(updateCommand);
+
+        Console.WriteLine($"API Response Success: {result?.Success}");
+        Console.WriteLine($"API Message: {result?.Message}");
+
+        if (result?.Success == true && result.Data != null)
+        {
+            successMessage = result.Message ?? "OTP configuration updated successfully!";
+            Console.WriteLine("OTP configuration updated successfully");
+            
+            // Update local configuration with new data
+            configuration = result.Data;
+
+            // Notify parent component
+            await OnOtpConfigurationUpdated.InvokeAsync(result.Data);
+            
+            // Close modal after a brief delay to show success message
+            await Task.Delay(1500);
+            await otpConfigEditModal.CloseModal();
+        }
+        else
+        {
+            formError = result?.Message ?? "Failed to update OTP configuration. Please try again.";
+            Console.WriteLine($"OTP configuration update failed: {formError}");
+            
+            // **ADDITIONAL DEBUGGING: Try to get the specific configuration to see its type**
+            try 
+            {
+                Console.WriteLine($"Attempting to get configuration details directly...");
+                var configDetails = await ApiClient.OtpProviderConfigurationAsync(configuration.ClientProviderConfigurationId);
+                Console.WriteLine($"   - Direct API call success: {configDetails?.Success}");
+                if (configDetails?.Data != null)
+                {
+                    Console.WriteLine($"   - Direct API data type: {configDetails.Data.GetType().Name}");
+                }
+            }
+            catch (Exception debugEx)
+            {
+                Console.WriteLine($"Direct API call failed: {debugEx.Message}");
+            }
+        }
+    }
+    catch (ApiException ex)
+    {
+        formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+        Console.WriteLine($"API Exception: {ex}");
+        Console.WriteLine($"API Response: {ex.Response}");
+        
+        // **SPECIFIC FIX ATTEMPT: The error suggests the ID might be for a different configuration type**
+        // Let's check if we should be using a different update method
+        Console.WriteLine($"POSSIBLE FIX: The configuration ID might be for a different provider type.");
+        Console.WriteLine($"Try checking if this configuration exists in other provider type lists.");
+    }
+    catch (Exception ex)
+    {
+        formError = $"Error updating OTP configuration: {ex.Message}";
+        Console.WriteLine($"Exception: {ex}");
+        Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+    }
+    
+    StateHasChanged();
+}
 
     private bool ValidateForm()
     {
@@ -532,7 +612,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ OtpProviderConfigurationEditModal component rendered");
+            Console.WriteLine("OtpProviderConfigurationEditModal component rendered");
         }
     }
 }

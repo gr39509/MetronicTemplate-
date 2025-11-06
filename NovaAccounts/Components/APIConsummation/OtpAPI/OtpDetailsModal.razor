@@ -169,8 +169,7 @@
             errorMessage = string.Empty;
             StateHasChanged();
 
-            // Since we don't have a direct API to get single OTP by ID,
-            // we'll load all and filter, or you might need to implement this API
+            
             var result = await ApiClient.All4Async();
 
             if (result?.Success == true && result.Data != null)
@@ -189,7 +188,7 @@
         catch (Exception ex)
         {
             errorMessage = $"Error loading OTP details: {ex.Message}";
-            Console.WriteLine($"❌ Error loading OTP details: {ex.Message}");
+            Console.WriteLine($"Error loading OTP details: {ex.Message}");
         }
         finally
         {

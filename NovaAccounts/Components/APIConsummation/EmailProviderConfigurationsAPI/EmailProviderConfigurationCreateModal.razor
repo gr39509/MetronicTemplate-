@@ -239,12 +239,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 clients = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {clients.Count} clients");
+                Console.WriteLine($"Loaded {clients.Count} clients");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
+            Console.WriteLine($"Error loading clients: {ex.Message}");
         }
         finally
         {
@@ -265,12 +265,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 emailProviders = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {emailProviders.Count} email providers");
+                Console.WriteLine($"Loaded {emailProviders.Count} email providers");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading email providers: {ex.Message}");
+            Console.WriteLine($"Error loading email providers: {ex.Message}");
         }
         finally
         {
@@ -287,12 +287,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
-                Console.WriteLine($"✅ Loaded {availableCredentialTypes.Count} credential types");
+                Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading credential types: {ex.Message}");
+            Console.WriteLine($"Error loading credential types: {ex.Message}");
         }
     }
 
@@ -465,7 +465,7 @@
                 return;
             }
 
-            Console.WriteLine($"📝 Creating email configuration for client: {selectedClientId}");
+            Console.WriteLine($"Creating email configuration for client: {selectedClientId}");
 
             // Get client identifier
             var client = clients.FirstOrDefault(c => c.ClientId == selectedClientId);
@@ -497,18 +497,18 @@
                 EmailFromName = string.IsNullOrWhiteSpace(emailFromName) ? null : emailFromName.Trim()
             };
 
-            Console.WriteLine("🔄 Calling Create2Async...");
+            Console.WriteLine("Calling Create2Async...");
 
             // Call the Create2Async method
             var result = await ApiClient.Create2Async(createCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 successMessage = result.Message ?? "Email configuration created successfully!";
-                Console.WriteLine("✅ Email configuration created successfully");
+                Console.WriteLine("Email configuration created successfully");
                 
                 // Clear form after successful creation
                 ResetForm();
@@ -522,24 +522,24 @@
             else
             {
                 formError = result?.Message ?? "Failed to create email configuration. Please try again.";
-                Console.WriteLine($"❌ Email configuration creation failed: {formError}");
+                Console.WriteLine($"Email configuration creation failed: {formError}");
             }
         }
         // catch (ApiException<ApiErrorResponse> apiEx)
         // {
         //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
-        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
-        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        //     Console.WriteLine($"API Exception Details: {apiEx}");
+        //     Console.WriteLine($"Status Code: {apiEx.StatusCode}");
         // }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error creating email configuration: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -634,7 +634,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ EmailProviderConfigurationCreateModal component rendered");
+            Console.WriteLine("EmailProviderConfigurationCreateModal component rendered");
         }
     }
 }

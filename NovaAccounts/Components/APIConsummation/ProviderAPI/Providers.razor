@@ -82,17 +82,17 @@ else
     {
         if (firstRender)
         {
-            Console.WriteLine("🔍 OnAfterRenderAsync - First render for provider types");
+            Console.WriteLine("OnAfterRenderAsync - First render for provider types");
             await JSRuntime.InvokeVoidAsync("setDotNetReference", 
                 DotNetObjectReference.Create(this));
             
             if (providerTypeDetailsModal == null)
             {
-                Console.WriteLine("❌ ProviderTypeDetailsModal component is NULL after first render");
+                Console.WriteLine("ProviderTypeDetailsModal component is NULL after first render");
             }
             else
             {
-                Console.WriteLine("✅ ProviderTypeDetailsModal component reference is set");
+                Console.WriteLine("ProviderTypeDetailsModal component reference is set");
             }
         }
     }
@@ -100,24 +100,24 @@ else
     [JSInvokable]
     public async Task ViewProviderType(string providerTypeName)
     {
-        Console.WriteLine($"🔍 ViewProviderType called with providerTypeName: {providerTypeName}");
+        Console.WriteLine($"ViewProviderType called with providerTypeName: {providerTypeName}");
         
         try
         {
             if (providerTypeDetailsModal == null)
             {
-                Console.WriteLine("❌ providerTypeDetailsModal is null - modal component not found");
+                Console.WriteLine("providerTypeDetailsModal is null - modal component not found");
                 return;
             }
     
-            Console.WriteLine("✅ Modal reference found, calling OpenModal...");
+            Console.WriteLine("Modal reference found, calling OpenModal...");
             await providerTypeDetailsModal.OpenModal(providerTypeName);
-            Console.WriteLine("✅ OpenModal completed");
+            Console.WriteLine("OpenModal completed");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error in ViewProviderType: {ex.Message}");
-            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+            Console.WriteLine($"Error in ViewProviderType: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
     }
 
@@ -141,24 +141,24 @@ else
             if (result?.Success == true && result.Data != null)
             {
                 providerTypes = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {providerTypes.Count} provider types");
+                Console.WriteLine($"Loaded {providerTypes.Count} provider types");
             }
             else
             {
                 errorMessage = result?.Message ?? "No provider types data received from server.";
                 providerTypes = new List<ProviderTypeViewModel>();
-                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
             }
         }
         catch (ApiException apiEx)
         {
             errorMessage = $"Server error ({apiEx.StatusCode}). Please try again.";
-            Console.WriteLine($"❌ API Exception loading provider types: {apiEx.Message}");
+            Console.WriteLine($"API Exception loading provider types: {apiEx.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = "Failed to load provider types. Please try again.";
-            Console.WriteLine($"❌ Error loading provider types: {ex.Message}");
+            Console.WriteLine($"Error loading provider types: {ex.Message}");
         }
         finally
         {
@@ -259,14 +259,21 @@ else
         window.dotNetReference = reference;
     };
 
-    window.viewProviderType = function(providerTypeName) {
-        if (window.dotNetReference) {
-            window.dotNetReference.invokeMethodAsync('ViewProviderType', providerTypeName)
-                .catch(err => {
-                    console.error('Error calling ViewProviderType:', err);
-                });
-        } else {
-            console.error('DotNet reference not available');
-        }
+    window.viewProviderType = function (providerTypeName) {
+        console.log('View Providers :', providerTypeName);
+
+        window.location.href = '/providers/' + providerTypeName;
     };
+    
+//for modal
+    // window.viewProviderType = function(providerTypeName) {
+    //     if (window.dotNetReference) {
+    //         window.dotNetReference.invokeMethodAsync('ViewProviderType', providerTypeName)
+    //             .catch(err => {
+    //                 console.error('Error calling ViewProviderType:', err);
+    //             });
+    //     } else {
+    //         console.error('DotNet reference not available');
+    //     }
+    // };
 </script>

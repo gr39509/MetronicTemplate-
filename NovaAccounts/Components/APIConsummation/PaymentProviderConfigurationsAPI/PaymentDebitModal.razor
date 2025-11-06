@@ -1,0 +1,531 @@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.ModalFields
+@inject ApiClient ApiClient
+
+<ReusableModal @ref="paymentDebitModal"
+               Title="Test Mobile Wallet Debit"
+               TriggerButtonText=""
+               ShowTriggerButton="false"
+               Size="ModalSize.Large"
+               TitleFontSize="1.2rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.95rem"
+               HeaderClass="leadBold bg-blue-chambray font-white"
+               BodyColor="#333"
+               ShowSaveButton="true"
+               SaveButtonText="Process Debit"
+               OnSave="@ProcessDebit"
+               ShowCancelButton="true"
+               CancelButtonText="Cancel"
+               SaveButtonDisabled="@isProcessing">
+
+    <BodyContent>
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2">Loading payment configurations...</p>
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label text-primary">This is for testing the Payment Configuration.</label>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Configuration *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(configurationError) ? "" : "is-invalid")"
+                                value="@selectedConfigurationIdString"
+                                @onchange="HandleConfigurationChange">
+                            <option value="">-- Select Payment Configuration --</option>
+                            @foreach (var config in paymentConfigurations)
+                            {
+                                <option value="@config.PaymentProviderConfigurationId">@config.Provider.Name - @config.Description</option>
+                            }
+                        </select>
+                        @if (!string.IsNullOrEmpty(configurationError))
+                        {
+                            <div class="invalid-feedback">@configurationError</div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Network *</label>
+                        <select class="form-control @(string.IsNullOrEmpty(networkError) ? "" : "is-invalid")"
+                                value="@selectedNetwork"
+                                @onchange="HandleNetworkChange">
+                            <option value="">-- Select Network --</option>
+                            <option value="MTN">MTN Mobile Money</option>
+                            <option value="VODAFONE">Vodafone Cash</option>
+                            <option value="AIRTELTIGO">AirtelTigo Money</option>
+                            <option value="TEST">Test Network</option>
+                        </select>
+                        @if (!string.IsNullOrEmpty(networkError))
+                        {
+                            <div class="invalid-feedback">@networkError</div>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(phoneNumberError) ? "" : "is-invalid")" 
+                               @bind="phoneNumber" 
+                               placeholder="Enter phone number with country code"
+                               maxlength="15" />
+                        @if (!string.IsNullOrEmpty(phoneNumberError))
+                        {
+                            <div class="invalid-feedback">@phoneNumberError</div>
+                        }
+                        <small class="form-text text-muted">Format: +1234567890</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Amount *</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">$</span>
+                            </div>
+                            <input type="number" 
+                                   class="form-control @(string.IsNullOrEmpty(amountError) ? "" : "is-invalid")" 
+                                   @bind="amount" 
+                                   min="0.01" 
+                                   max="10000" 
+                                   step="0.01"
+                                   placeholder="0.00" />
+                            @if (!string.IsNullOrEmpty(amountError))
+                            {
+                                <div class="invalid-feedback">@amountError</div>
+                            }
+                        </div>
+                        <small class="form-text text-muted">Enter amount between $0.01 and $10,000</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="mb-3">
+                        <label class="form-label">Invoice Number *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(invoiceNumberError) ? "" : "is-invalid")" 
+                               @bind="invoiceNumber" 
+                               placeholder="Enter unique invoice number"
+                               maxlength="50" />
+                        @if (!string.IsNullOrEmpty(invoiceNumberError))
+                        {
+                            <div class="invalid-feedback">@invoiceNumberError</div>
+                        }
+                        <small class="form-text text-muted">Unique identifier for this transaction</small>
+                    </div>
+                </div>
+            </div>
+
+            @if (isProcessing)
+            {
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm mr-2" role="status"></div>
+                        <span>Processing debit transaction...</span>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3">
+                    <strong>Success!</strong> @successMessage
+                    @if (paymentResponse != null)
+                    {
+                        <div class="mt-2">
+                            <strong>Transaction Details:</strong>
+                            <ul class="mb-0">
+                                <li>Request ID: @paymentResponse.RequestId</li>
+                                <li>Status: @paymentResponse.Status</li>
+                                <li>Transaction ID: @(paymentResponse.TransactionID ?? "Pending")</li>
+                                <li>Provider Reference: @(paymentResponse.ProviderReference ?? "N/A")</li>
+                                <li>Invoice Number: @(paymentResponse.InvoiceNumber ?? "N/A")</li>
+                            </ul>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger mt-3">
+                    <strong>Error!</strong> @formError
+                </div>
+            }
+
+            <!-- Preview Section -->
+            @if (!string.IsNullOrEmpty(phoneNumber) && amount > 0 && !string.IsNullOrEmpty(invoiceNumber))
+            {
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Transaction Preview</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Network:</strong> @selectedNetwork</p>
+                        <p><strong>Phone Number:</strong> @phoneNumber</p>
+                        <p><strong>Amount:</strong> $@amount.ToString("F2")</p>
+                        <p><strong>Invoice Number:</strong> @invoiceNumber</p>
+                    </div>
+                </div>
+            }
+        }
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private ReusableModal paymentDebitModal = null!;
+    
+    private List<PaymentClientProviderConfigurationViewModel> paymentConfigurations = new();
+    private string selectedConfigurationIdString = string.Empty;
+    private Guid? selectedConfigurationId = null;
+    private string selectedNetwork = string.Empty;
+    private string phoneNumber = string.Empty;
+    private double amount = 0.0;
+    private string invoiceNumber = string.Empty;
+    
+    private PaymentResponseModel? paymentResponse = null;
+    
+    private string configurationError = string.Empty;
+    private string networkError = string.Empty;
+    private string phoneNumberError = string.Empty;
+    private string amountError = string.Empty;
+    private string invoiceNumberError = string.Empty;
+    private string formError = string.Empty;
+    private string successMessage = string.Empty;
+    
+    private bool isLoading = false;
+    private bool isProcessing = false;
+
+    [Parameter]
+    public string ClientIdentifier { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback OnPaymentProcessed { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Console.WriteLine($"PaymentDebitModal received ClientIdentifier: {ClientIdentifier}");
+    }
+
+    private async Task LoadPaymentConfigurations()
+    {
+        try
+        {
+            isLoading = true;
+            formError = string.Empty;
+            StateHasChanged();
+
+            if (string.IsNullOrEmpty(ClientIdentifier))
+            {
+                formError = "Client identifier is required. Please ensure the parent component is properly loaded.";
+                Console.WriteLine("ClientIdentifier is null or empty");
+                return;
+            }
+
+            Console.WriteLine($"Loading payment configurations for client: {ClientIdentifier}");
+
+            var result = await ApiClient.ConfigurationsPerClient3Async(ClientIdentifier);
+            if (result?.Success == true && result.Data != null)
+            {
+                paymentConfigurations = result.Data
+                    .Where(c => c.IsActive)
+                    .OrderByDescending(c => c.IsDefault)
+                    .ThenBy(c => c.ProviderName)
+                    .ToList();
+                
+                Console.WriteLine($"Loaded {paymentConfigurations.Count} payment configurations for testing");
+                
+                // Auto-select the default configuration if available
+                var defaultConfig = paymentConfigurations.FirstOrDefault(c => c.IsDefault);
+                if (defaultConfig != null)
+                {
+                    selectedConfigurationId = defaultConfig.PaymentProviderConfigurationId;
+                    selectedConfigurationIdString = defaultConfig.PaymentProviderConfigurationId.ToString();
+                    Console.WriteLine($"Auto-selected default configuration: {defaultConfig.Description}");
+                }
+            }
+            else
+            {
+                formError = result?.Message ?? "No active payment configurations found for this client.";
+                paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
+                Console.WriteLine($"No payment configurations loaded: {formError}");
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error loading payment configurations: {ex.Message}";
+            Console.WriteLine($"Error loading payment configurations: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    public async Task OpenModalWithConfiguration(PaymentClientProviderConfigurationViewModel config)
+    {
+        // Reset form
+        selectedConfigurationIdString = string.Empty;
+        selectedConfigurationId = null;
+        selectedNetwork = string.Empty;
+        phoneNumber = string.Empty;
+        amount = 0.0;
+        invoiceNumber = string.Empty;
+        paymentResponse = null;
+        
+        configurationError = string.Empty;
+        networkError = string.Empty;
+        phoneNumberError = string.Empty;
+        amountError = string.Empty;
+        invoiceNumberError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        isProcessing = false;
+
+        Console.WriteLine($"Opening Payment Debit Modal for client: {ClientIdentifier}");
+        Console.WriteLine($"Pre-selecting configuration: {config.Description} (ID: {config.PaymentProviderConfigurationId})");
+
+        // Load configurations first
+        await LoadPaymentConfigurations();
+
+        // Pre-select the specific configuration
+        if (paymentConfigurations.Any(c => c.PaymentProviderConfigurationId == config.PaymentProviderConfigurationId))
+        {
+            selectedConfigurationId = config.PaymentProviderConfigurationId;
+            selectedConfigurationIdString = config.PaymentProviderConfigurationId.ToString();
+            Console.WriteLine($"Successfully pre-selected configuration: {config.Provider.Name} - {config.Description}");
+        }
+        else
+        {
+            Console.WriteLine($"Configuration {config.PaymentProviderConfigurationId} not found in loaded configurations");
+            // Fallback: try to select by provider name
+            var similarConfig = paymentConfigurations.FirstOrDefault(c => 
+                c.Provider.Name == config.Provider.Name || 
+                c.PaymentProviderConfigurationId == config.PaymentProviderConfigurationId);
+            
+            if (similarConfig != null)
+            {
+                selectedConfigurationId = similarConfig.PaymentProviderConfigurationId;
+                selectedConfigurationIdString = similarConfig.PaymentProviderConfigurationId.ToString();
+                Console.WriteLine($"Selected similar configuration: {similarConfig.Provider.Name} - {similarConfig.Description}");
+            }
+        }
+
+        if (paymentDebitModal != null)
+        {
+            await paymentDebitModal.OpenModal();
+        }
+        else
+        {
+            Console.WriteLine("paymentDebitModal is null");
+        }
+    }
+
+    private void HandleConfigurationChange(ChangeEventArgs e)
+    {
+        configurationError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString();
+        selectedConfigurationIdString = value ?? string.Empty;
+        
+        if (string.IsNullOrEmpty(value))
+        {
+            selectedConfigurationId = null;
+        }
+        else
+        {
+            selectedConfigurationId = Guid.Parse(value);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void HandleNetworkChange(ChangeEventArgs e)
+    {
+        networkError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString();
+        selectedNetwork = value ?? string.Empty;
+        
+        StateHasChanged();
+    }
+
+    private async Task ProcessDebit()
+    {
+        try
+        {
+            // Clear previous messages
+            formError = string.Empty;
+            successMessage = string.Empty;
+            paymentResponse = null;
+            
+            // Validate form
+            if (!ValidateForm())
+            {
+                return;
+            }
+
+            isProcessing = true;
+            StateHasChanged();
+
+            // Create the debit request
+            var debitRequest = new MobileWalletPaymentRequest
+            {
+                PaymentClientProviderConfigurationId = selectedConfigurationId,
+                Network = selectedNetwork,
+                PhoneNumber = phoneNumber.Trim(),
+                Amount = amount,
+                InvoiceNumber = invoiceNumber.Trim()
+            };
+
+            Console.WriteLine($"Processing debit transaction:");
+            Console.WriteLine($"- Configuration: {selectedConfigurationId}");
+            Console.WriteLine($"- Network: {selectedNetwork}");
+            Console.WriteLine($"- Phone: {phoneNumber}");
+            Console.WriteLine($"- Amount: {amount}");
+            Console.WriteLine($"- Invoice: {invoiceNumber}");
+            Console.WriteLine($"Using client identifier: {ClientIdentifier}");
+
+            // Call the DebitAsync method for mobile wallet payment
+            var result = await ApiClient.DebitAsync(ClientIdentifier, debitRequest);
+
+            Console.WriteLine($"Debit Response Success: {result?.Success}");
+            Console.WriteLine($"Debit Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                paymentResponse = result.Data;
+                successMessage = result.Message ?? $"Debit transaction processed successfully!";
+                Console.WriteLine("Debit transaction processed successfully");
+                
+                // Notify parent component
+                await OnPaymentProcessed.InvokeAsync();
+                
+                // Don't close modal automatically to show transaction details
+                // User can close manually after reviewing the results
+            }
+            else
+            {
+                formError = result?.Message ?? "Failed to process debit transaction. Please try again.";
+                Console.WriteLine($"Debit transaction failed: {formError}");
+            }
+        }
+        catch (ApiException ex)
+        {
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"API Exception: {ex}");
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error processing debit transaction: {ex.Message}";
+            Console.WriteLine($"Exception: {ex}");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool ValidateForm()
+    {
+        var isValid = true;
+
+        // Validate Configuration
+        if (!selectedConfigurationId.HasValue)
+        {
+            configurationError = "Please select a payment configuration";
+            isValid = false;
+        }
+        else
+        {
+            configurationError = string.Empty;
+        }
+
+        // Validate Network
+        if (string.IsNullOrWhiteSpace(selectedNetwork))
+        {
+            networkError = "Please select a network";
+            isValid = false;
+        }
+        else
+        {
+            networkError = string.Empty;
+        }
+
+        // Validate Phone Number
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            phoneNumberError = "Please enter a phone number";
+            isValid = false;
+        }
+        else if (!IsValidPhoneNumber(phoneNumber))
+        {
+            phoneNumberError = "Please enter a valid phone number with country code";
+            isValid = false;
+        }
+        else
+        {
+            phoneNumberError = string.Empty;
+        }
+
+        // Validate Amount
+        if (amount <= 0)
+        {
+            amountError = "Please enter a valid amount greater than 0";
+            isValid = false;
+        }
+        else if (amount > 10000)
+        {
+            amountError = "Amount cannot exceed $10,000";
+            isValid = false;
+        }
+        else
+        {
+            amountError = string.Empty;
+        }
+
+        // Validate Invoice Number
+        if (string.IsNullOrWhiteSpace(invoiceNumber))
+        {
+            invoiceNumberError = "Please enter an invoice number";
+            isValid = false;
+        }
+        else if (invoiceNumber.Length > 50)
+        {
+            invoiceNumberError = "Invoice number cannot exceed 50 characters";
+            isValid = false;
+        }
+        else
+        {
+            invoiceNumberError = string.Empty;
+        }
+
+        // Validate Client Identifier
+        if (string.IsNullOrEmpty(ClientIdentifier))
+        {
+            formError = "Client identifier is missing. Please refresh the page and try again.";
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private bool IsValidPhoneNumber(string phone)
+    {
+        // Basic phone number validation - can be enhanced based on requirements
+        return !string.IsNullOrWhiteSpace(phone) && phone.Length >= 10;
+    }
+}

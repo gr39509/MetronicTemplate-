@@ -1,428 +1,428 @@
-@page "/updated-modal-examples"
-@using NovaAccounts.Components.Shared
-@using NovaAccounts.SharedModels.ModalFields
-
-<h2>Updated Modal Examples with Font & Color Customization</h2>
-
-<div class="row mb-4">
-    <!-- Example 1: Small Modal with Custom Colors -->
-    <div class="col-md-6">
-        <Select2Component 
-            Label="Department"
-            @bind-SelectedValue="selectedDepartment">
-            <option value="hr">HR</option>
-            <option value="it">IT</option>
-            <option value="finance">Finance</option>
-        </Select2Component>
-        <h4>1. Small Modal with Custom Title</h4>
-        <ReusableModal Title="Quick Action"
-                       TriggerButtonText="Small Modal"
-                       TriggerButtonClass="btn btn-info"
-                       ShowTriggerButton="true"
-                       Size="ModalSize.Small"
-                       TitleFontSize="1.5rem"
-                       TitleColor="#007bff"
-                       BodyFontSize="0.9rem"
-                       BodyColor="#495057"
-                       ButtonFontSize="0.8rem">
-            <BodyContent>
-                <p>This is a small modal with custom styling.</p>
-                <div class="form-group">
-                    <label>Quick Input:</label>
-                    <input type="text" class="form-control" placeholder="Enter value"/>
-                </div>
-            </BodyContent>
-        </ReusableModal>
-    </div>
-
-    <!-- Example 2: Extra Large Modal -->
-    <div class="col-md-6">
-        <h4>2.  Large Modal</h4>
-        <ReusableModal Title="Complete Employee Registration"
-                      TriggerButtonText="Employee form"
-                      TriggerButtonClass="btn btn-success"
-                      ShowTriggerButton="true"
-                      Size="ModalSize.Large"
-                      TitleFontSize="3rem"
-                      HeaderClass="bg-danger text-white"
-                      TitleColor="#ffffff"
-                      BodyFontSize="1.1rem"
-                      ButtonFontSize="1rem">
-            <BodyContent>
-                <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <h5>Personal Information</h5>
-                            <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" class="form-control" />
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <h5>Employment Details</h5>
-                            <BootstrapSelect 
-                                Label="USER"
-                                LabelClass=""
-                                Name="user_id"
-                                Placeholder="--SELECT USER--"
-                                Options="@userOptions"
-                                LiveSearch="true"
-                                Required="true"
-                                OnValueChanged="@HandleUserChanged" />
-                            @* <div class="form-group"> *@
-                            @*     <label>Department</label> *@
-                            @*     <select class="form-control select2" style="width: 100%;"> *@
-                            @*         <option>HR</option> *@
-                            @*         <option>IT</option> *@
-                            @*         <option>Finance</option> *@
-                            @*     </select> *@
-                            @* </div> *@
-                            <div class="form-group">
-                                <label>Position</label>
-                                <input type="text" class="form-control" />
-                            </div>
-                            <div class="form-group">
-                                <label>Start Date</label>
-                                <input type="date" class="form-control" />
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <h5>Additional Information</h5>
-                            <div class="form-group">
-                                <label>Notes</label>
-                                <textarea class="form-control" rows="6"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    
-                </div>
-            </BodyContent>
-        </ReusableModal>
-    </div>
-</div>
-
-<div class="row mb-4">
-    <!-- Example 3: Full Screen Modal -->
-    <div class="col-md-6">
-        <h4>3. Default Screen Modal</h4>
-        <ReusableModal Title="Default Screen Dashboard"
-                      TriggerButtonText="Full Screen View"
-                      TriggerButtonClass="btn btn-warning"
-                      ShowTriggerButton="true"
-                      Size="ModalSize.FullScreenSmDown"
-                      
-                      HeaderClass="bg-dark text-white"
-                      TitleFontSize="2rem"
-                      TitleColor="#ffffff"
-                      BodyFontSize="1rem"
-                      BodyStyle="padding: 2rem;">
-            <BodyContent>
-                <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-12">
-                            <h3>Dashboard Overview</h3>
-                            <p>This modal takes up the entire screen, perfect for detailed forms or dashboards.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="row mt-4">
-                        <div class="col-md-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Total Users</h5>
-                                    <p class="card-text display-4">1,234</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Revenue</h5>
-                                    <p class="card-text display-4">₵45K</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Orders</h5>
-                                    <p class="card-text display-4">567</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Products</h5>
-                                    <p class="card-text display-4">89</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <h4>Recent Activity</h4>
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Time</th>
-                                            <th>User</th>
-                                            <th>Action</th>
-                                            <th>Details</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @for (int i = 0; i < 10; i++)
-                                        {
-                                            <tr>
-                                                <td>@DateTime.Now.AddMinutes(-i*5).ToString("HH:mm")</td>
-                                                <td>User @(i + 1)</td>
-                                                <td>@(i % 2 == 0 ? "Login" : "Purchase")</td>
-                                                <td>@(i % 2 == 0 ? "Successful login" : $"Bought product {i + 1}")</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </BodyContent>
-        </ReusableModal>
-    </div>
-
-    <!-- Example 4: Custom Header Colors -->
-    <div class="col-md-6">
-        <h4>4. Colored Header Modal</h4>
-        <ReusableModal Title="Important Notice"
-                      TriggerButtonText="Show Notice"
-                      TriggerButtonClass="btn btn-danger"
-                      ShowTriggerButton="true"
-                      Size="ModalSize.Default"
-                      HeaderClass="bg-danger text-white"
-                      TitleFontSize="1.3rem"
-                      TitleColor="#ffffff"
-                      BodyFontSize="1rem"
-                      BodyColor="#dc3545"
-                      SaveButtonClass="btn btn-danger"
-                      CancelButtonClass="btn btn-outline-secondary">
-            <BodyContent>
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Warning!</strong> This action cannot be undone.
-                </div>
-                <p>Please read the terms and conditions carefully before proceeding.</p>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="termsCheck">
-                    <label class="form-check-label" for="termsCheck">
-                        I agree to the terms and conditions
-                    </label>
-                </div>
-            </BodyContent>
-        </ReusableModal>
-    </div>
-</div>
-
-<!-- Example 5: Responsive Fullscreen -->
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h4>5. Responsive Fullscreen (Fullscreen on mobile only)</h4>
-        <ReusableModal Title="Responsive Form"
-                      TriggerButtonText="Mobile Fullscreen"
-                      TriggerButtonClass="btn btn-info"
-                      ShowTriggerButton="true"
-                      Size="ModalSize.FullScreenMdDown"
-                      TitleFontSize="1.4rem"
-                      TitleColor="#17a2b8"
-                      BodyFontSize="1rem">
-            <BodyContent>
-                <p>This modal will be fullscreen on tablets and mobile devices, but normal size on desktop.</p>
-                
-                <div class="form-group">
-                    <label>Name</label>
-                    <input type="text" class="form-control" />
-                </div>
-                
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" class="form-control" />
-                </div>
-                
-                <div class="form-group">
-                    <label>Message</label>
-                    <textarea class="form-control" rows="4"></textarea>
-                </div>
-            </BodyContent>
-        </ReusableModal>
-    </div>
-</div>
-
-@code {
-    // Form fields
-    private string? selectedUser;
-    private string cashierId = string.Empty;
-    private decimal transactionLimit = 0;
-    private string? selectedControlAccount;
-    private string? selectedMobileMoney;
-    private bool isEnabled = true;
-    private List<string>? selectedCashierTypes;
-    private string? selectedShift = "morning";
-
-    // Options for selects
-    private List<BootstrapSelect.SelectOption> userOptions = new()
-    {
-        new BootstrapSelect.SelectOption { Value = "1", Text = "John Doe (john.doe@company.com)" },
-        new BootstrapSelect.SelectOption { Value = "2", Text = "Jane Smith (jane.smith@company.com)" },
-        new BootstrapSelect.SelectOption { Value = "3", Text = "Mike Johnson (mike.johnson@company.com)" },
-        new BootstrapSelect.SelectOption { Value = "4", Text = "Sarah Wilson (sarah.wilson@company.com)" },
-        new BootstrapSelect.SelectOption { Value = "5", Text = "David Brown (david.brown@company.com)" },
-        new BootstrapSelect.SelectOption { Value = "6", Text = "Lisa Anderson (lisa.anderson@company.com)" },
-        new BootstrapSelect.SelectOption { Value = "7", Text = "Robert Taylor (robert.taylor@company.com)" }
-    };
-
-    private List<BootstrapSelect.SelectOption> controlAccountOptions = new()
-    {
-        new BootstrapSelect.SelectOption { Value = "1001", Text = "Cash in Hand", Subtext = "1001" },
-        new BootstrapSelect.SelectOption { Value = "1002", Text = "Petty Cash", Subtext = "1002" },
-        new BootstrapSelect.SelectOption { Value = "1003", Text = "Main Cash Account", Subtext = "1003" },
-        new BootstrapSelect.SelectOption { Value = "1004", Text = "Vault Account", Subtext = "1004" },
-        new BootstrapSelect.SelectOption { Value = "1005", Text = "Branch Cash Account", Subtext = "1005" },
-        new BootstrapSelect.SelectOption { Value = "1006", Text = "Teller Cash Account", Subtext = "1006" }
-    };
-
-    private List<BootstrapSelect.SelectOption> mobileMoneyOptions = new()
-    {
-        new BootstrapSelect.SelectOption { Value = "2001", Text = "MTN Mobile Money", Icon = "glyphicon-phone" },
-        new BootstrapSelect.SelectOption { Value = "2002", Text = "Vodafone Cash", Icon = "glyphicon-phone" },
-        new BootstrapSelect.SelectOption { Value = "2003", Text = "AirtelTigo Money", Icon = "glyphicon-phone" },
-        new BootstrapSelect.SelectOption { Value = "2004", Text = "General Mobile Money", Icon = "glyphicon-phone" },
-        new BootstrapSelect.SelectOption { Value = "2005", Text = "Bank Mobile Money", Icon = "glyphicon-phone" }
-    };
-
-    private List<BootstrapSelect.SelectOption> cashierTypeOptions = new()
-    {
-        new BootstrapSelect.SelectOption { Value = "cash", Text = "Cash Transactions" },
-        new BootstrapSelect.SelectOption { Value = "mobile", Text = "Mobile Money" },
-        new BootstrapSelect.SelectOption { Value = "transfer", Text = "Bank Transfers" },
-        new BootstrapSelect.SelectOption { Value = "deposit", Text = "Deposits" },
-        new BootstrapSelect.SelectOption { Value = "withdrawal", Text = "Withdrawals" }
-    };
-
-    private List<BootstrapSelect.SelectOption> shiftOptions = new()
-    {
-        new BootstrapSelect.SelectOption { Value = "morning", Text = "Morning Shift (8:00 AM - 4:00 PM)" },
-        new BootstrapSelect.SelectOption { Value = "evening", Text = "Evening Shift (4:00 PM - 12:00 AM)" },
-        new BootstrapSelect.SelectOption { Value = "night", Text = "Night Shift (12:00 AM - 8:00 AM)" },
-        new BootstrapSelect.SelectOption { Value = "full", Text = "Full Day (8:00 AM - 8:00 PM)" }
-    };
-
-    // Event handlers
-    private void HandleUserChanged(string? value)
-    {
-        selectedUser = value;
-    }
-
-    private void HandleControlAccountChanged(string? value)
-    {
-        selectedControlAccount = value;
-    }
-
-    private void HandleMobileMoneyChanged(string? value)
-    {
-        selectedMobileMoney = value;
-    }
-
-    private void HandleCashierTypesChanged(List<string>? values)
-    {
-        selectedCashierTypes = values;
-    }
-
-    private void HandleShiftChanged(string? value)
-    {
-        selectedShift = value;
-    }
-
-    private void CancelForm()
-    {
-        // Reset form
-        selectedUser = null;
-        cashierId = string.Empty;
-        transactionLimit = 0;
-        selectedControlAccount = null;
-        selectedMobileMoney = null;
-        isEnabled = true;
-        selectedCashierTypes = null;
-        selectedShift = "morning";
-    }
-
-    private void SubmitForm()
-    {
-        // Handle form submission
-        Console.WriteLine("Form submitted!");
-    }
-}
-
-
-@code {
-    private string selectedDepartment = "";
-    
-    private List<SelectOption> departmentOptions = new()
-    {
-        new SelectOption { Value = "hr", Text = "Human Resources" },
-        new SelectOption { Value = "it", Text = "Information Technology" },
-        new SelectOption { Value = "finance", Text = "Finance" },
-        new SelectOption { Value = "marketing", Text = "Marketing" },
-        new SelectOption { Value = "sales", Text = "Sales" }
-    };
-}
+@* @page "/updated-modal-examples" *@
+@* @using NovaAccounts.Components.Shared *@
+@* @using NovaAccounts.SharedModels.ModalFields *@
+@* *@
+@* <h2>Updated Modal Examples with Font & Color Customization</h2> *@
+@* *@
+@* <div class="row mb-4"> *@
+@*     <!-- Example 1: Small Modal with Custom Colors --> *@
+@*     <div class="col-md-6"> *@
+@*         <Select2Component  *@
+@*             Label="Department" *@
+@*             @bind-SelectedValue="selectedDepartment"> *@
+@*             <option value="hr">HR</option> *@
+@*             <option value="it">IT</option> *@
+@*             <option value="finance">Finance</option> *@
+@*         </Select2Component> *@
+@*         <h4>1. Small Modal with Custom Title</h4> *@
+@*         <ReusableModal Title="Quick Action" *@
+@*                        TriggerButtonText="Small Modal" *@
+@*                        TriggerButtonClass="btn btn-info" *@
+@*                        ShowTriggerButton="true" *@
+@*                        Size="ModalSize.Small" *@
+@*                        TitleFontSize="1.5rem" *@
+@*                        TitleColor="#007bff" *@
+@*                        BodyFontSize="0.9rem" *@
+@*                        BodyColor="#495057" *@
+@*                        ButtonFontSize="0.8rem"> *@
+@*             <BodyContent> *@
+@*                 <p>This is a small modal with custom styling.</p> *@
+@*                 <div class="form-group"> *@
+@*                     <label>Quick Input:</label> *@
+@*                     <input type="text" class="form-control" placeholder="Enter value"/> *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* *@
+@*     <!-- Example 2: Extra Large Modal --> *@
+@*     <div class="col-md-6"> *@
+@*         <h4>2.  Large Modal</h4> *@
+@*         <ReusableModal Title="Complete Employee Registration" *@
+@*                       TriggerButtonText="Employee form" *@
+@*                       TriggerButtonClass="btn btn-success" *@
+@*                       ShowTriggerButton="true" *@
+@*                       Size="ModalSize.Large" *@
+@*                       TitleFontSize="3rem" *@
+@*                       HeaderClass="bg-danger text-white" *@
+@*                       TitleColor="#ffffff" *@
+@*                       BodyFontSize="1.1rem" *@
+@*                       ButtonFontSize="1rem"> *@
+@*             <BodyContent> *@
+@*                 <div class="container-fluid"> *@
+@*                     <div class="row"> *@
+@*                         <div class="col-md-4"> *@
+@*                             <h5>Personal Information</h5> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>First Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Last Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Email</label> *@
+@*                                 <input type="email" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>First Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Last Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Email</label> *@
+@*                                 <input type="email" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>First Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Last Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Email</label> *@
+@*                                 <input type="email" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>First Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Last Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Email</label> *@
+@*                                 <input type="email" class="form-control" /> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                          *@
+@*                         <div class="col-md-4"> *@
+@*                             <h5>Employment Details</h5> *@
+@*                             <BootstrapSelect  *@
+@*                                 Label="USER" *@
+@*                                 LabelClass="" *@
+@*                                 Name="user_id" *@
+@*                                 Placeholder="--SELECT USER--" *@
+@*                                 Options="@userOptions" *@
+@*                                 LiveSearch="true" *@
+@*                                 Required="true" *@
+@*                                 OnValueChanged="@HandleUserChanged" /> *@
+@*                             $1$ <div class="form-group"> #1# *@
+@*                             $1$     <label>Department</label> #1# *@
+@*                             $1$     <select class="form-control select2" style="width: 100%;"> #1# *@
+@*                             $1$         <option>HR</option> #1# *@
+@*                             $1$         <option>IT</option> #1# *@
+@*                             $1$         <option>Finance</option> #1# *@
+@*                             $1$     </select> #1# *@
+@*                             $1$ </div> #1# *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Position</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Start Date</label> *@
+@*                                 <input type="date" class="form-control" /> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                          *@
+@*                         <div class="col-md-4"> *@
+@*                             <h5>Additional Information</h5> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Notes</label> *@
+@*                                 <textarea class="form-control" rows="6"></textarea> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                      *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* <div class="row mb-4"> *@
+@*     <!-- Example 3: Full Screen Modal --> *@
+@*     <div class="col-md-6"> *@
+@*         <h4>3. Default Screen Modal</h4> *@
+@*         <ReusableModal Title="Default Screen Dashboard" *@
+@*                       TriggerButtonText="Full Screen View" *@
+@*                       TriggerButtonClass="btn btn-warning" *@
+@*                       ShowTriggerButton="true" *@
+@*                       Size="ModalSize.FullScreenSmDown" *@
+@*                        *@
+@*                       HeaderClass="bg-dark text-white" *@
+@*                       TitleFontSize="2rem" *@
+@*                       TitleColor="#ffffff" *@
+@*                       BodyFontSize="1rem" *@
+@*                       BodyStyle="padding: 2rem;"> *@
+@*             <BodyContent> *@
+@*                 <div class="container-fluid"> *@
+@*                     <div class="row"> *@
+@*                         <div class="col-12"> *@
+@*                             <h3>Dashboard Overview</h3> *@
+@*                             <p>This modal takes up the entire screen, perfect for detailed forms or dashboards.</p> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                      *@
+@*                     <div class="row mt-4"> *@
+@*                         <div class="col-md-3"> *@
+@*                             <div class="card"> *@
+@*                                 <div class="card-body"> *@
+@*                                     <h5 class="card-title">Total Users</h5> *@
+@*                                     <p class="card-text display-4">1,234</p> *@
+@*                                 </div> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                         <div class="col-md-3"> *@
+@*                             <div class="card"> *@
+@*                                 <div class="card-body"> *@
+@*                                     <h5 class="card-title">Revenue</h5> *@
+@*                                     <p class="card-text display-4">₵45K</p> *@
+@*                                 </div> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                         <div class="col-md-3"> *@
+@*                             <div class="card"> *@
+@*                                 <div class="card-body"> *@
+@*                                     <h5 class="card-title">Orders</h5> *@
+@*                                     <p class="card-text display-4">567</p> *@
+@*                                 </div> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                         <div class="col-md-3"> *@
+@*                             <div class="card"> *@
+@*                                 <div class="card-body"> *@
+@*                                     <h5 class="card-title">Products</h5> *@
+@*                                     <p class="card-text display-4">89</p> *@
+@*                                 </div> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                      *@
+@*                     <div class="row mt-4"> *@
+@*                         <div class="col-12"> *@
+@*                             <h4>Recent Activity</h4> *@
+@*                             <div class="table-responsive"> *@
+@*                                 <table class="table table-striped"> *@
+@*                                     <thead> *@
+@*                                         <tr> *@
+@*                                             <th>Time</th> *@
+@*                                             <th>User</th> *@
+@*                                             <th>Action</th> *@
+@*                                             <th>Details</th> *@
+@*                                         </tr> *@
+@*                                     </thead> *@
+@*                                     <tbody> *@
+@*                                         @for (int i = 0; i < 10; i++) *@
+@*                                         { *@
+@*                                             <tr> *@
+@*                                                 <td>@DateTime.Now.AddMinutes(-i*5).ToString("HH:mm")</td> *@
+@*                                                 <td>User @(i + 1)</td> *@
+@*                                                 <td>@(i % 2 == 0 ? "Login" : "Purchase")</td> *@
+@*                                                 <td>@(i % 2 == 0 ? "Successful login" : $"Bought product {i + 1}")</td> *@
+@*                                             </tr> *@
+@*                                         } *@
+@*                                     </tbody> *@
+@*                                 </table> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* *@
+@*     <!-- Example 4: Custom Header Colors --> *@
+@*     <div class="col-md-6"> *@
+@*         <h4>4. Colored Header Modal</h4> *@
+@*         <ReusableModal Title="Important Notice" *@
+@*                       TriggerButtonText="Show Notice" *@
+@*                       TriggerButtonClass="btn btn-danger" *@
+@*                       ShowTriggerButton="true" *@
+@*                       Size="ModalSize.Default" *@
+@*                       HeaderClass="bg-danger text-white" *@
+@*                       TitleFontSize="1.3rem" *@
+@*                       TitleColor="#ffffff" *@
+@*                       BodyFontSize="1rem" *@
+@*                       BodyColor="#dc3545" *@
+@*                       SaveButtonClass="btn btn-danger" *@
+@*                       CancelButtonClass="btn btn-outline-secondary"> *@
+@*             <BodyContent> *@
+@*                 <div class="alert alert-danger"> *@
+@*                     <i class="fas fa-exclamation-triangle"></i> *@
+@*                     <strong>Warning!</strong> This action cannot be undone. *@
+@*                 </div> *@
+@*                 <p>Please read the terms and conditions carefully before proceeding.</p> *@
+@*                 <div class="form-check"> *@
+@*                     <input class="form-check-input" type="checkbox" id="termsCheck"> *@
+@*                     <label class="form-check-label" for="termsCheck"> *@
+@*                         I agree to the terms and conditions *@
+@*                     </label> *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* <!-- Example 5: Responsive Fullscreen --> *@
+@* <div class="row mb-4"> *@
+@*     <div class="col-md-12"> *@
+@*         <h4>5. Responsive Fullscreen (Fullscreen on mobile only)</h4> *@
+@*         <ReusableModal Title="Responsive Form" *@
+@*                       TriggerButtonText="Mobile Fullscreen" *@
+@*                       TriggerButtonClass="btn btn-info" *@
+@*                       ShowTriggerButton="true" *@
+@*                       Size="ModalSize.FullScreenMdDown" *@
+@*                       TitleFontSize="1.4rem" *@
+@*                       TitleColor="#17a2b8" *@
+@*                       BodyFontSize="1rem"> *@
+@*             <BodyContent> *@
+@*                 <p>This modal will be fullscreen on tablets and mobile devices, but normal size on desktop.</p> *@
+@*                  *@
+@*                 <div class="form-group"> *@
+@*                     <label>Name</label> *@
+@*                     <input type="text" class="form-control" /> *@
+@*                 </div> *@
+@*                  *@
+@*                 <div class="form-group"> *@
+@*                     <label>Email</label> *@
+@*                     <input type="email" class="form-control" /> *@
+@*                 </div> *@
+@*                  *@
+@*                 <div class="form-group"> *@
+@*                     <label>Message</label> *@
+@*                     <textarea class="form-control" rows="4"></textarea> *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* @code { *@
+@*     // Form fields *@
+@*     private string? selectedUser; *@
+@*     private string cashierId = string.Empty; *@
+@*     private decimal transactionLimit = 0; *@
+@*     private string? selectedControlAccount; *@
+@*     private string? selectedMobileMoney; *@
+@*     private bool isEnabled = true; *@
+@*     private List<string>? selectedCashierTypes; *@
+@*     private string? selectedShift = "morning"; *@
+@* *@
+@*     // Options for selects *@
+@*     private List<BootstrapSelect.SelectOption> userOptions = new() *@
+@*     { *@
+@*         new BootstrapSelect.SelectOption { Value = "1", Text = "John Doe (john.doe@company.com)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "2", Text = "Jane Smith (jane.smith@company.com)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "3", Text = "Mike Johnson (mike.johnson@company.com)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "4", Text = "Sarah Wilson (sarah.wilson@company.com)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "5", Text = "David Brown (david.brown@company.com)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "6", Text = "Lisa Anderson (lisa.anderson@company.com)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "7", Text = "Robert Taylor (robert.taylor@company.com)" } *@
+@*     }; *@
+@* *@
+@*     private List<BootstrapSelect.SelectOption> controlAccountOptions = new() *@
+@*     { *@
+@*         new BootstrapSelect.SelectOption { Value = "1001", Text = "Cash in Hand", Subtext = "1001" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "1002", Text = "Petty Cash", Subtext = "1002" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "1003", Text = "Main Cash Account", Subtext = "1003" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "1004", Text = "Vault Account", Subtext = "1004" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "1005", Text = "Branch Cash Account", Subtext = "1005" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "1006", Text = "Teller Cash Account", Subtext = "1006" } *@
+@*     }; *@
+@* *@
+@*     private List<BootstrapSelect.SelectOption> mobileMoneyOptions = new() *@
+@*     { *@
+@*         new BootstrapSelect.SelectOption { Value = "2001", Text = "MTN Mobile Money", Icon = "glyphicon-phone" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "2002", Text = "Vodafone Cash", Icon = "glyphicon-phone" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "2003", Text = "AirtelTigo Money", Icon = "glyphicon-phone" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "2004", Text = "General Mobile Money", Icon = "glyphicon-phone" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "2005", Text = "Bank Mobile Money", Icon = "glyphicon-phone" } *@
+@*     }; *@
+@* *@
+@*     private List<BootstrapSelect.SelectOption> cashierTypeOptions = new() *@
+@*     { *@
+@*         new BootstrapSelect.SelectOption { Value = "cash", Text = "Cash Transactions" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "mobile", Text = "Mobile Money" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "transfer", Text = "Bank Transfers" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "deposit", Text = "Deposits" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "withdrawal", Text = "Withdrawals" } *@
+@*     }; *@
+@* *@
+@*     private List<BootstrapSelect.SelectOption> shiftOptions = new() *@
+@*     { *@
+@*         new BootstrapSelect.SelectOption { Value = "morning", Text = "Morning Shift (8:00 AM - 4:00 PM)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "evening", Text = "Evening Shift (4:00 PM - 12:00 AM)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "night", Text = "Night Shift (12:00 AM - 8:00 AM)" }, *@
+@*         new BootstrapSelect.SelectOption { Value = "full", Text = "Full Day (8:00 AM - 8:00 PM)" } *@
+@*     }; *@
+@* *@
+@*     // Event handlers *@
+@*     private void HandleUserChanged(string? value) *@
+@*     { *@
+@*         selectedUser = value; *@
+@*     } *@
+@* *@
+@*     private void HandleControlAccountChanged(string? value) *@
+@*     { *@
+@*         selectedControlAccount = value; *@
+@*     } *@
+@* *@
+@*     private void HandleMobileMoneyChanged(string? value) *@
+@*     { *@
+@*         selectedMobileMoney = value; *@
+@*     } *@
+@* *@
+@*     private void HandleCashierTypesChanged(List<string>? values) *@
+@*     { *@
+@*         selectedCashierTypes = values; *@
+@*     } *@
+@* *@
+@*     private void HandleShiftChanged(string? value) *@
+@*     { *@
+@*         selectedShift = value; *@
+@*     } *@
+@* *@
+@*     private void CancelForm() *@
+@*     { *@
+@*         // Reset form *@
+@*         selectedUser = null; *@
+@*         cashierId = string.Empty; *@
+@*         transactionLimit = 0; *@
+@*         selectedControlAccount = null; *@
+@*         selectedMobileMoney = null; *@
+@*         isEnabled = true; *@
+@*         selectedCashierTypes = null; *@
+@*         selectedShift = "morning"; *@
+@*     } *@
+@* *@
+@*     private void SubmitForm() *@
+@*     { *@
+@*         // Handle form submission *@
+@*         Console.WriteLine("Form submitted!"); *@
+@*     } *@
+@* } *@
+@* *@
+@* *@
+@* @code { *@
+@*     private string selectedDepartment = ""; *@
+@*      *@
+@*     private List<SelectOption> departmentOptions = new() *@
+@*     { *@
+@*         new SelectOption { Value = "hr", Text = "Human Resources" }, *@
+@*         new SelectOption { Value = "it", Text = "Information Technology" }, *@
+@*         new SelectOption { Value = "finance", Text = "Finance" }, *@
+@*         new SelectOption { Value = "marketing", Text = "Marketing" }, *@
+@*         new SelectOption { Value = "sales", Text = "Sales" } *@
+@*     }; *@
+@* } *@
 
 
 @* @page "/modal-examples" *@

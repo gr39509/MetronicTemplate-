@@ -1,4 +1,4 @@
-@* SmsProviderConfigurationCreateModal.razor *@
+
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
@@ -92,43 +92,43 @@
 
                 <div class="col-md-6">
                     <!-- SMS Specific Settings -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">SMS Settings</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Default Sender ID</label>
-                                <input class="form-control" 
-                                       @bind="defaultSenderId"
-                                       placeholder="e.g., CompanyName"
-                                       maxlength="11" />
-                                <small class="form-text text-muted">Default sender name for SMS messages (max 11 characters)</small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Message Encoding</label>
-                                <select class="form-control" @bind="messageEncoding">
-                                    <option value="GSM7">GSM 7-bit (160 chars)</option>
-                                    <option value="UCS2">UCS-2 (70 chars)</option>
-                                    <option value="AUTO">Auto-detect</option>
-                                </select>
-                                <small class="form-text text-muted">Character encoding for SMS messages</small>
-                            </div>
-
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" @bind="enableDeliveryReports" />
-                                <label class="form-check-label">Enable delivery reports</label>
-                                <small class="form-text text-muted d-block">Receive delivery status updates for sent messages</small>
-                            </div>
-
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" @bind="allowUnicode" />
-                                <label class="form-check-label">Allow Unicode characters</label>
-                                <small class="form-text text-muted d-block">Support for non-Latin characters in messages</small>
-                            </div>
-                        </div>
-                    </div>
+                    @* <div class="card"> *@
+                    @*     <div class="card-header"> *@
+                    @*         <h6 class="card-title mb-0">SMS Settings</h6> *@
+                    @*     </div> *@
+                    @*     <div class="card-body"> *@
+                    @*         <div class="mb-3"> *@
+                    @*             <label class="form-label">Default Sender ID</label> *@
+                    @*             <input class="form-control"  *@
+                    @*                    @bind="defaultSenderId" *@
+                    @*                    placeholder="e.g., CompanyName" *@
+                    @*                    maxlength="11" /> *@
+                    @*             <small class="form-text text-muted">Default sender name for SMS messages (max 11 characters)</small> *@
+                    @*         </div> *@
+                    @* *@
+                    @*         <div class="mb-3"> *@
+                    @*             <label class="form-label">Message Encoding</label> *@
+                    @*             <select class="form-control" @bind="messageEncoding"> *@
+                    @*                 <option value="GSM7">GSM 7-bit (160 chars)</option> *@
+                    @*                 <option value="UCS2">UCS-2 (70 chars)</option> *@
+                    @*                 <option value="AUTO">Auto-detect</option> *@
+                    @*             </select> *@
+                    @*             <small class="form-text text-muted">Character encoding for SMS messages</small> *@
+                    @*         </div> *@
+                    @* *@
+                    @*         <div class="mb-3 form-check"> *@
+                    @*             <input type="checkbox" class="form-check-input" @bind="enableDeliveryReports" /> *@
+                    @*             <label class="form-check-label">Enable delivery reports</label> *@
+                    @*             <small class="form-text text-muted d-block">Receive delivery status updates for sent messages</small> *@
+                    @*         </div> *@
+                    @* *@
+                    @*         <div class="mb-3 form-check"> *@
+                    @*             <input type="checkbox" class="form-check-input" @bind="allowUnicode" /> *@
+                    @*             <label class="form-check-label">Allow Unicode characters</label> *@
+                    @*             <small class="form-text text-muted d-block">Support for non-Latin characters in messages</small> *@
+                    @*         </div> *@
+                    @*     </div> *@
+                    @* </div> *@
 
                     <!-- Credentials Section -->
                     <div class="card mt-3">
@@ -255,12 +255,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 clients = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {clients.Count} clients for SMS configuration");
+                Console.WriteLine($"Loaded {clients.Count} clients for SMS configuration");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
+            Console.WriteLine($"Error loading clients: {ex.Message}");
         }
         finally
         {
@@ -281,12 +281,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 smsProviders = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {smsProviders.Count} SMS providers");
+                Console.WriteLine($"Loaded {smsProviders.Count} SMS providers");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading SMS providers: {ex.Message}");
+            Console.WriteLine($"Error loading SMS providers: {ex.Message}");
         }
         finally
         {
@@ -303,12 +303,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
-                Console.WriteLine($"✅ Loaded {availableCredentialTypes.Count} credential types for SMS");
+                Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types for SMS");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading credential types: {ex.Message}");
+            Console.WriteLine($"Error loading credential types: {ex.Message}");
         }
     }
 
@@ -450,7 +450,7 @@
                 return;
             }
 
-            Console.WriteLine($"📝 Creating SMS configuration for client: {selectedClientId}");
+            Console.WriteLine($"Creating SMS configuration for client: {selectedClientId}");
 
             // Get client identifier
             var client = clients.FirstOrDefault(c => c.ClientId == selectedClientId);
@@ -482,18 +482,18 @@
                 // depending on your API requirements
             };
 
-            Console.WriteLine("🔄 Calling Create6Async for SMS...");
+            Console.WriteLine("Calling Create6Async for SMS...");
 
             // Call the Create6Async method (for SMS)
             var result = await ApiClient.Create6Async(createCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 successMessage = result.Message ?? "SMS configuration created successfully!";
-                Console.WriteLine("✅ SMS configuration created successfully");
+                Console.WriteLine("SMS configuration created successfully");
                 
                 // Clear form after successful creation
                 ResetForm();
@@ -507,18 +507,18 @@
             else
             {
                 formError = result?.Message ?? "Failed to create SMS configuration. Please try again.";
-                Console.WriteLine($"❌ SMS configuration creation failed: {formError}");
+                Console.WriteLine($"SMS configuration creation failed: {formError}");
             }
         }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error creating SMS configuration: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -588,7 +588,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ SmsProviderConfigurationCreateModal component rendered");
+            Console.WriteLine("SmsProviderConfigurationCreateModal component rendered");
         }
     }
     

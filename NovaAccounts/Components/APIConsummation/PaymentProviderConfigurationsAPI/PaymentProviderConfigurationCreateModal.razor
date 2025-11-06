@@ -1,13 +1,13 @@
-@* PaymentProviderConfigurationCreateModal.razor *@
+
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
 @using NovaAccounts.SharedModels.QuickNav
 @inject ApiClient ApiClient
 
-<ReusableQuickNav NavItems="@navigationItems" 
-                  NavId="paymentConfigNav" 
-                  ActiveUrl="@currentUrl" />
+@* <ReusableQuickNav NavItems="@navigationItems"  *@
+@*                   NavId="paymentConfigNav"  *@
+@*                   ActiveUrl="@currentUrl" /> *@
 
 <ReusableModal @ref="paymentConfigCreateModal"
                Title="Create Payment Provider Configuration"
@@ -101,9 +101,6 @@
                                 <label class="form-label">Default Currency</label>
                                 <select class="form-control" @bind="defaultCurrency">
                                     <option value="USD">USD - US Dollar</option>
-                                    <option value="EUR">EUR - Euro</option>
-                                    <option value="GBP">GBP - British Pound</option>
-                                    <option value="KES">KES - Kenyan Shilling</option>
                                     <option value="GHS">GHS - Ghanaian Cedi</option>
                                     <option value="NGN">NGN - Nigerian Naira</option>
                                 </select>
@@ -190,7 +187,7 @@
     private Guid? selectedProviderId = null;
     private string description = string.Empty;
     private bool isDefault = false;
-    private string defaultCurrency = "USD";
+    private string defaultCurrency = "GHS";
     private int transactionTimeout = 30;
     private bool enableWebhooks = true;
     private Dictionary<string, string> credentials = new();
@@ -248,12 +245,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 clients = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {clients.Count} clients for payment configuration");
+                Console.WriteLine($"Loaded {clients.Count} clients for payment configuration");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
+            Console.WriteLine($"Error loading clients: {ex.Message}");
         }
         finally
         {
@@ -274,12 +271,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 paymentProviders = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {paymentProviders.Count} payment providers");
+                Console.WriteLine($"Loaded {paymentProviders.Count} payment providers");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading payment providers: {ex.Message}");
+            Console.WriteLine($"Error loading payment providers: {ex.Message}");
         }
         finally
         {
@@ -296,12 +293,12 @@
             if (result?.Success == true && result.Data != null)
             {
                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
-                Console.WriteLine($"✅ Loaded {availableCredentialTypes.Count} credential types for payment");
+                Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types for payment");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading credential types: {ex.Message}");
+            Console.WriteLine($"Error loading credential types: {ex.Message}");
         }
     }
 
@@ -442,7 +439,7 @@
             return;
         }
 
-        Console.WriteLine($"📝 Creating payment configuration for client: {selectedClientId}");
+        Console.WriteLine($"Creating payment configuration for client: {selectedClientId}");
 
         // Get client identifier
         var client = clients.FirstOrDefault(c => c.ClientId == selectedClientId);
@@ -472,8 +469,8 @@
             IsDefault = isDefault
         };
 
-        Console.WriteLine("🔄 Calling Create4Async for Payment...");
-        Console.WriteLine($"📤 Request DTO: {Newtonsoft.Json.JsonConvert.SerializeObject(createCommand, Newtonsoft.Json.Formatting.Indented)}");
+        Console.WriteLine("Calling Create4Async for Payment...");
+        Console.WriteLine($"Request DTO: {Newtonsoft.Json.JsonConvert.SerializeObject(createCommand, Newtonsoft.Json.Formatting.Indented)}");
 
         // Enable response reading as string to see the raw response
         ApiClient.ReadResponseAsString = true;
@@ -481,13 +478,13 @@
         // Call the Create4Async method (for Payment)
         var result = await ApiClient.Create4Async(createCommand);
 
-        Console.WriteLine($"✅ API Response Success: {result?.Success}");
-        Console.WriteLine($"✅ API Message: {result?.Message}");
+        Console.WriteLine($"API Response Success: {result?.Success}");
+        Console.WriteLine($"API Message: {result?.Message}");
 
         if (result?.Success == true && result.Data != null)
         {
             successMessage = result.Message ?? "Payment configuration created successfully!";
-            Console.WriteLine("✅ Payment configuration created successfully");
+            Console.WriteLine("Payment configuration created successfully");
             
             // Clear form after successful creation
             ResetForm();
@@ -501,19 +498,19 @@
         else
         {
             formError = result?.Message ?? "Failed to create payment configuration. Please try again.";
-            Console.WriteLine($"❌ Payment configuration creation failed: {formError}");
+            Console.WriteLine($"Payment configuration creation failed: {formError}");
         }
     }
     catch (ApiException ex)
     {
         formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-        Console.WriteLine($"❌ API Exception: {ex}");
-        Console.WriteLine($"❌ Response Content: {ex.Response}");
+        Console.WriteLine($"API Exception: {ex}");
+        Console.WriteLine($"Response Content: {ex.Response}");
     }
     catch (Exception ex)
     {
         formError = $"Error creating payment configuration: {ex.Message}";
-        Console.WriteLine($"❌ Exception: {ex}");
+        Console.WriteLine($"Exception: {ex}");
     }
     finally
     {
@@ -587,7 +584,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ PaymentProviderConfigurationCreateModal component rendered");
+            Console.WriteLine("PaymentProviderConfigurationCreateModal component rendered");
         }
     }
 }

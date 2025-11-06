@@ -85,43 +85,47 @@ else
     private ClientEmailModal clientEmailModal = null!;
     private ClientCreateModal clientCreateModal = null!;
     
+    
+    
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            Console.WriteLine("🔍 OnAfterRenderAsync - First render");
+            Console.WriteLine("OnAfterRenderAsync - First render");
             await JSRuntime.InvokeVoidAsync("setDotNetReference", 
                 DotNetObjectReference.Create(this));
             
             // Check if modal components are initialized
             if (clientDetailsModal == null)
             {
-                Console.WriteLine("❌ ClientDetailsModal component is NULL after first render");
+                Console.WriteLine("ClientDetailsModal component is NULL after first render");
             }
             else
             {
-                Console.WriteLine("✅ ClientDetailsModal component reference is set");
+                Console.WriteLine("ClientDetailsModal component reference is set");
             }
 
             if (clientEmailModal == null)
             {
-                Console.WriteLine("❌ ClientEmailModal component is NULL after first render");
+                Console.WriteLine("ClientEmailModal component is NULL after first render");
             }
             else
             {
-                Console.WriteLine("✅ ClientEmailModal component reference is set");
+                Console.WriteLine("ClientEmailModal component reference is set");
             }
         }
     }
+    
+   
 
     [JSInvokable]
     public async Task EditClient(string clientId)
     {
-        Console.WriteLine($"📝 EditClient called with clientId: {clientId}");
+        Console.WriteLine($"EditClient called with clientId: {clientId}");
     
         if (clientEditModal == null)
         {
-            Console.WriteLine("❌ clientEditModal is null");
+            Console.WriteLine("clientEditModal is null");
             return;
         }
     
@@ -131,11 +135,11 @@ else
     [JSInvokable]
     public async Task SendEmailToClient(string clientId)
     {
-        Console.WriteLine($"📧 SendEmailToClient called with clientId: {clientId}");
+        Console.WriteLine($"SendEmailToClient called with clientId: {clientId}");
     
         if (clientEmailModal == null)
         {
-            Console.WriteLine("❌ clientEmailModal is null");
+            Console.WriteLine("clientEmailModal is null");
             return;
         }
     
@@ -151,24 +155,24 @@ else
     [JSInvokable]
     public async Task ViewClient(string clientId)
     {
-        Console.WriteLine($"🔍 ViewClient called with clientId: {clientId}");
+        Console.WriteLine($"ViewClient called with clientId: {clientId}");
         
         try
         {
             if (clientDetailsModal == null)
             {
-                Console.WriteLine("❌ clientDetailsModal is null - modal component not found");
+                Console.WriteLine("clientDetailsModal is null - modal component not found");
                 return;
             }
     
-            Console.WriteLine("✅ Modal reference found, calling OpenModal...");
+            Console.WriteLine("Modal reference found, calling OpenModal...");
             await clientDetailsModal.OpenModal(clientId);
-            Console.WriteLine("✅ OpenModal completed");
+            Console.WriteLine("OpenModal completed");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error in ViewClient: {ex.Message}");
-            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+            Console.WriteLine($"Error in ViewClient: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
     }
     
@@ -188,24 +192,24 @@ else
             if (result?.Success == true && result.Data != null)
             {
                 clients = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {clients.Count} clients");
+                Console.WriteLine($"Loaded {clients.Count} clients");
             }
             else
             {
                 errorMessage = result?.Message ?? "No clients data received from server.";
                 clients = new List<ClientViewModel>();
-                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
             }
         }
         catch (ApiException apiEx)
         {
             errorMessage = $"Server error ({apiEx.StatusCode}). Please try again.";
-            Console.WriteLine($"❌ API Exception loading clients: {apiEx.Message}");
+            Console.WriteLine($"API Exception loading clients: {apiEx.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = "Failed to load clients. Please try again.";
-            Console.WriteLine($"❌ Error loading clients: {ex.Message}");
+            Console.WriteLine($"Error loading clients: {ex.Message}");
         }
         finally
         {
@@ -272,9 +276,7 @@ else
             <button type='button' class='btn btn-info btn-xs' onclick='editClient(""{client.ClientId}"")' title='Edit Client'>
                 <i class='fa fa-edit'></i>
             </button>
-            <button type='button' class='btn btn-success btn-xs' onclick='sendEmailToClient(""{client.ClientId}"")' title='Send Email'>
-                <i class='fa fa-envelope'></i>
-            </button>
+          
         </div>";
                 }
             }
@@ -303,7 +305,7 @@ else
     // THIS METHOD TO HANDLE CLIENT UPDATES
     private async Task HandleClientUpdated(UpdateClientDto updatedClient)
     {
-        Console.WriteLine($"🔄 Handling client update for ID: {updatedClient.ClientId}");
+        Console.WriteLine($"Handling client update for ID: {updatedClient.ClientId}");
         
         try
         {
@@ -317,11 +319,11 @@ else
             // Reload the clients from server to get fresh data
             await LoadClients();
             
-            Console.WriteLine("✅ Client list refreshed after update");
+            Console.WriteLine("Client list refreshed after update");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error refreshing client list: {ex.Message}");
+            Console.WriteLine($"Error refreshing client list: {ex.Message}");
             errorMessage = "Client was updated but couldn't refresh the list. Please refresh the page.";
             StateHasChanged();
         }
@@ -330,7 +332,7 @@ else
     
     private async Task HandleClientCreated(ClientViewModel createdClient)
     {
-        Console.WriteLine($"🔄 Handling new client creation: {createdClient.Name}");
+        Console.WriteLine($"Handling new client creation: {createdClient.Name}");
         
         try
         {
@@ -344,11 +346,11 @@ else
             // Reload the clients from server to get fresh data including the new client
             await LoadClients();
             
-            Console.WriteLine("✅ Client list refreshed after creation");
+            Console.WriteLine("Client list refreshed after creation");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error refreshing client list: {ex.Message}");
+            Console.WriteLine($"Error refreshing client list: {ex.Message}");
             errorMessage = "Client was created but couldn't refresh the list. Please refresh the page.";
             StateHasChanged();
         }
@@ -359,6 +361,8 @@ else
         Console.WriteLine($"CBS Client clicked: {client.Name}");
         await ViewClient(client.ClientId.ToString());
     }
+    
+    
 }
 
 
@@ -371,16 +375,23 @@ else
         window.dotNetReference = reference;
     };
 
-    window.viewClient = function(clientId) {
-        if (window.dotNetReference) {
-            window.dotNetReference.invokeMethodAsync('ViewClient', clientId)
-                .catch(err => {
-                    console.error('Error calling ViewClient:', err);
-                });
-        } else {
-            console.error('DotNet reference not available');
-        }
+    window.viewClient = function (clientId) {
+        console.log('View Client :', clientId);
+        
+        window.location.href = '/clients/' + clientId;
     };
+
+    //for modal
+    // window.viewClient = function(clientId) {
+    //     if (window.dotNetReference) {
+    //         window.dotNetReference.invokeMethodAsync('ViewClient', clientId)
+    //             .catch(err => {
+    //                 console.error('Error calling ViewClient:', err);
+    //             });
+    //     } else {
+    //         console.error('DotNet reference not available');
+    //     }
+    // };
 
     window.editClient = function (clientId) {
         if (window.dotNetReference) {

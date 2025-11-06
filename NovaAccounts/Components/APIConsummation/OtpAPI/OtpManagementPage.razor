@@ -14,9 +14,9 @@
 <PageTitle>OTP Management</PageTitle>
 
 @* Modals *@
-@* <OtpGenerateModal @ref="otpGenerateModal" OnOtpGenerated="HandleOtpGenerated" /> *@
-@* <OtpConfirmModal @ref="otpConfirmModal" OnOtpConfirmed="HandleOtpConfirmed" /> *@
-@* <OtpDetailsModal @ref="otpDetailsModal" /> *@
+<OtpGenerateModal @ref="otpGenerateModal" OnOtpGenerated="HandleOtpGenerated" />
+<OtpConfirmModal @ref="otpConfirmModal" OnOtpConfirmed="HandleOtpConfirmed" />
+<OtpDetailsModal @ref="otpDetailsModal" />
 
 <h1 class="page-title">
     OTP Management
@@ -85,41 +85,41 @@ else
     private string errorMessage = string.Empty;
     
     // Modal references
-    // private OtpGenerateModal otpGenerateModal = null!;
-    // private OtpConfirmModal otpConfirmModal = null!;
-    // private OtpDetailsModal otpDetailsModal = null!;
+    private OtpGenerateModal otpGenerateModal = null!;
+    private OtpConfirmModal otpConfirmModal = null!;
+    private OtpDetailsModal otpDetailsModal = null!;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            Console.WriteLine("🔍 OnAfterRenderAsync - First render");
+            Console.WriteLine("OnAfterRenderAsync - First render");
             await JSRuntime.InvokeVoidAsync("setDotNetReference", 
                 DotNetObjectReference.Create(this));
         }
     }
 
-    // [JSInvokable]
-    // public async Task ViewOtpDetails(string otpId)
-    // {
-    //     Console.WriteLine($"🔍 ViewOtpDetails called with otpId: {otpId}");
-    //     
-    //     try
-    //     {
-    //         if (otpDetailsModal == null)
-    //         {
-    //             Console.WriteLine("❌ otpDetailsModal is null");
-    //             return;
-    //         }
-    //
-    //         await otpDetailsModal.OpenModal(otpId);
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Console.WriteLine($"❌ Error in ViewOtpDetails: {ex.Message}");
-    //     }
-    // }
-    //
+    [JSInvokable]
+    public async Task ViewOtpDetails(string otpId)
+    {
+        Console.WriteLine($"ViewOtpDetails called with otpId: {otpId}");
+        
+        try
+        {
+            if (otpDetailsModal == null)
+            {
+                Console.WriteLine("otpDetailsModal is null");
+                return;
+            }
+    
+            await otpDetailsModal.OpenModal(otpId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in ViewOtpDetails: {ex.Message}");
+        }
+    }
+    
     // [JSInvokable]
     // public async Task GenerateNewOtp()
     // {
@@ -127,7 +127,7 @@ else
     //     
     //     if (otpGenerateModal == null)
     //     {
-    //         Console.WriteLine("❌ otpGenerateModal is null");
+    //         Console.WriteLine("otpGenerateModal is null");
     //         return;
     //     }
     //
@@ -137,11 +137,11 @@ else
     // [JSInvokable]
     // public async Task ConfirmOtp()
     // {
-    //     Console.WriteLine("✅ ConfirmOtp called");
+    //     Console.WriteLine("ConfirmOtp called");
     //     
     //     if (otpConfirmModal == null)
     //     {
-    //         Console.WriteLine("❌ otpConfirmModal is null");
+    //         Console.WriteLine("otpConfirmModal is null");
     //         return;
     //     }
     //
@@ -168,24 +168,24 @@ else
             if (result?.Success == true && result.Data != null)
             {
                 otpRecords = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {otpRecords.Count} OTP records");
+                Console.WriteLine($"Loaded {otpRecords.Count} OTP records");
             }
             else
             {
                 errorMessage = result?.Message ?? "No OTP records received from server.";
                 otpRecords = new List<OtpCodes>();
-                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
             }
         }
         catch (ApiException apiEx)
         {
             errorMessage = $"Server error ({apiEx.StatusCode}). Please try again.";
-            Console.WriteLine($"❌ API Exception loading OTP records: {apiEx.Message}");
+            Console.WriteLine($"API Exception loading OTP records: {apiEx.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = "Failed to load OTP records. Please try again.";
-            Console.WriteLine($"❌ Error loading OTP records: {ex.Message}");
+            Console.WriteLine($"Error loading OTP records: {ex.Message}");
         }
         finally
         {
@@ -374,11 +374,11 @@ else
     // Handle OTP generation
     private async Task HandleOtpGenerated(OtpResponse generatedOtp)
     {
-        Console.WriteLine($"🔄 Handling OTP generation: {generatedOtp.OtpId}");
+        Console.WriteLine($"Handling OTP generation: {generatedOtp.OtpId}");
         
         try
         {
-            // Show loading state briefly
+           
             isLoading = true;
             StateHasChanged();
             
@@ -388,11 +388,11 @@ else
             // Reload the OTP records from server to get fresh data including the new OTP
             await LoadOtpRecords();
             
-            Console.WriteLine("✅ OTP records refreshed after generation");
+            Console.WriteLine("OTP records refreshed after generation");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error refreshing OTP records: {ex.Message}");
+            Console.WriteLine($"Error refreshing OTP records: {ex.Message}");
             errorMessage = "OTP was generated but couldn't refresh the records. Please refresh the page.";
             StateHasChanged();
         }
@@ -401,7 +401,7 @@ else
     // Handle OTP confirmation
     private async Task HandleOtpConfirmed(ConfirmOtpResponse confirmationResult)
     {
-        Console.WriteLine($"🔄 Handling OTP confirmation: {confirmationResult.IsValid}");
+        Console.WriteLine($"Handling OTP confirmation: {confirmationResult.IsValid}");
         
         try
         {

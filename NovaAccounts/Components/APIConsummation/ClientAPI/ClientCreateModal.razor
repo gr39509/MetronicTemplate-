@@ -191,13 +191,13 @@
             // Call the CreateAsync method
             var result = await ApiClient.CreateAsync(createCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
             Console.WriteLine($"✅ API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 successMessage = result.Message ?? "Client created successfully!";
-                Console.WriteLine("✅ Client created successfully");
+                Console.WriteLine("Client created successfully");
                 
                 // Notify parent component
                 await OnClientCreated.InvokeAsync(result.Data);
@@ -213,24 +213,24 @@
             else
             {
                 formError = result?.Message ?? "Failed to create client. Please try again.";
-                Console.WriteLine($"❌ Client creation failed: {formError}");
+                Console.WriteLine($"Client creation failed: {formError}");
             }
         }
         // catch (ApiException<ApiErrorResponse> apiEx)
         // {
         //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
-        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
-        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        //     Console.WriteLine($"API Exception Details: {apiEx}");
+        //     Console.WriteLine($"Status Code: {apiEx.StatusCode}");
         // }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error creating client: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -274,7 +274,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ ClientCreateModal component rendered");
+            Console.WriteLine("ClientCreateModal component rendered");
         }
     }
 }
