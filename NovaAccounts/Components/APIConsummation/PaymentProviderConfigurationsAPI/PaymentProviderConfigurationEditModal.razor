@@ -31,7 +31,7 @@
         else if (configuration != null)
         {
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <div class="mb-3">
                         <label class="form-label">Client</label>
                         <input class="form-control" value="@configuration.ClientIdentifier" disabled />
@@ -63,44 +63,44 @@
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <!-- Payment Specific Settings -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="card-title mb-0">Payment Settings</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label">Default Currency</label>
-                                <select class="form-control" @bind="defaultCurrency">
-                                    <option value="USD">USD - US Dollar</option>
-                                    <option value="GHS">GHS - Ghanaian Cedi</option>
-                                    <option value="NGN">NGN - Nigerian Naira</option>
-                                </select>
-                                <small class="form-text text-muted">Default currency for payments</small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Transaction Timeout (minutes)</label>
-                                <input type="number" class="form-control" @bind="transactionTimeout" min="1" max="60" />
-                                <small class="form-text text-muted">How long to wait for payment confirmation</small>
-                            </div>
-
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" class="form-check-input" @bind="enableWebhooks" />
-                                <label class="form-check-label">Enable webhook notifications</label>
-                                <small class="form-text text-muted d-block">Receive payment status updates via webhooks</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Status Toggle -->
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" @bind="isActive" />
-                        <label class="form-check-label">Active Configuration</label>
-                        <small class="form-text text-muted d-block">Enable or disable this configuration</small>
-                    </div>
-                </div>
+                @* <div class="col-md-6"> *@
+                @*     <!-- Payment Specific Settings --> *@
+                @*     <div class="card"> *@
+                @*         <div class="card-header"> *@
+                @*             <h6 class="card-title mb-0">Payment Settings</h6> *@
+                @*         </div> *@
+                @*         <div class="card-body"> *@
+                @*             <div class="mb-3"> *@
+                @*                 <label class="form-label">Default Currency</label> *@
+                @*                 <select class="form-control" @bind="defaultCurrency"> *@
+                @*                     <option value="USD">USD - US Dollar</option> *@
+                @*                     <option value="GHS">GHS - Ghanaian Cedi</option> *@
+                @*                     <option value="NGN">NGN - Nigerian Naira</option> *@
+                @*                 </select> *@
+                @*                 <small class="form-text text-muted">Default currency for payments</small> *@
+                @*             </div> *@
+                @* *@
+                @*             <div class="mb-3"> *@
+                @*                 <label class="form-label">Transaction Timeout (minutes)</label> *@
+                @*                 <input type="number" class="form-control" @bind="transactionTimeout" min="1" max="60" /> *@
+                @*                 <small class="form-text text-muted">How long to wait for payment confirmation</small> *@
+                @*             </div> *@
+                @* *@
+                @*             <div class="mb-3 form-check"> *@
+                @*                 <input type="checkbox" class="form-check-input" @bind="enableWebhooks" /> *@
+                @*                 <label class="form-check-label">Enable webhook notifications</label> *@
+                @*                 <small class="form-text text-muted d-block">Receive payment status updates via webhooks</small> *@
+                @*             </div> *@
+                @*         </div> *@
+                @*     </div> *@
+                @* *@
+                @*     <!-- Status Toggle --> *@
+                @*     <div class="mb-3 form-check"> *@
+                @*         <input type="checkbox" class="form-check-input" @bind="isActive" /> *@
+                @*         <label class="form-check-label">Active Configuration</label> *@
+                @*         <small class="form-text text-muted d-block">Enable or disable this configuration</small> *@
+                @*     </div> *@
+                @* </div> *@
             </div>
 
             <!-- Credentials Section -->

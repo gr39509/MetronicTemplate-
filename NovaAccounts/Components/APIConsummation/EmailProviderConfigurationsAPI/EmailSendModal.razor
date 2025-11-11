@@ -4,14 +4,14 @@
 @inject ApiClient ApiClient
 
 <ReusableModal @ref="emailSendModal"
-               Title="Send Email Message"
+               Title="Compose Email"
                TriggerButtonText=""
                ShowTriggerButton="false"
-               Size="ModalSize.Large"
-               TitleFontSize="1.2rem"
-               TitleColor="#007bff"
+               Size="ModalSize.ExtraLarge"
+               TitleFontSize="1.4rem"
+               TitleColor="#1a1a1a"
                BodyFontSize="0.95rem"
-               HeaderClass="leadBold bg-blue-chambray font-white"
+               HeaderClass="border-bottom-0 pb-3"
                BodyColor="#333"
                ShowSaveButton="true"
                SaveButtonText="Send Email"
@@ -23,126 +23,256 @@
     <BodyContent>
         @if (isLoading)
         {
-            <div class="text-center p-4">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-2">Loading email configurations...</p>
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="text-muted">Loading email configurations...</p>
             </div>
         }
         else
         {
-            <div class="row">
-                <div class="col-md-6">
-                    <label class="form-label text-primary">This is for testing the Email Configuration.</label>
-                    <div class="mb-3">
-                        <label class="form-label">Email Configuration *</label>
-                        <select class="form-control @(string.IsNullOrEmpty(configurationError) ? "" : "is-invalid")"
-                                value="@selectedConfigurationIdString"
-                                @onchange="HandleConfigurationChange">
-                            <option value="">-- Select Email Configuration --</option>
-                            @foreach (var config in emailConfigurations)
+            <div class="email-compose-container">
+                <!-- Configuration Banner -->
+                <div class="alert alert-info border-0 mb-4" style="background-color: #e8f4fd; border-left: 4px solid #0d6efd !important;">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill mr-2" style="font-size: 1.2rem;"></i>
+                        <span class="font-weight-medium">This is for testing your email configuration before sending to actual recipients.</span>
+                    </div>
+                </div>
+
+                <!-- Email Configuration Section -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-gear-fill text-primary mr-2" style="font-size: 1.3rem;"></i>
+                            <h6 class="mb-0 font-weight-bold">Email Configuration</h6>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="form-label text-dark font-weight-medium mb-2">
+                                Select Configuration <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-control form-control-lg @(string.IsNullOrEmpty(configurationError) ? "" : "is-invalid")"
+                                    value="@selectedConfigurationIdString"
+                                    @onchange="HandleConfigurationChange"
+                                    style="border-radius: 8px; border: 2px solid #e0e0e0;">
+                                <option value="">-- Choose an email provider --</option>
+                                @foreach (var config in emailConfigurations)
+                                {
+                                    <option value="@config.EmailProviderConfigurationId">
+                                        @config.Provider.Name - @config.Description @(config.IsDefault ? "(Default)" : "")
+                                    </option>
+                                }
+                            </select>
+                            @if (!string.IsNullOrEmpty(configurationError))
                             {
-                                <option value="@config.EmailProviderConfigurationId">@config.Provider.Name - @config.Description</option>
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle mr-1"></i>@configurationError
+                                </div>
                             }
-                        </select>
-                        @if (!string.IsNullOrEmpty(configurationError))
-                        {
-                            <div class="invalid-feedback">@configurationError</div>
-                        }
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Subject *</label>
-                        <input class="form-control @(string.IsNullOrEmpty(subjectError) ? "" : "is-invalid")"
-                               @bind="subject"
-                               placeholder="Enter email subject"
-                               maxlength="200" />
-                        @if (!string.IsNullOrEmpty(subjectError))
-                        {
-                            <div class="invalid-feedback">@subjectError</div>
-                        }
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Recipients *</label>
-                        <textarea class="form-control @(string.IsNullOrEmpty(recipientsError) ? "" : "is-invalid")" 
-                                  @bind="recipientsInput" 
-                                  rows="3"
-                                  placeholder="Enter email addresses, one per line&#10;Example:&#10;user1@example.com&#10;user2@example.com"></textarea>
-                        @if (!string.IsNullOrEmpty(recipientsError))
-                        {
-                            <div class="invalid-feedback">@recipientsError</div>
-                        }
-                        <small class="form-text text-muted">Enter one email address per line.</small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-12">
-                    <div class="mb-3">
-                        <label class="form-label">Message Body *</label>
-                        <textarea class="form-control @(string.IsNullOrEmpty(messageBodyError) ? "" : "is-invalid")" 
-                                  @bind="messageBody" 
-                                  rows="8"
-                                  placeholder="Enter your email message here..."
-                                  maxlength="10000"></textarea>
-                        @if (!string.IsNullOrEmpty(messageBodyError))
-                        {
-                            <div class="invalid-feedback">@messageBodyError</div>
-                        }
-                        <div class="d-flex justify-content-between mt-1">
-                            <small class="form-text text-muted">
-                                Message length: <span class="text-muted">@messageBody.Length</span> characters
-                            </small>
-                            <small class="form-text text-muted">Max: 10,000 characters</small>
                         </div>
                     </div>
                 </div>
+
+                <!-- Email Composition Section -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <i class="bi bi-envelope-fill text-primary mr-2" style="font-size: 1.3rem;"></i>
+                            <h6 class="mb-0 font-weight-bold">Email Details</h6>
+                        </div>
+
+                        <!-- Recipients -->
+                        <div class="form-group mb-4">
+                            <label class="form-label text-dark font-weight-medium mb-2">
+                                <i class="bi bi-people-fill mr-1"></i>
+                                Recipients <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control @(string.IsNullOrEmpty(recipientsError) ? "" : "is-invalid")" 
+                                      @bind="recipientsInput" 
+                                      rows="3"
+                                      placeholder="Enter email addresses (one per line)&#10;&#10;Example:&#10;john.doe@company.com&#10;jane.smith@company.com"
+                                      style="border-radius: 8px; border: 2px solid #e0e0e0; font-family: 'Courier New', monospace; font-size: 0.9rem;"></textarea>
+                            @if (!string.IsNullOrEmpty(recipientsError))
+                            {
+                                <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-circle mr-1"></i>@recipientsError
+                                </div>
+                            }
+                            else if (emailRecipientsList.Any())
+                            {
+                                <small class="form-text text-success d-flex align-items-center mt-2">
+                                    <i class="bi bi-check-circle-fill mr-1"></i>
+                                    @emailRecipientsList.Count recipient(s) will receive this email
+                                </small>
+                            }
+                            else
+                            {
+                                <small class="form-text text-muted mt-2">
+                                    <i class="bi bi-info-circle mr-1"></i>
+                                    Separate multiple recipients with new lines
+                                </small>
+                            }
+                        </div>
+
+                        <!-- Subject -->
+                        <div class="form-group mb-4">
+                            <label class="form-label text-dark font-weight-medium mb-2">
+                                <i class="bi bi-tag-fill mr-1"></i>
+                                Subject <span class="text-danger">*</span>
+                            </label>
+                            <input class="form-control form-control-lg @(string.IsNullOrEmpty(subjectError) ? "" : "is-invalid")"
+                                   @bind="subject"
+                                   @bind:event="oninput"
+                                   placeholder="Enter a clear and descriptive subject line"
+                                   maxlength="200"
+                                   style="border-radius: 8px; border: 2px solid #e0e0e0;" />
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                @if (!string.IsNullOrEmpty(subjectError))
+                                {
+                                    <small class="text-danger">
+                                        <i class="bi bi-exclamation-circle mr-1"></i>@subjectError
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted"></small>
+                                }
+                                <small class="text-muted">@subject.Length / 200</small>
+                            </div>
+                        </div>
+
+                        <!-- Message Body -->
+                        <div class="form-group mb-0">
+                            <label class="form-label text-dark font-weight-medium mb-2">
+                                <i class="bi bi-pencil-fill mr-1"></i>
+                                Message <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control @(string.IsNullOrEmpty(messageBodyError) ? "" : "is-invalid")" 
+                                      @bind="messageBody"
+                                      @bind:event="oninput"
+                                      rows="10"
+                                      placeholder="Compose your email message here...&#10;&#10;This is the main content that your recipients will see."
+                                      maxlength="10000"
+                                      style="border-radius: 8px; border: 2px solid #e0e0e0; font-size: 0.95rem; line-height: 1.6;"></textarea>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                @if (!string.IsNullOrEmpty(messageBodyError))
+                                {
+                                    <small class="text-danger">
+                                        <i class="bi bi-exclamation-circle mr-1"></i>@messageBodyError
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted">
+                                        <i class="bi bi-card-text mr-1"></i>
+                                        Write a clear and concise message
+                                    </small>
+                                }
+                                <small class="text-muted font-weight-medium">@messageBody.Length / 10,000</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Section -->
+                @if (!string.IsNullOrEmpty(subject) && !string.IsNullOrEmpty(messageBody) && emailRecipientsList.Any())
+                {
+                    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="card-body p-4 text-white">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="bi bi-eye-fill mr-2" style="font-size: 1.3rem;"></i>
+                                <h6 class="mb-0 font-weight-bold">Email Preview</h6>
+                            </div>
+                            <div class="bg-white text-dark p-3" style="border-radius: 8px;">
+                                <div class="mb-2">
+                                    <strong class="text-muted" style="font-size: 0.85rem;">TO:</strong>
+                                    <span class="ml-2">@emailRecipientsList.Count recipient(s)</span>
+                                </div>
+                                <div class="mb-3 pb-3 border-bottom">
+                                    <strong class="text-muted" style="font-size: 0.85rem;">SUBJECT:</strong>
+                                    <span class="ml-2 font-weight-medium">@subject</span>
+                                </div>
+                                <div style="max-height: 150px; overflow-y: auto;">
+                                    <p class="mb-0" style="white-space: pre-wrap; line-height: 1.6;">@(messageBody.Length > 300 ? messageBody.Substring(0, 300) + "..." : messageBody)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Status Messages -->
+                @if (isSending)
+                {
+                    <div class="alert alert-info border-0 shadow-sm" style="background-color: #d1ecf1; border-left: 4px solid #0dcaf0 !important;">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm text-info mr-3" role="status">
+                                <span class="sr-only">Sending...</span>
+                            </div>
+                            <div>
+                                <strong>Sending your email...</strong>
+                                <p class="mb-0 small mt-1">Please wait while we deliver your message to @emailRecipientsList.Count recipient(s).</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success border-0 shadow-sm" style="background-color: #d1e7dd; border-left: 4px solid #198754 !important;">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill text-success mr-3" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <strong>Success!</strong>
+                                <p class="mb-0 mt-1">@successMessage</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(formError))
+                {
+                    <div class="alert alert-danger border-0 shadow-sm" style="background-color: #f8d7da; border-left: 4px solid #dc3545 !important;">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill text-danger mr-3" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <strong>Error!</strong>
+                                <p class="mb-0 mt-1">@formError</p>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
-
-            @if (isSending)
-            {
-                <div class="alert alert-info">
-                    <div class="d-flex align-items-center">
-                        <div class="spinner-border spinner-border-sm mr-2" role="status"></div>
-                        <span>Sending email messages...</span>
-                    </div>
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(successMessage))
-            {
-                <div class="alert alert-success mt-3">
-                    <strong>Success!</strong> @successMessage
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(formError))
-            {
-                <div class="alert alert-danger mt-3">
-                    <strong>Error!</strong> @formError
-                </div>
-            }
-
-            <!-- Preview Section -->
-            @if (!string.IsNullOrEmpty(subject) && !string.IsNullOrEmpty(messageBody) && emailRecipientsList.Any())
-            {
-                <div class="card mt-3">
-                    <div class="card-header">
-                        <h6 class="card-title mb-0">Preview</h6>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>To:</strong> @emailRecipientsList.Count recipient(s)</p>
-                        <p><strong>Subject:</strong> @subject</p>
-                        <p><strong>Message Preview:</strong> @(messageBody.Length > 100 ? messageBody.Substring(0, 100) + "..." : messageBody)</p>
-                    </div>
-                </div>
-            }
         }
     </BodyContent>
 </ReusableModal>
+
+<style>
+    .email-compose-container {
+        max-width: 100%;
+    }
+
+    .email-compose-container .card {
+        transition: all 0.3s ease;
+    }
+
+    .email-compose-container .card:hover {
+        transform: translateY(-2px);
+    }
+
+    .email-compose-container .form-control:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15) !important;
+    }
+
+    .email-compose-container .form-label {
+        letter-spacing: 0.3px;
+    }
+
+    .font-weight-medium {
+        font-weight: 500;
+    }
+</style>
 
 @code {
     private ReusableModal emailSendModal = null!;
@@ -205,7 +335,6 @@
                 
                 Console.WriteLine($"Loaded {emailConfigurations.Count} email configurations for sending");
                 
-                // Auto-select the default configuration if available
                 var defaultConfig = emailConfigurations.FirstOrDefault(c => c.IsDefault);
                 if (defaultConfig != null)
                 {
@@ -235,7 +364,6 @@
     
     public async Task OpenModalWithConfiguration(EmailClientProviderConfigurationViewModel config)
     {
-        // Reset form
         selectedConfigurationIdString = string.Empty;
         selectedConfigurationId = null;
         subject = string.Empty;
@@ -255,10 +383,8 @@
         Console.WriteLine($"Opening Email Send Modal for client: {ClientIdentifier}");
         Console.WriteLine($"Pre-selecting configuration: {config.Description} (ID: {config.EmailProviderConfigurationId})");
 
-        // Load configurations first
         await LoadEmailConfigurations();
 
-        // Pre-select the specific configuration
         if (emailConfigurations.Any(c => c.EmailProviderConfigurationId == config.EmailProviderConfigurationId))
         {
             selectedConfigurationId = config.EmailProviderConfigurationId;
@@ -268,7 +394,6 @@
         else
         {
             Console.WriteLine($"Configuration {config.EmailProviderConfigurationId} not found in loaded configurations");
-            // Fallback: try to select by provider name
             var similarConfig = emailConfigurations.FirstOrDefault(c => 
                 c.Provider.Name == config.Provider.Name || 
                 c.EmailProviderConfigurationId == config.EmailProviderConfigurationId);
@@ -309,6 +434,7 @@
             selectedConfigurationId = Guid.Parse(value);
         }
         
+        ParseEmailRecipients();
         StateHasChanged();
     }
 
@@ -326,11 +452,9 @@
     {
         try
         {
-            // Clear previous messages
             formError = string.Empty;
             successMessage = string.Empty;
             
-            // Validate form
             if (!ValidateForm())
             {
                 return;
@@ -339,10 +463,8 @@
             isSending = true;
             StateHasChanged();
 
-            // Parse email recipients
             ParseEmailRecipients();
 
-            // Create the send request
             var sendRequest = new SendEmailRequest
             {
                 EmailClientProviderConfigurationId = selectedConfigurationId,
@@ -354,7 +476,6 @@
             Console.WriteLine($"Sending email to {emailRecipientsList.Count} recipients using configuration: {selectedConfigurationId}");
             Console.WriteLine($"Using client identifier: {ClientIdentifier}");
 
-            // Call the SendAsync method for email
             var result = await ApiClient.SendAsync(ClientIdentifier, sendRequest);
 
             Console.WriteLine($"Email Send Response Success: {result?.Success}");
@@ -365,10 +486,8 @@
                 successMessage = result.Message ?? $"Email sent successfully to {emailRecipientsList.Count} recipient(s)!";
                 Console.WriteLine("Email sent successfully");
                 
-                // Notify parent component
                 await OnEmailSent.InvokeAsync();
                 
-                // Close modal after a short delay to show success message
                 await Task.Delay(2000);
                 await emailSendModal.CloseModal();
             }
@@ -399,7 +518,6 @@
     {
         var isValid = true;
 
-        // Validate Configuration
         if (!selectedConfigurationId.HasValue)
         {
             configurationError = "Please select an email configuration";
@@ -410,7 +528,6 @@
             configurationError = string.Empty;
         }
 
-        // Validate Subject
         if (string.IsNullOrWhiteSpace(subject))
         {
             subjectError = "Please enter an email subject";
@@ -426,7 +543,6 @@
             subjectError = string.Empty;
         }
 
-        // Validate Recipients
         if (string.IsNullOrWhiteSpace(recipientsInput))
         {
             recipientsError = "Please enter at least one email address";
@@ -446,7 +562,6 @@
             }
         }
 
-        // Validate Message Body
         if (string.IsNullOrWhiteSpace(messageBody))
         {
             messageBodyError = "Please enter a message body";
@@ -462,7 +577,6 @@
             messageBodyError = string.Empty;
         }
 
-        // Validate Client Identifier
         if (string.IsNullOrEmpty(ClientIdentifier))
         {
             formError = "Client identifier is missing. Please refresh the page and try again.";
@@ -472,3 +586,481 @@
         return isValid;
     }
 }
+
+
+
+
+@* @using NovaAccounts.Components.Shared *@
+@* @using NovaAccounts.SharedModels.ApiService *@
+@* @using NovaAccounts.SharedModels.ModalFields *@
+@* @inject ApiClient ApiClient *@
+@* *@
+@* <ReusableModal @ref="emailSendModal" *@
+@*                Title="Send Email Message" *@
+@*                TriggerButtonText="" *@
+@*                ShowTriggerButton="false" *@
+@*                Size="ModalSize.Large" *@
+@*                TitleFontSize="1.2rem" *@
+@*                TitleColor="#007bff" *@
+@*                BodyFontSize="0.95rem" *@
+@*                HeaderClass="leadBold bg-blue-chambray font-white" *@
+@*                BodyColor="#333" *@
+@*                ShowSaveButton="true" *@
+@*                SaveButtonText="Send Email" *@
+@*                OnSave="@SendEmail" *@
+@*                ShowCancelButton="true" *@
+@*                CancelButtonText="Cancel" *@
+@*                SaveButtonDisabled="@isSending"> *@
+@* *@
+@*     <BodyContent> *@
+@*         @if (isLoading) *@
+@*         { *@
+@*             <div class="text-center p-4"> *@
+@*                 <div class="spinner-border text-primary" role="status"></div> *@
+@*                 <p class="mt-2">Loading email configurations...</p> *@
+@*             </div> *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             <div class="row"> *@
+@*                 <div class="col-md-6"> *@
+@*                     <label class="form-label text-primary">This is for testing the Email Configuration.</label> *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Email Configuration *</label> *@
+@*                         <select class="form-control @(string.IsNullOrEmpty(configurationError) ? "" : "is-invalid")" *@
+@*                                 value="@selectedConfigurationIdString" *@
+@*                                 @onchange="HandleConfigurationChange"> *@
+@*                             <option value="">-- Select Email Configuration --</option> *@
+@*                             @foreach (var config in emailConfigurations) *@
+@*                             { *@
+@*                                 <option value="@config.EmailProviderConfigurationId">@config.Provider.Name - @config.Description</option> *@
+@*                             } *@
+@*                         </select> *@
+@*                         @if (!string.IsNullOrEmpty(configurationError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@configurationError</div> *@
+@*                         } *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Subject *</label> *@
+@*                         <input class="form-control @(string.IsNullOrEmpty(subjectError) ? "" : "is-invalid")" *@
+@*                                @bind="subject" *@
+@*                                placeholder="Enter email subject" *@
+@*                                maxlength="200" /> *@
+@*                         @if (!string.IsNullOrEmpty(subjectError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@subjectError</div> *@
+@*                         } *@
+@*                     </div> *@
+@*                 </div> *@
+@* *@
+@*                 <div class="col-md-6"> *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Recipients *</label> *@
+@*                         <textarea class="form-control @(string.IsNullOrEmpty(recipientsError) ? "" : "is-invalid")"  *@
+@*                                   @bind="recipientsInput"  *@
+@*                                   rows="3" *@
+@*                                   placeholder="Enter email addresses, one per line&#10;Example:&#10;user1@example.com&#10;user2@example.com"></textarea> *@
+@*                         @if (!string.IsNullOrEmpty(recipientsError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@recipientsError</div> *@
+@*                         } *@
+@*                         <small class="form-text text-muted">Enter one email address per line.</small> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@* *@
+@*             <div class="row"> *@
+@*                 <div class="col-12"> *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Message Body *</label> *@
+@*                         <textarea class="form-control @(string.IsNullOrEmpty(messageBodyError) ? "" : "is-invalid")"  *@
+@*                                   @bind="messageBody"  *@
+@*                                   rows="8" *@
+@*                                   placeholder="Enter your email message here..." *@
+@*                                   maxlength="10000"></textarea> *@
+@*                         @if (!string.IsNullOrEmpty(messageBodyError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@messageBodyError</div> *@
+@*                         } *@
+@*                         <div class="d-flex justify-content-between mt-1"> *@
+@*                             <small class="form-text text-muted"> *@
+@*                                 Message length: <span class="text-muted">@messageBody.Length</span> characters *@
+@*                             </small> *@
+@*                             <small class="form-text text-muted">Max: 10,000 characters</small> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@* *@
+@*             @if (isSending) *@
+@*             { *@
+@*                 <div class="alert alert-info"> *@
+@*                     <div class="d-flex align-items-center"> *@
+@*                         <div class="spinner-border spinner-border-sm mr-2" role="status"></div> *@
+@*                         <span>Sending email messages...</span> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             } *@
+@* *@
+@*             @if (!string.IsNullOrEmpty(successMessage)) *@
+@*             { *@
+@*                 <div class="alert alert-success mt-3"> *@
+@*                     <strong>Success!</strong> @successMessage *@
+@*                 </div> *@
+@*             } *@
+@* *@
+@*             @if (!string.IsNullOrEmpty(formError)) *@
+@*             { *@
+@*                 <div class="alert alert-danger mt-3"> *@
+@*                     <strong>Error!</strong> @formError *@
+@*                 </div> *@
+@*             } *@
+@* *@
+@*             <!-- Preview Section --> *@
+@*             @if (!string.IsNullOrEmpty(subject) && !string.IsNullOrEmpty(messageBody) && emailRecipientsList.Any()) *@
+@*             { *@
+@*                 <div class="card mt-3"> *@
+@*                     <div class="card-header"> *@
+@*                         <h6 class="card-title mb-0">Preview</h6> *@
+@*                     </div> *@
+@*                     <div class="card-body"> *@
+@*                         <p><strong>To:</strong> @emailRecipientsList.Count recipient(s)</p> *@
+@*                         <p><strong>Subject:</strong> @subject</p> *@
+@*                         <p><strong>Message Preview:</strong> @(messageBody.Length > 100 ? messageBody.Substring(0, 100) + "..." : messageBody)</p> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             } *@
+@*         } *@
+@*     </BodyContent> *@
+@* </ReusableModal> *@
+@* *@
+@* @code { *@
+@*     private ReusableModal emailSendModal = null!; *@
+@*      *@
+@*     private List<EmailClientProviderConfigurationViewModel> emailConfigurations = new(); *@
+@*     private string selectedConfigurationIdString = string.Empty; *@
+@*     private Guid? selectedConfigurationId = null; *@
+@*     private string subject = string.Empty; *@
+@*     private string recipientsInput = string.Empty; *@
+@*     private string messageBody = string.Empty; *@
+@*      *@
+@*     private List<string> emailRecipientsList = new(); *@
+@*      *@
+@*     private string configurationError = string.Empty; *@
+@*     private string subjectError = string.Empty; *@
+@*     private string recipientsError = string.Empty; *@
+@*     private string messageBodyError = string.Empty; *@
+@*     private string formError = string.Empty; *@
+@*     private string successMessage = string.Empty; *@
+@*      *@
+@*     private bool isLoading = false; *@
+@*     private bool isSending = false; *@
+@* *@
+@*     [Parameter] *@
+@*     public string ClientIdentifier { get; set; } = string.Empty; *@
+@* *@
+@*     [Parameter] *@
+@*     public EventCallback OnEmailSent { get; set; } *@
+@* *@
+@*     protected override void OnParametersSet() *@
+@*     { *@
+@*         Console.WriteLine($"EmailSendModal received ClientIdentifier: {ClientIdentifier}"); *@
+@*     } *@
+@* *@
+@*     private async Task LoadEmailConfigurations() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             isLoading = true; *@
+@*             formError = string.Empty; *@
+@*             StateHasChanged(); *@
+@* *@
+@*             if (string.IsNullOrEmpty(ClientIdentifier)) *@
+@*             { *@
+@*                 formError = "Client identifier is required. Please ensure the parent component is properly loaded."; *@
+@*                 Console.WriteLine("ClientIdentifier is null or empty"); *@
+@*                 return; *@
+@*             } *@
+@* *@
+@*             Console.WriteLine($"Loading email configurations for client: {ClientIdentifier}"); *@
+@* *@
+@*             var result = await ApiClient.ConfigurationsPerClientAsync(ClientIdentifier); *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 emailConfigurations = result.Data *@
+@*                     .Where(c => c.IsActive) *@
+@*                     .OrderByDescending(c => c.IsDefault) *@
+@*                     .ThenBy(c => c.ProviderName) *@
+@*                     .ToList(); *@
+@*                  *@
+@*                 Console.WriteLine($"Loaded {emailConfigurations.Count} email configurations for sending"); *@
+@*                  *@
+@*                 // Auto-select the default configuration if available *@
+@*                 var defaultConfig = emailConfigurations.FirstOrDefault(c => c.IsDefault); *@
+@*                 if (defaultConfig != null) *@
+@*                 { *@
+@*                     selectedConfigurationId = defaultConfig.EmailProviderConfigurationId; *@
+@*                     selectedConfigurationIdString = defaultConfig.EmailProviderConfigurationId.ToString(); *@
+@*                     Console.WriteLine($"Auto-selected default configuration: {defaultConfig.Description}"); *@
+@*                 } *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 formError = result?.Message ?? "No active email configurations found for this client."; *@
+@*                 emailConfigurations = new List<EmailClientProviderConfigurationViewModel>(); *@
+@*                 Console.WriteLine($"No email configurations loaded: {formError}"); *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             formError = $"Error loading email configurations: {ex.Message}"; *@
+@*             Console.WriteLine($"Error loading email configurations: {ex.Message}"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoading = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@*      *@
+@*     public async Task OpenModalWithConfiguration(EmailClientProviderConfigurationViewModel config) *@
+@*     { *@
+@*         // Reset form *@
+@*         selectedConfigurationIdString = string.Empty; *@
+@*         selectedConfigurationId = null; *@
+@*         subject = string.Empty; *@
+@*         recipientsInput = string.Empty; *@
+@*         messageBody = string.Empty; *@
+@*         emailRecipientsList = new List<string>(); *@
+@*          *@
+@*         configurationError = string.Empty; *@
+@*         subjectError = string.Empty; *@
+@*         recipientsError = string.Empty; *@
+@*         messageBodyError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         isSending = false; *@
+@* *@
+@*         Console.WriteLine($"Opening Email Send Modal for client: {ClientIdentifier}"); *@
+@*         Console.WriteLine($"Pre-selecting configuration: {config.Description} (ID: {config.EmailProviderConfigurationId})"); *@
+@* *@
+@*         // Load configurations first *@
+@*         await LoadEmailConfigurations(); *@
+@* *@
+@*         // Pre-select the specific configuration *@
+@*         if (emailConfigurations.Any(c => c.EmailProviderConfigurationId == config.EmailProviderConfigurationId)) *@
+@*         { *@
+@*             selectedConfigurationId = config.EmailProviderConfigurationId; *@
+@*             selectedConfigurationIdString = config.EmailProviderConfigurationId.ToString(); *@
+@*             Console.WriteLine($"Successfully pre-selected configuration: {config.Provider.Name} - {config.Description}"); *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             Console.WriteLine($"Configuration {config.EmailProviderConfigurationId} not found in loaded configurations"); *@
+@*             // Fallback: try to select by provider name *@
+@*             var similarConfig = emailConfigurations.FirstOrDefault(c =>  *@
+@*                 c.Provider.Name == config.Provider.Name ||  *@
+@*                 c.EmailProviderConfigurationId == config.EmailProviderConfigurationId); *@
+@*              *@
+@*             if (similarConfig != null) *@
+@*             { *@
+@*                 selectedConfigurationId = similarConfig.EmailProviderConfigurationId; *@
+@*                 selectedConfigurationIdString = similarConfig.EmailProviderConfigurationId.ToString(); *@
+@*                 Console.WriteLine($"Selected similar configuration: {similarConfig.Provider.Name} - {similarConfig.Description}"); *@
+@*             } *@
+@*         } *@
+@* *@
+@*         if (emailSendModal != null) *@
+@*         { *@
+@*             await emailSendModal.OpenModal(); *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             Console.WriteLine("emailSendModal is null"); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void HandleConfigurationChange(ChangeEventArgs e) *@
+@*     { *@
+@*         configurationError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString(); *@
+@*         selectedConfigurationIdString = value ?? string.Empty; *@
+@*          *@
+@*         if (string.IsNullOrEmpty(value)) *@
+@*         { *@
+@*             selectedConfigurationId = null; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             selectedConfigurationId = Guid.Parse(value); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void ParseEmailRecipients() *@
+@*     { *@
+@*         emailRecipientsList = recipientsInput *@
+@*             .Split(new[] { '\n', '\r', ',' }, StringSplitOptions.RemoveEmptyEntries) *@
+@*             .Select(p => p.Trim()) *@
+@*             .Where(p => !string.IsNullOrWhiteSpace(p)) *@
+@*             .Distinct() *@
+@*             .ToList(); *@
+@*     } *@
+@* *@
+@*     private async Task SendEmail() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             // Clear previous messages *@
+@*             formError = string.Empty; *@
+@*             successMessage = string.Empty; *@
+@*              *@
+@*             // Validate form *@
+@*             if (!ValidateForm()) *@
+@*             { *@
+@*                 return; *@
+@*             } *@
+@* *@
+@*             isSending = true; *@
+@*             StateHasChanged(); *@
+@* *@
+@*             // Parse email recipients *@
+@*             ParseEmailRecipients(); *@
+@* *@
+@*             // Create the send request *@
+@*             var sendRequest = new SendEmailRequest *@
+@*             { *@
+@*                 EmailClientProviderConfigurationId = selectedConfigurationId, *@
+@*                 Subject = subject.Trim(), *@
+@*                 MessageBody = messageBody.Trim(), *@
+@*                 EmailRecipients = emailRecipientsList *@
+@*             }; *@
+@* *@
+@*             Console.WriteLine($"Sending email to {emailRecipientsList.Count} recipients using configuration: {selectedConfigurationId}"); *@
+@*             Console.WriteLine($"Using client identifier: {ClientIdentifier}"); *@
+@* *@
+@*             // Call the SendAsync method for email *@
+@*             var result = await ApiClient.SendAsync(ClientIdentifier, sendRequest); *@
+@* *@
+@*             Console.WriteLine($"Email Send Response Success: {result?.Success}"); *@
+@*             Console.WriteLine($"Email Send Message: {result?.Message}"); *@
+@* *@
+@*             if (result?.Success == true) *@
+@*             { *@
+@*                 successMessage = result.Message ?? $"Email sent successfully to {emailRecipientsList.Count} recipient(s)!"; *@
+@*                 Console.WriteLine("Email sent successfully"); *@
+@*                  *@
+@*                 // Notify parent component *@
+@*                 await OnEmailSent.InvokeAsync(); *@
+@*                  *@
+@*                 // Close modal after a short delay to show success message *@
+@*                 await Task.Delay(2000); *@
+@*                 await emailSendModal.CloseModal(); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 formError = result?.Message ?? "Failed to send email. Please try again."; *@
+@*                 Console.WriteLine($"Email send failed: {formError}"); *@
+@*             } *@
+@*         } *@
+@*         catch (ApiException ex) *@
+@*         { *@
+@*             formError = $"Server error ({ex.StatusCode}): {ex.Message}"; *@
+@*             Console.WriteLine($"API Exception: {ex}"); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             formError = $"Error sending email: {ex.Message}"; *@
+@*             Console.WriteLine($"Exception: {ex}"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isSending = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private bool ValidateForm() *@
+@*     { *@
+@*         var isValid = true; *@
+@* *@
+@*         // Validate Configuration *@
+@*         if (!selectedConfigurationId.HasValue) *@
+@*         { *@
+@*             configurationError = "Please select an email configuration"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             configurationError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate Subject *@
+@*         if (string.IsNullOrWhiteSpace(subject)) *@
+@*         { *@
+@*             subjectError = "Please enter an email subject"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else if (subject.Length > 200) *@
+@*         { *@
+@*             subjectError = "Subject cannot exceed 200 characters"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             subjectError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate Recipients *@
+@*         if (string.IsNullOrWhiteSpace(recipientsInput)) *@
+@*         { *@
+@*             recipientsError = "Please enter at least one email address"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             ParseEmailRecipients(); *@
+@*             if (!emailRecipientsList.Any()) *@
+@*             { *@
+@*                 recipientsError = "Please enter valid email addresses"; *@
+@*                 isValid = false; *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 recipientsError = string.Empty; *@
+@*             } *@
+@*         } *@
+@* *@
+@*         // Validate Message Body *@
+@*         if (string.IsNullOrWhiteSpace(messageBody)) *@
+@*         { *@
+@*             messageBodyError = "Please enter a message body"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else if (messageBody.Length > 10000) *@
+@*         { *@
+@*             messageBodyError = "Message body cannot exceed 10,000 characters"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             messageBodyError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate Client Identifier *@
+@*         if (string.IsNullOrEmpty(ClientIdentifier)) *@
+@*         { *@
+@*             formError = "Client identifier is missing. Please refresh the page and try again."; *@
+@*             isValid = false; *@
+@*         } *@
+@* *@
+@*         return isValid; *@
+@*     } *@
+@* } *@

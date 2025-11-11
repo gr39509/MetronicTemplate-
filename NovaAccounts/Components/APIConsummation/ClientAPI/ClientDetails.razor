@@ -540,7 +540,7 @@
                                     <th>Status</th>
                                     <th>Default</th>
                                     <th>Created Date</th>
-                                    <th style="width: 150px;">Actions</th>
+                                    <th style="width: 180px;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -583,7 +583,7 @@
                                             <button type="button" class="btn btn-sm btn-primary"
                                                     @onclick='() => OpenEditPaymentConfiguration(config.PaymentProviderConfigurationId)'
                                                     title="Edit Configuration">
-                                                <i class="fa fa-edit"></i> Edit
+                                                <i class="fa fa-edit"></i>
                                             </button>
                                             <button type="button" class="btn btn-sm btn-success"
                                                     @onclick:preventDefault
@@ -749,7 +749,8 @@
                 await Task.WhenAll(
                     LoadEmailConfigurations(clientDetails.Identifier),
                     LoadSmsConfigurations(clientDetails.Identifier),
-                    LoadOtpConfigurations(clientDetails.Identifier)
+                    LoadOtpConfigurations(clientDetails.Identifier),
+                    LoadPaymentConfigurations(clientDetails.Identifier)
                 );
             }
             else

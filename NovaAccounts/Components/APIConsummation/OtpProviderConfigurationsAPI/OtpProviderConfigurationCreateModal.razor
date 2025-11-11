@@ -4,10 +4,6 @@
 @using NovaAccounts.SharedModels.ModalFields
 @using NovaAccounts.SharedModels.QuickNav
 @inject ApiClient ApiClient
-@* *@
-@* <ReusableQuickNav NavItems="@navigationItems"  *@
-@*                   NavId="otpConfigNav"  *@
-@*                   ActiveUrl="@currentUrl" /> *@
 
 <ReusableModal @ref="otpConfigCreateModal"
                Title="Create OTP Provider Configuration"
@@ -91,36 +87,6 @@
                 </div>
 
                 <div class="col-md-6">
-                    <!-- OTP Specific Settings -->
-                    @* <div class="card"> *@
-                    @*     <div class="card-header"> *@
-                    @*         <h6 class="card-title mb-0">OTP Settings</h6> *@
-                    @*     </div> *@
-                    @*     <div class="card-body"> *@
-                    @*         <div class="mb-3"> *@
-                    @*             <label class="form-label">Default OTP Length</label> *@
-                    @*             <select class="form-control" @bind="defaultOtpLength"> *@
-                    @*                 <option value="4">4 digits</option> *@
-                    @*                 <option value="6" selected>6 digits</option> *@
-                    @*                 <option value="8">8 digits</option> *@
-                    @*             </select> *@
-                    @*             <small class="form-text text-muted">Number of digits in the OTP code</small> *@
-                    @*         </div> *@
-                    @* *@
-                    @*         <div class="mb-3"> *@
-                    @*             <label class="form-label">Default OTP Expiry (minutes)</label> *@
-                    @*             <input type="number" class="form-control" @bind="defaultOtpExpiry" min="1" max="60" /> *@
-                    @*             <small class="form-text text-muted">How long the OTP code remains valid</small> *@
-                    @*         </div> *@
-                    @* *@
-                    @*         <div class="mb-3 form-check"> *@
-                    @*             <input type="checkbox" class="form-check-input" @bind="allowAlphanumeric" /> *@
-                    @*             <label class="form-check-label">Allow alphanumeric OTP codes</label> *@
-                    @*             <small class="form-text text-muted d-block">If enabled, OTP can contain letters and numbers</small> *@
-                    @*         </div> *@
-                    @*     </div> *@
-                    @* </div> *@
-
                     <!-- Credentials Section -->
                     <div class="card mt-3">
                         <div class="card-header">
@@ -132,14 +98,38 @@
                             {
                                 @foreach (var credType in availableCredentialTypes)
                                 {
-                                    <div class="mb-2">
-                                        <label class="form-label">@credType.DisplayName</label>
-                                        <input type="password" 
-                                               class="form-control" 
+                                    var credentialError = GetCredentialError(credType.CredentialTypeName);
+                                    var credentialValue = GetCredentialValue(credType.CredentialTypeName);
+                                    var isRequired = IsCredentialRequired(credType.CredentialTypeName);
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            @credType.DisplayName 
+                                            @if (isRequired)
+                                            {
+                                                <span class="text-danger">*</span>
+                                            }
+                                        </label>
+                                        <input type="password"
+                                               class="form-control @(string.IsNullOrEmpty(credentialError) ? "" : "is-invalid")"
                                                placeholder="Enter @credType.DisplayName"
-                                               value="@GetCredentialValue(credType.CredentialTypeName)"
+                                               value="@credentialValue"
                                                @oninput="@(e => OnCredentialInput(credType.CredentialTypeName, e))" />
-                                        <small class="form-text text-muted">@credType.CredentialTypeName</small>
+                                        @if (!string.IsNullOrEmpty(credentialError))
+                                        {
+                                            <div class="invalid-feedback">@credentialError</div>
+                                        }
+                                        <small class="form-text text-muted">
+                                            @credType.CredentialTypeName
+                                            @if (isRequired)
+                                            {
+                                                <span class="text-danger">(Required)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">(Optional)</span>
+                                            }
+                                        </small>
                                     </div>
                                 }
                             }
@@ -191,6 +181,7 @@
     private int defaultOtpExpiry = 5;
     private bool allowAlphanumeric = false;
     private Dictionary<string, string> credentials = new();
+    private Dictionary<string, string> credentialErrors = new();
 
     // Validation errors
     private string clientError = string.Empty;
@@ -202,6 +193,15 @@
     // Loading states
     private bool isLoadingClients = false;
     private bool isLoadingProviders = false;
+
+    // Define ONLY API_KEY as required for OTP providers - all others are optional
+    private readonly HashSet<string> requiredOtpCredentials = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "API_KEY",
+        "APIKEY",
+        "ACCESS_KEY",
+        "SECRET_KEY"
+    };
 
     [Parameter] public EventCallback<OtpClientProviderConfigurationViewModel> OnOtpConfigurationCreated { get; set; }
 
@@ -315,6 +315,7 @@
         defaultOtpExpiry = 5;
         allowAlphanumeric = false;
         credentials.Clear();
+        credentialErrors.Clear();
         
         clientError = string.Empty;
         providerError = string.Empty;
@@ -413,6 +414,9 @@
     {
         var value = e.Value?.ToString() ?? string.Empty;
         credentials[credentialTypeName] = value;
+
+        // Validate credential in real-time
+        ValidateCredential(credentialTypeName, value);
         
         StateHasChanged();
     }
@@ -420,6 +424,87 @@
     private string GetCredentialValue(string credentialTypeName)
     {
         return credentials.ContainsKey(credentialTypeName) ? credentials[credentialTypeName] : string.Empty;
+    }
+
+    private string GetCredentialError(string credentialTypeName)
+    {
+        return credentialErrors.ContainsKey(credentialTypeName) ? credentialErrors[credentialTypeName] : string.Empty;
+    }
+
+    private bool IsCredentialRequired(string credentialTypeName)
+    {
+        return requiredOtpCredentials.Contains(credentialTypeName.ToUpper());
+    }
+
+    private void ValidateCredential(string credentialTypeName, string value)
+    {
+        credentialErrors.Remove(credentialTypeName);
+
+        if (IsCredentialRequired(credentialTypeName))
+        {
+            // Only API_KEY and similar keys are required - validate them strictly
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                credentialErrors[credentialTypeName] = $"{credentialTypeName} is required";
+            }
+            else if (value.Length < 3)
+            {
+                credentialErrors[credentialTypeName] = $"{credentialTypeName} must be at least 3 characters long";
+            }
+            else if (value.Length > 500)
+            {
+                credentialErrors[credentialTypeName] = $"{credentialTypeName} cannot exceed 500 characters";
+            }
+            else if (ContainsInvalidCharacters(value))
+            {
+                credentialErrors[credentialTypeName] = $"{credentialTypeName} contains invalid characters";
+            }
+        }
+        else
+        {
+            // All other credentials are optional - only validate if provided
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                if (value.Length > 500)
+                {
+                    credentialErrors[credentialTypeName] = $"{credentialTypeName} cannot exceed 500 characters";
+                }
+                else if (ContainsInvalidCharacters(value))
+                {
+                    credentialErrors[credentialTypeName] = $"{credentialTypeName} contains invalid characters";
+                }
+            }
+            // No validation if optional field is empty
+        }
+    }
+
+    private bool ContainsInvalidCharacters(string value)
+    {
+        // Check for potentially dangerous characters in credentials
+        var invalidChars = new[] { '<', '>', '&', '\"', '\'' };
+        return invalidChars.Any(c => value.Contains(c));
+    }
+
+    private bool ValidateCredentials()
+    {
+        credentialErrors.Clear();
+        var isValid = true;
+
+        foreach (var credType in availableCredentialTypes)
+        {
+            var credentialValue = GetCredentialValue(credType.CredentialTypeName);
+            ValidateCredential(credType.CredentialTypeName, credentialValue);
+
+            // Only fail validation for required credentials
+            if (IsCredentialRequired(credType.CredentialTypeName) && 
+                credentialErrors.ContainsKey(credType.CredentialTypeName))
+            {
+                isValid = false;
+            }
+            // Optional credentials with errors don't fail the overall validation
+        }
+
+        return isValid;
     }
 
     private async Task CreateOtpConfiguration()
@@ -431,9 +516,10 @@
             successMessage = string.Empty;
             
             // Validate all fields
-            var isValid = ValidateForm();
+            var isFormValid = ValidateForm();
+            var areCredentialsValid = ValidateCredentials();
             
-            if (!isValid)
+            if (!isFormValid || !areCredentialsValid)
             {
                 formError = "Please fix the validation errors before creating the configuration.";
                 return;
@@ -449,7 +535,7 @@
                 return;
             }
 
-            // Create credentials list
+            // Create credentials list - include all non-empty credentials
             var clientProviderCredentials = credentials
                 .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value))
                 .Select(kvp => new CreateClientProviderCredentialDto
@@ -467,8 +553,6 @@
                 ProviderId = selectedProviderId.Value,
                 ClientProviderCredentials = clientProviderCredentials,
                 IsDefault = isDefault
-               
-                
             };
 
             Console.WriteLine("Calling Create3Async for OTP...");
@@ -570,6 +654,7 @@
         defaultOtpExpiry = 5;
         allowAlphanumeric = false;
         credentials.Clear();
+        credentialErrors.Clear();
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -580,3 +665,587 @@
         }
     }
 }
+
+
+@* $1$ OtpProviderConfigurationCreateModal.razor #1# *@
+@* @using NovaAccounts.Components.Shared *@
+@* @using NovaAccounts.SharedModels.ApiService *@
+@* @using NovaAccounts.SharedModels.ModalFields *@
+@* @using NovaAccounts.SharedModels.QuickNav *@
+@* @inject ApiClient ApiClient *@
+@* $1$ #1# *@
+@* $1$ <ReusableQuickNav NavItems="@navigationItems"  #1# *@
+@* $1$                   NavId="otpConfigNav"  #1# *@
+@* $1$                   ActiveUrl="@currentUrl" /> #1# *@
+@* *@
+@* <ReusableModal @ref="otpConfigCreateModal" *@
+@*                Title="Create OTP Provider Configuration" *@
+@*                TriggerButtonText="" *@
+@*                ShowTriggerButton="false" *@
+@*                Size="ModalSize.Large" *@
+@*                TitleFontSize="1.2rem" *@
+@*                TitleColor="#007bff" *@
+@*                BodyFontSize="0.95rem" *@
+@*                HeaderClass="leadBold bg-blue-chambray font-white" *@
+@*                BodyColor="#333" *@
+@*                ShowSaveButton="true" *@
+@*                SaveButtonText="Create Configuration" *@
+@*                OnSave="@CreateOtpConfiguration" *@
+@*                ShowCancelButton="true" *@
+@*                CancelButtonText="Cancel"> *@
+@* *@
+@*     <BodyContent> *@
+@*         @if (isLoadingClients || isLoadingProviders) *@
+@*         { *@
+@*             <div class="text-center p-4"> *@
+@*                 <div class="spinner-border text-primary" role="status"></div> *@
+@*                 <p class="mt-2">Loading data...</p> *@
+@*             </div> *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             <div class="row"> *@
+@*                 <div class="col-md-6"> *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Client *</label> *@
+@*                         <select class="form-control @(string.IsNullOrEmpty(clientError) ? "" : "is-invalid")"  *@
+@*                                 value="@selectedClientIdString" *@
+@*                                 @onchange="HandleClientChange"> *@
+@*                             <option value="">-- Select Client --</option> *@
+@*                             @foreach (var client in clients) *@
+@*                             { *@
+@*                                 <option value="@client.ClientId">@client.Name (@client.Identifier)</option> *@
+@*                             } *@
+@*                         </select> *@
+@*                         @if (!string.IsNullOrEmpty(clientError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@clientError</div> *@
+@*                         } *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">OTP Provider *</label> *@
+@*                         <select class="form-control @(string.IsNullOrEmpty(providerError) ? "" : "is-invalid")"  *@
+@*                                 value="@selectedProviderIdString" *@
+@*                                 @onchange="HandleProviderChange"> *@
+@*                             <option value="">-- Select OTP Provider --</option> *@
+@*                             @foreach (var provider in otpProviders) *@
+@*                             { *@
+@*                                 <option value="@provider.ProviderId">@provider.Name</option> *@
+@*                             } *@
+@*                         </select> *@
+@*                         @if (!string.IsNullOrEmpty(providerError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@providerError</div> *@
+@*                         } *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Description *</label> *@
+@*                         <input class="form-control @(string.IsNullOrEmpty(descriptionError) ? "" : "is-invalid")"  *@
+@*                                @bind="description"  *@
+@*                                @oninput="OnDescriptionInput" *@
+@*                                placeholder="Enter configuration description" /> *@
+@*                         @if (!string.IsNullOrEmpty(descriptionError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@descriptionError</div> *@
+@*                         } *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3 form-check"> *@
+@*                         <input type="checkbox" class="form-check-input" @bind="isDefault" /> *@
+@*                         <label class="form-check-label">Set as default configuration</label> *@
+@*                         <small class="form-text text-muted d-block">This configuration will be used when no specific configuration is selected</small> *@
+@*                     </div> *@
+@*                 </div> *@
+@* *@
+@*                 <div class="col-md-6"> *@
+@*                     <!-- OTP Specific Settings --> *@
+@*                     $1$ <div class="card"> #1# *@
+@*                     $1$     <div class="card-header"> #1# *@
+@*                     $1$         <h6 class="card-title mb-0">OTP Settings</h6> #1# *@
+@*                     $1$     </div> #1# *@
+@*                     $1$     <div class="card-body"> #1# *@
+@*                     $1$         <div class="mb-3"> #1# *@
+@*                     $1$             <label class="form-label">Default OTP Length</label> #1# *@
+@*                     $1$             <select class="form-control" @bind="defaultOtpLength"> #1# *@
+@*                     $1$                 <option value="4">4 digits</option> #1# *@
+@*                     $1$                 <option value="6" selected>6 digits</option> #1# *@
+@*                     $1$                 <option value="8">8 digits</option> #1# *@
+@*                     $1$             </select> #1# *@
+@*                     $1$             <small class="form-text text-muted">Number of digits in the OTP code</small> #1# *@
+@*                     $1$         </div> #1# *@
+@*                     $1$ #1# *@
+@*                     $1$         <div class="mb-3"> #1# *@
+@*                     $1$             <label class="form-label">Default OTP Expiry (minutes)</label> #1# *@
+@*                     $1$             <input type="number" class="form-control" @bind="defaultOtpExpiry" min="1" max="60" /> #1# *@
+@*                     $1$             <small class="form-text text-muted">How long the OTP code remains valid</small> #1# *@
+@*                     $1$         </div> #1# *@
+@*                     $1$ #1# *@
+@*                     $1$         <div class="mb-3 form-check"> #1# *@
+@*                     $1$             <input type="checkbox" class="form-check-input" @bind="allowAlphanumeric" /> #1# *@
+@*                     $1$             <label class="form-check-label">Allow alphanumeric OTP codes</label> #1# *@
+@*                     $1$             <small class="form-text text-muted d-block">If enabled, OTP can contain letters and numbers</small> #1# *@
+@*                     $1$         </div> #1# *@
+@*                     $1$     </div> #1# *@
+@*                     $1$ </div> #1# *@
+@* *@
+@*                     <!-- Credentials Section --> *@
+@*                     <div class="card mt-3"> *@
+@*                         <div class="card-header"> *@
+@*                             <h5 class="card-title mb-0">Provider Credentials</h5> *@
+@*                             <small class="text-muted">Add required credentials for the selected provider</small> *@
+@*                         </div> *@
+@*                         <div class="card-body"> *@
+@*                             @if (availableCredentialTypes.Any()) *@
+@*                             { *@
+@*                                 @foreach (var credType in availableCredentialTypes) *@
+@*                                 { *@
+@*                                     <div class="mb-2"> *@
+@*                                         <label class="form-label">@credType.DisplayName</label> *@
+@*                                         <input type="password"  *@
+@*                                                class="form-control"  *@
+@*                                                placeholder="Enter @credType.DisplayName" *@
+@*                                                value="@GetCredentialValue(credType.CredentialTypeName)" *@
+@*                                                @oninput="@(e => OnCredentialInput(credType.CredentialTypeName, e))" /> *@
+@*                                         <small class="form-text text-muted">@credType.CredentialTypeName</small> *@
+@*                                     </div> *@
+@*                                 } *@
+@*                             } *@
+@*                             else *@
+@*                             { *@
+@*                                 <p class="text-muted">Select a provider to see required credentials</p> *@
+@*                             } *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@* *@
+@*             @if (!string.IsNullOrEmpty(successMessage)) *@
+@*             { *@
+@*                 <div class="alert alert-success mt-3"> *@
+@*                     <strong>Success!</strong> @successMessage *@
+@*                 </div> *@
+@*             } *@
+@* *@
+@*             @if (!string.IsNullOrEmpty(formError)) *@
+@*             { *@
+@*                 <div class="alert alert-danger mt-3"> *@
+@*                     <strong>Error!</strong> @formError *@
+@*                 </div> *@
+@*             } *@
+@*         } *@
+@*     </BodyContent> *@
+@* </ReusableModal> *@
+@* *@
+@* @code { *@
+@*     private string currentUrl = "/otp-configurations"; *@
+@*     private ReusableModal otpConfigCreateModal = null!; *@
+@*      *@
+@*     private List<NavItem> navigationItems = new(); *@
+@* *@
+@*     // Data collections *@
+@*     private List<ClientViewModel> clients = new(); *@
+@*     private List<ProviderViewModel> otpProviders = new(); *@
+@*     private List<CredentialTypeViewModel> availableCredentialTypes = new(); *@
+@* *@
+@*     // Form fields *@
+@*     private string selectedClientIdString = string.Empty; *@
+@*     private string selectedProviderIdString = string.Empty; *@
+@*     private Guid? selectedClientId = null; *@
+@*     private Guid? selectedProviderId = null; *@
+@*     private string description = string.Empty; *@
+@*     private bool isDefault = false; *@
+@*     private int defaultOtpLength = 6; *@
+@*     private int defaultOtpExpiry = 5; *@
+@*     private bool allowAlphanumeric = false; *@
+@*     private Dictionary<string, string> credentials = new(); *@
+@* *@
+@*     // Validation errors *@
+@*     private string clientError = string.Empty; *@
+@*     private string providerError = string.Empty; *@
+@*     private string descriptionError = string.Empty; *@
+@*     private string formError = string.Empty; *@
+@*     private string successMessage = string.Empty; *@
+@* *@
+@*     // Loading states *@
+@*     private bool isLoadingClients = false; *@
+@*     private bool isLoadingProviders = false; *@
+@* *@
+@*     [Parameter] public EventCallback<OtpClientProviderConfigurationViewModel> OnOtpConfigurationCreated { get; set; } *@
+@* *@
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         navigationItems = new() *@
+@*         { *@
+@*             new NavItem *@
+@*             { *@
+@*                 Text = "Create OTP Configuration", *@
+@*                 Url = "/otp-configurations", *@
+@*                 IconClass = "icon-shield", *@
+@*                 OnClick = async () => await OpenModal(), *@
+@*                 PreventNavigation = true *@
+@*             }, *@
+@*             new NavItem *@
+@*             { *@
+@*                 Text = "View Configurations", *@
+@*                 Url = "/otp-configurations", *@
+@*                 IconClass = "icon-list" *@
+@*             } *@
+@*         }; *@
+@* *@
+@*         await LoadInitialData(); *@
+@*     } *@
+@* *@
+@*     private async Task LoadInitialData() *@
+@*     { *@
+@*         await LoadClients(); *@
+@*         await LoadOtpProviders(); *@
+@*     } *@
+@* *@
+@*     private async Task LoadClients() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             isLoadingClients = true; *@
+@*             StateHasChanged(); *@
+@* *@
+@*             var result = await ApiClient.AllAsync(); *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 clients = result.Data.ToList(); *@
+@*                 Console.WriteLine($"Loaded {clients.Count} clients for OTP configuration"); *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Console.WriteLine($"Error loading clients: {ex.Message}"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoadingClients = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task LoadOtpProviders() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             isLoadingProviders = true; *@
+@*             StateHasChanged(); *@
+@* *@
+@*             // Get OTP providers (providerType = "OTP") *@
+@*             var result = await ApiClient.Provider2Async("OTP"); *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 otpProviders = result.Data.ToList(); *@
+@*                 Console.WriteLine($"Loaded {otpProviders.Count} OTP providers"); *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Console.WriteLine($"Error loading OTP providers: {ex.Message}"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoadingProviders = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task LoadCredentialTypes() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             var result = await ApiClient.All2Async(); *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList(); *@
+@*                 Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types for OTP"); *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Console.WriteLine($"Error loading credential types: {ex.Message}"); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     public async Task OpenModal() *@
+@*     { *@
+@*         // Reset form fields and messages *@
+@*         selectedClientIdString = string.Empty; *@
+@*         selectedProviderIdString = string.Empty; *@
+@*         selectedClientId = null; *@
+@*         selectedProviderId = null; *@
+@*         description = string.Empty; *@
+@*         isDefault = false; *@
+@*         defaultOtpLength = 6; *@
+@*         defaultOtpExpiry = 5; *@
+@*         allowAlphanumeric = false; *@
+@*         credentials.Clear(); *@
+@*          *@
+@*         clientError = string.Empty; *@
+@*         providerError = string.Empty; *@
+@*         descriptionError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@* *@
+@*         // Load credential types when opening modal *@
+@*         await LoadCredentialTypes(); *@
+@* *@
+@*         if (otpConfigCreateModal != null) *@
+@*         { *@
+@*             await otpConfigCreateModal.OpenModal(); *@
+@*         } *@
+@*     } *@
+@*      *@
+@*     public async Task OpenModalWithClient(string clientIdentifier) *@
+@*     { *@
+@*         // Reset form first *@
+@*         await OpenModal(); *@
+@*      *@
+@*         // Find and pre-select the client *@
+@*         var client = clients.FirstOrDefault(c => c.Identifier == clientIdentifier); *@
+@*         if (client != null) *@
+@*         { *@
+@*             selectedClientId = client.ClientId; *@
+@*             selectedClientIdString = client.ClientId.ToString(); *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void HandleClientChange(ChangeEventArgs e) *@
+@*     { *@
+@*         clientError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString(); *@
+@*         selectedClientIdString = value ?? string.Empty; *@
+@*          *@
+@*         if (string.IsNullOrEmpty(value)) *@
+@*         { *@
+@*             selectedClientId = null; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             selectedClientId = Guid.Parse(value); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void HandleProviderChange(ChangeEventArgs e) *@
+@*     { *@
+@*         providerError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString(); *@
+@*         selectedProviderIdString = value ?? string.Empty; *@
+@*          *@
+@*         if (string.IsNullOrEmpty(value)) *@
+@*         { *@
+@*             selectedProviderId = null; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             selectedProviderId = Guid.Parse(value); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void OnDescriptionInput(ChangeEventArgs e) *@
+@*     { *@
+@*         descriptionError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         description = value; *@
+@*          *@
+@*         if (string.IsNullOrWhiteSpace(value)) *@
+@*         { *@
+@*             descriptionError = "Description is required"; *@
+@*         } *@
+@*         else if (value.Length > 200) *@
+@*         { *@
+@*             descriptionError = "Description cannot exceed 200 characters"; *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void OnCredentialInput(string credentialTypeName, ChangeEventArgs e) *@
+@*     { *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         credentials[credentialTypeName] = value; *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private string GetCredentialValue(string credentialTypeName) *@
+@*     { *@
+@*         return credentials.ContainsKey(credentialTypeName) ? credentials[credentialTypeName] : string.Empty; *@
+@*     } *@
+@* *@
+@*     private async Task CreateOtpConfiguration() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             // Clear previous messages *@
+@*             formError = string.Empty; *@
+@*             successMessage = string.Empty; *@
+@*              *@
+@*             // Validate all fields *@
+@*             var isValid = ValidateForm(); *@
+@*              *@
+@*             if (!isValid) *@
+@*             { *@
+@*                 formError = "Please fix the validation errors before creating the configuration."; *@
+@*                 return; *@
+@*             } *@
+@* *@
+@*             Console.WriteLine($"Creating OTP configuration for client: {selectedClientId}"); *@
+@* *@
+@*             // Get client identifier *@
+@*             var client = clients.FirstOrDefault(c => c.ClientId == selectedClientId); *@
+@*             if (client == null) *@
+@*             { *@
+@*                 formError = "Selected client not found."; *@
+@*                 return; *@
+@*             } *@
+@* *@
+@*             // Create credentials list *@
+@*             var clientProviderCredentials = credentials *@
+@*                 .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value)) *@
+@*                 .Select(kvp => new CreateClientProviderCredentialDto *@
+@*                 { *@
+@*                     CredentialTypeName = kvp.Key, *@
+@*                     CredentialKey = kvp.Value *@
+@*                 }) *@
+@*                 .ToList(); *@
+@* *@
+@*             // Create the configuration DTO *@
+@*             var createCommand = new CreateOtpProviderConfigurationDto *@
+@*             { *@
+@*                 ClientIdentifier = client.Identifier, *@
+@*                 Description = description.Trim(), *@
+@*                 ProviderId = selectedProviderId.Value, *@
+@*                 ClientProviderCredentials = clientProviderCredentials, *@
+@*                 IsDefault = isDefault *@
+@*                 *@
+@*                  *@
+@*             }; *@
+@* *@
+@*             Console.WriteLine("Calling Create3Async for OTP..."); *@
+@* *@
+@*             // Call the Create3Async method (for OTP) *@
+@*             var result = await ApiClient.Create3Async(createCommand); *@
+@* *@
+@*             Console.WriteLine($"API Response Success: {result?.Success}"); *@
+@*             Console.WriteLine($"API Message: {result?.Message}"); *@
+@* *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 successMessage = result.Message ?? "OTP configuration created successfully!"; *@
+@*                 Console.WriteLine("OTP configuration created successfully"); *@
+@*                  *@
+@*                 // Clear form after successful creation *@
+@*                 ResetForm(); *@
+@*                  *@
+@*                 // Notify parent component and wait for it to complete *@
+@*                 await OnOtpConfigurationCreated.InvokeAsync(result.Data); *@
+@*                  *@
+@*                 // Close modal after parent is notified *@
+@*                 await otpConfigCreateModal.CloseModal(); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 formError = result?.Message ?? "Failed to create OTP configuration. Please try again."; *@
+@*                 Console.WriteLine($"OTP configuration creation failed: {formError}"); *@
+@*             } *@
+@*         } *@
+@*         catch (ApiException ex) *@
+@*         { *@
+@*             formError = $"Server error ({ex.StatusCode}): {ex.Message}"; *@
+@*             Console.WriteLine($"API Exception: {ex}"); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             formError = $"Error creating OTP configuration: {ex.Message}"; *@
+@*             Console.WriteLine($"Exception: {ex}"); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private bool ValidateForm() *@
+@*     { *@
+@*         var isValid = true; *@
+@* *@
+@*         // Validate Client *@
+@*         if (!selectedClientId.HasValue) *@
+@*         { *@
+@*             clientError = "Please select a client"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             clientError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate Provider *@
+@*         if (!selectedProviderId.HasValue) *@
+@*         { *@
+@*             providerError = "Please select an OTP provider"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             providerError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate Description *@
+@*         if (string.IsNullOrWhiteSpace(description)) *@
+@*         { *@
+@*             descriptionError = "Description is required"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else if (description.Length > 200) *@
+@*         { *@
+@*             descriptionError = "Description cannot exceed 200 characters"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             descriptionError = string.Empty; *@
+@*         } *@
+@* *@
+@*         return isValid; *@
+@*     } *@
+@* *@
+@*     private void ResetForm() *@
+@*     { *@
+@*         selectedClientIdString = string.Empty; *@
+@*         selectedProviderIdString = string.Empty; *@
+@*         selectedClientId = null; *@
+@*         selectedProviderId = null; *@
+@*         description = string.Empty; *@
+@*         isDefault = false; *@
+@*         defaultOtpLength = 6; *@
+@*         defaultOtpExpiry = 5; *@
+@*         allowAlphanumeric = false; *@
+@*         credentials.Clear(); *@
+@*     } *@
+@* *@
+@*     protected override void OnAfterRender(bool firstRender) *@
+@*     { *@
+@*         if (firstRender) *@
+@*         { *@
+@*             Console.WriteLine("OtpProviderConfigurationCreateModal component rendered"); *@
+@*         } *@
+@*     } *@
+@* } *@

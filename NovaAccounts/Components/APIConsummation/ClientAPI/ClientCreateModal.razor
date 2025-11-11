@@ -46,12 +46,12 @@
                               @bind="clientDescription" 
                               @oninput="OnDescriptionInput"
                               rows="3"
-                              placeholder="Enter client description (optional)"></textarea>
+                              placeholder="Enter client description"></textarea>
                     @if (!string.IsNullOrEmpty(descriptionError))
                     {
                         <div class="invalid-feedback">@descriptionError</div>
                     }
-                    <small class="form-text text-muted">Optional description for the client</small>
+                    <small class="form-text text-muted">Description for the client</small>
                 </div>
             </div>
         </div>
@@ -192,7 +192,7 @@
             var result = await ApiClient.CreateAsync(createCommand);
 
             Console.WriteLine($"API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
