@@ -3,19 +3,19 @@
 @using NovaAccounts.SharedModels.ModalFields
 @inject ApiClient ApiClient
 
-<ReusableModal @ref="paymentDebitModal"
-               Title="Test Mobile Wallet Debit"
+<ReusableModal @ref="paymentCreditModal"
+               Title="Test Mobile Wallet Credit"
                TriggerButtonText=""
                ShowTriggerButton="false"
                Size="ModalSize.Large"
                TitleFontSize="1.2rem"
-               TitleColor="#007bff"
+               TitleColor="#28a745"
                BodyFontSize="0.95rem"
-               HeaderClass="leadBold bg-blue-chambray font-white"
+               HeaderClass="leadBold bg-success font-white"
                BodyColor="#333"
                ShowSaveButton="true"
-               SaveButtonText="Process Debit"
-               OnSave="@ProcessDebit"
+               SaveButtonText="Process Credit"
+               OnSave="@ProcessCredit"
                ShowCancelButton="true"
                CancelButtonText="Cancel"
                SaveButtonDisabled="@isProcessing">
@@ -24,7 +24,7 @@
         @if (isLoading)
         {
             <div class="text-center p-4">
-                <div class="spinner-border text-primary" role="status"></div>
+                <div class="spinner-border text-success" role="status"></div>
                 <p class="mt-2">Loading payment configurations...</p>
             </div>
         }
@@ -32,7 +32,7 @@
         {
             <div class="row">
                 <div class="col-md-6">
-                    <label class="form-label text-primary">This is for testing the Payment Configuration.</label>
+                    <label class="form-label text-success">This is for testing the Payment Configuration.</label>
                     <div class="mb-3">
                         <label class="form-label">Payment Configuration *</label>
                         <select class="form-control @(string.IsNullOrEmpty(configurationError) ? "" : "is-invalid")"
@@ -127,7 +127,7 @@
                 <div class="alert alert-info">
                     <div class="d-flex align-items-center">
                         <div class="spinner-border spinner-border-sm mr-2" role="status"></div>
-                        <span>Processing debit transaction...</span>
+                        <span>Processing credit transaction...</span>
                     </div>
                 </div>
             }
@@ -162,11 +162,12 @@
             <!-- Preview Section -->
             @if (!string.IsNullOrEmpty(phoneNumber) && amount > 0 && !string.IsNullOrEmpty(invoiceNumber))
             {
-                <div class="card mt-3">
-                    <div class="card-header">
+                <div class="card mt-3 border-success">
+                    <div class="card-header bg-success text-white">
                         <h6 class="card-title mb-0">Transaction Preview</h6>
                     </div>
                     <div class="card-body">
+                        <p><strong>Type:</strong> <span class="text-success">Credit (Payment to customer)</span></p>
                         <p><strong>Network:</strong> @selectedNetwork</p>
                         <p><strong>Phone Number:</strong> @phoneNumber</p>
                         <p><strong>Amount:</strong> GHC @amount.ToString("F2")</p>
@@ -179,7 +180,7 @@
 </ReusableModal>
 
 @code {
-    private ReusableModal paymentDebitModal = null!;
+    private ReusableModal paymentCreditModal = null!;
     
     private List<PaymentClientProviderConfigurationViewModel> paymentConfigurations = new();
     private string selectedConfigurationIdString = string.Empty;
@@ -210,7 +211,7 @@
 
     protected override void OnParametersSet()
     {
-        Console.WriteLine($"PaymentDebitModal received ClientIdentifier: {ClientIdentifier}");
+        Console.WriteLine($"PaymentCreditModal received ClientIdentifier: {ClientIdentifier}");
     }
 
     private async Task LoadPaymentConfigurations()
@@ -290,7 +291,7 @@
         
         isProcessing = false;
 
-        Console.WriteLine($"Opening Payment Debit Modal for client: {ClientIdentifier}");
+        Console.WriteLine($"Opening Payment Credit Modal for client: {ClientIdentifier}");
         Console.WriteLine($"Pre-selecting configuration: {config.Description} (ID: {config.PaymentProviderConfigurationId})");
 
         // Load configurations first
@@ -319,13 +320,13 @@
             }
         }
 
-        if (paymentDebitModal != null)
+        if (paymentCreditModal != null)
         {
-            await paymentDebitModal.OpenModal();
+            await paymentCreditModal.OpenModal();
         }
         else
         {
-            Console.WriteLine("paymentDebitModal is null");
+            Console.WriteLine("paymentCreditModal is null");
         }
     }
 
@@ -362,7 +363,7 @@
         StateHasChanged();
     }
 
-    private async Task ProcessDebit()
+    private async Task ProcessCredit()
     {
         try
         {
@@ -380,8 +381,8 @@
             isProcessing = true;
             StateHasChanged();
 
-            // Create the debit request
-            var debitRequest = new MobileWalletPaymentRequest
+            // Create the credit request
+            var creditRequest = new MobileWalletPaymentRequest
             {
                 PaymentClientProviderConfigurationId = selectedConfigurationId,
                 Network = selectedNetwork,
@@ -390,7 +391,7 @@
                 InvoiceNumber = invoiceNumber.Trim()
             };
 
-            Console.WriteLine($"Processing debit transaction:");
+            Console.WriteLine($"Processing credit transaction:");
             Console.WriteLine($"- Configuration: {selectedConfigurationId}");
             Console.WriteLine($"- Network: {selectedNetwork}");
             Console.WriteLine($"- Phone: {phoneNumber}");
@@ -398,17 +399,17 @@
             Console.WriteLine($"- Invoice: {invoiceNumber}");
             Console.WriteLine($"Using client identifier: {ClientIdentifier}");
 
-            // Call the DebitAsync method for mobile wallet payment
-            var result = await ApiClient.DebitAsync(ClientIdentifier, debitRequest);
+            // Call the CreditAsync method for mobile wallet payment
+            var result = await ApiClient.CreditAsync(ClientIdentifier, creditRequest);
 
-            Console.WriteLine($"Debit Response Success: {result?.Success}");
-            Console.WriteLine($"Debit Message: {result?.Message}");
+            Console.WriteLine($"Credit Response Success: {result?.Success}");
+            Console.WriteLine($"Credit Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 paymentResponse = result.Data;
-                successMessage = result.Message ?? $"Debit transaction processed successfully!";
-                Console.WriteLine("Debit transaction processed successfully");
+                successMessage = result.Message ?? $"Credit transaction processed successfully!";
+                Console.WriteLine("Credit transaction processed successfully");
                 
                 // Notify parent component
                 await OnPaymentProcessed.InvokeAsync();
@@ -418,8 +419,8 @@
             }
             else
             {
-                formError = result?.Message ?? "Failed to process debit transaction. Please try again.";
-                Console.WriteLine($"Debit transaction failed: {formError}");
+                formError = result?.Message ?? "Failed to process credit transaction. Please try again.";
+                Console.WriteLine($"Credit transaction failed: {formError}");
             }
         }
         catch (ApiException ex)
@@ -429,7 +430,7 @@
         }
         catch (Exception ex)
         {
-            formError = $"Error processing debit transaction: {ex.Message}";
+            formError = $"Error processing credit transaction: {ex.Message}";
             Console.WriteLine($"Exception: {ex}");
         }
         finally

@@ -1,4 +1,3 @@
-
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
@@ -31,7 +30,7 @@
         else if (configuration != null)
         {
             <div class="row">
-                <div class="col-md-12">
+                <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Client</label>
                         <input class="form-control" value="@configuration.ClientIdentifier" disabled />
@@ -56,6 +55,32 @@
                         }
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">From Account *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(fromAccountError) ? "" : "is-invalid")" 
+                               @bind="fromAccount" 
+                               @oninput="OnFromAccountInput"
+                               placeholder="Enter source account number/ID" />
+                        @if (!string.IsNullOrEmpty(fromAccountError))
+                        {
+                            <div class="invalid-feedback">@fromAccountError</div>
+                        }
+                        <small class="form-text text-muted">The account number or identifier to debit payments from</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">From Account Name *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(fromAccountNameError) ? "" : "is-invalid")" 
+                               @bind="fromAccountName" 
+                               @oninput="OnFromAccountNameInput"
+                               placeholder="Enter account holder name" />
+                        @if (!string.IsNullOrEmpty(fromAccountNameError))
+                        {
+                            <div class="invalid-feedback">@fromAccountNameError</div>
+                        }
+                        <small class="form-text text-muted">The name associated with the source account</small>
+                    </div>
+
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" @bind="isDefault" />
                         <label class="form-check-label">Set as default configuration</label>
@@ -63,112 +88,69 @@
                     </div>
                 </div>
 
-                @* <div class="col-md-6"> *@
-                @*     <!-- Payment Specific Settings --> *@
-                @*     <div class="card"> *@
-                @*         <div class="card-header"> *@
-                @*             <h6 class="card-title mb-0">Payment Settings</h6> *@
-                @*         </div> *@
-                @*         <div class="card-body"> *@
-                @*             <div class="mb-3"> *@
-                @*                 <label class="form-label">Default Currency</label> *@
-                @*                 <select class="form-control" @bind="defaultCurrency"> *@
-                @*                     <option value="USD">USD - US Dollar</option> *@
-                @*                     <option value="GHS">GHS - Ghanaian Cedi</option> *@
-                @*                     <option value="NGN">NGN - Nigerian Naira</option> *@
-                @*                 </select> *@
-                @*                 <small class="form-text text-muted">Default currency for payments</small> *@
-                @*             </div> *@
-                @* *@
-                @*             <div class="mb-3"> *@
-                @*                 <label class="form-label">Transaction Timeout (minutes)</label> *@
-                @*                 <input type="number" class="form-control" @bind="transactionTimeout" min="1" max="60" /> *@
-                @*                 <small class="form-text text-muted">How long to wait for payment confirmation</small> *@
-                @*             </div> *@
-                @* *@
-                @*             <div class="mb-3 form-check"> *@
-                @*                 <input type="checkbox" class="form-check-input" @bind="enableWebhooks" /> *@
-                @*                 <label class="form-check-label">Enable webhook notifications</label> *@
-                @*                 <small class="form-text text-muted d-block">Receive payment status updates via webhooks</small> *@
-                @*             </div> *@
-                @*         </div> *@
-                @*     </div> *@
-                @* *@
-                @*     <!-- Status Toggle --> *@
-                @*     <div class="mb-3 form-check"> *@
-                @*         <input type="checkbox" class="form-check-input" @bind="isActive" /> *@
-                @*         <label class="form-check-label">Active Configuration</label> *@
-                @*         <small class="form-text text-muted d-block">Enable or disable this configuration</small> *@
-                @*     </div> *@
-                @* </div> *@
-            </div>
-
-            <!-- Credentials Section -->
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Provider Credentials</h5>
-                    <small class="text-muted">
-                        @if (availableCredentialTypes.Any())
-                        {
-                            <text>Update credentials for @configuration.ProviderName</text>
-                        }
-                        else
-                        {
-                            <text>Loading credential types...</text>
-                        }
-                    </small>
-                </div>
-                <div class="card-body">
-                    @if (availableCredentialTypes.Any())
-                    {
-                        @foreach (var credType in availableCredentialTypes)
-                        {
-                            var existingCredential = configuration.ClientProviderCredentials?
-                                .FirstOrDefault(c => c.CredentialType?.CredentialTypeName == credType.CredentialTypeName);
-                            
-                            <div class="mb-2">
-                                <label class="form-label">@credType.DisplayName *</label>
-                                <input type="password"
-                                       class="form-control @(string.IsNullOrEmpty(GetCredentialError(credType.CredentialTypeName)) ? "" : "is-invalid")"
-                                       placeholder="Enter @credType.DisplayName"
-                                       value="@GetCredentialValue(credType.CredentialTypeName)"
-                                       @oninput="@(e => OnCredentialInput(credType.CredentialTypeName, e))" />
-                                
-                                @if (!string.IsNullOrEmpty(GetCredentialError(credType.CredentialTypeName)))
+                <div class="col-md-6">
+                    <!-- Credentials Section -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Provider Credentials</h5>
+                            <small class="text-muted">
+                                @if (availableCredentialTypes.Any())
                                 {
-                                    <div class="invalid-feedback">@GetCredentialError(credType.CredentialTypeName)</div>
-                                }
-                                
-                                <small class="form-text text-muted">@credType.CredentialTypeName</small>
-                                
-                                @if (existingCredential != null && !string.IsNullOrEmpty(existingCredential.CredentialKey))
-                                {
-                                    <small class="form-text text-info">
-                                        <i class="fa fa-info-circle"></i>
-                                        Current value is set (enter new value only if you want to change it)
-                                    </small>
+                                    <text>Update credentials for @configuration.ProviderName</text>
                                 }
                                 else
                                 {
-                                    <small class="form-text text-warning">
-                                        <i class="fa fa-exclamation-triangle"></i>
-                                        This credential is required for the provider to function properly
-                                    </small>
+                                    <text>Loading credential types...</text>
                                 }
-                            </div>
-                        }
-                    }
-                    else if (!isLoadingCredentialTypes)
-                    {
-                        <p class="text-muted">No credential types available for this provider type.</p>
-                    }
-                    else
-                    {
-                        <div class="text-center">
-                            <div class="spinner-border spinner-border-sm" role="status"></div>
-                            <span class="ml-2">Loading credential types...</span>
+                            </small>
                         </div>
-                    }
+                        <div class="card-body">
+                            @if (availableCredentialTypes.Any())
+                            {
+                                @foreach (var credType in availableCredentialTypes)
+                                {
+                                    var existingCredential = configuration.ClientProviderCredentials?
+                                        .FirstOrDefault(c => c.CredentialType?.CredentialTypeName == credType.CredentialTypeName);
+                                    
+                                    <div class="mb-2">
+                                        <label class="form-label">@credType.DisplayName</label>
+                                        <input type="password"
+                                               class="form-control"
+                                               placeholder="Enter @credType.DisplayName"
+                                               value="@GetCredentialValue(credType.CredentialTypeName)"
+                                               @oninput="@(e => OnCredentialInput(credType.CredentialTypeName, e))" />
+                                        <small class="form-text text-muted">@credType.CredentialTypeName</small>
+                                        
+                                        @if (existingCredential != null && !string.IsNullOrEmpty(existingCredential.CredentialKey))
+                                        {
+                                            <small class="form-text text-info">
+                                                <i class="fa fa-info-circle"></i>
+                                                Current value is set (enter new value only if you want to change it)
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <small class="form-text text-warning">
+                                                <i class="fa fa-exclamation-triangle"></i>
+                                                This credential is required for the provider to function properly
+                                            </small>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else if (!isLoadingCredentialTypes)
+                            {
+                                <p class="text-muted">No credential types available for this provider type.</p>
+                            }
+                            else
+                            {
+                                <div class="text-center">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                                    <span class="ml-2">Loading credential types...</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -210,6 +192,8 @@
 
     // Form fields
     private string description = string.Empty;
+    private string fromAccount = string.Empty;
+    private string fromAccountName = string.Empty;
     private bool isDefault = false;
     private bool isActive = true;
     private string defaultCurrency = "GHS";
@@ -220,6 +204,8 @@
 
     // Validation errors
     private string descriptionError = string.Empty;
+    private string fromAccountError = string.Empty;
+    private string fromAccountNameError = string.Empty;
     private Dictionary<string, string> credentialErrors = new();
 
     [Parameter] public EventCallback<PaymentClientProviderConfigurationViewModel> OnPaymentConfigurationUpdated { get; set; }
@@ -287,6 +273,8 @@
                             
                             // Populate form fields
                             description = configuration.Description ?? "";
+                            // fromAccount = configuration.FromAccount ?? "";
+                            // fromAccountName = configuration.FromAccountName ?? "";
                             isDefault = configuration.IsDefault;
                             isActive = configuration.IsActive;
 
@@ -389,7 +377,9 @@
                 ProviderId = configuration.ProviderId,
                 ClientProviderCredentials = clientProviderCredentials,
                 PaymentClientProviderConfigurationId = configuration.PaymentProviderConfigurationId,
-                IsDefault = isDefault
+                IsDefault = isDefault,
+                FromAccount = fromAccount.Trim(),
+                FromAccountName = fromAccountName.Trim()
             };
 
             Console.WriteLine("Calling Update4Async for Payment...");
@@ -455,21 +445,37 @@
             descriptionError = string.Empty;
         }
 
-        // Validate required credentials
-        // credentialErrors.Clear();
-        // foreach (var credType in availableCredentialTypes)
-        // {
-        //     var credentialValue = credentials.ContainsKey(credType.CredentialTypeName) 
-        //         ? credentials[credType.CredentialTypeName] 
-        //         : string.Empty;
-        //
-        //     // Check if this credential is required but empty
-        //     if (string.IsNullOrWhiteSpace(credentialValue))
-        //     {
-        //         credentialErrors[credType.CredentialTypeName] = $"{credType.DisplayName} is required";
-        //         isValid = false;
-        //     }
-        // }
+        // Validate From Account
+        if (string.IsNullOrWhiteSpace(fromAccount))
+        {
+            fromAccountError = "From Account is required";
+            isValid = false;
+        }
+        else if (fromAccount.Length > 50)
+        {
+            fromAccountError = "From Account cannot exceed 50 characters";
+            isValid = false;
+        }
+        else
+        {
+            fromAccountError = string.Empty;
+        }
+
+        // Validate From Account Name
+        if (string.IsNullOrWhiteSpace(fromAccountName))
+        {
+            fromAccountNameError = "From Account Name is required";
+            isValid = false;
+        }
+        else if (fromAccountName.Length > 100)
+        {
+            fromAccountNameError = "From Account Name cannot exceed 100 characters";
+            isValid = false;
+        }
+        else
+        {
+            fromAccountNameError = string.Empty;
+        }
 
         return isValid;
     }
@@ -495,6 +501,48 @@
         else if (value.Length > 200)
         {
             descriptionError = "Description cannot exceed 200 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnFromAccountInput(ChangeEventArgs e)
+    {
+        fromAccountError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        fromAccount = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            fromAccountError = "From Account is required";
+        }
+        else if (value.Length > 50)
+        {
+            fromAccountError = "From Account cannot exceed 50 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnFromAccountNameInput(ChangeEventArgs e)
+    {
+        fromAccountNameError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        fromAccountName = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            fromAccountNameError = "From Account Name is required";
+        }
+        else if (value.Length > 100)
+        {
+            fromAccountNameError = "From Account Name cannot exceed 100 characters";
         }
         
         StateHasChanged();

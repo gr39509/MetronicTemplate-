@@ -51,6 +51,10 @@
                    ClientIdentifier="@clientDetails?.Identifier"
                    OnPaymentProcessed="HandlePaymentProcessed" />
 
+<PaymentCreditModal @ref="paymentCreditModal" 
+                   ClientIdentifier="@clientDetails?.Identifier"
+                   OnPaymentProcessed="HandlePaymentProcessed" />
+
 <OtpTestModal @ref="otpTestModal" 
               ClientIdentifier="@clientDetails?.Identifier"
               OnOtpTested="HandleOtpTested" />
@@ -189,6 +193,17 @@
                     @if (paymentConfigurations?.Any() == true)
                     {
                         <span class="badge badge-primary ml-1">@paymentConfigurations.Count</span>
+                    }
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @GetTabClass("transactions")"
+                   @onclick='() => SwitchTab("transactions")'
+                   role="button">
+                    <i class="fa fa-history"></i> Transactions
+                    @if (transactions?.Data?.Any() == true)
+                    {
+                        <span class="badge badge-primary ml-1">@transactions.TotalCount</span>
                     }
                 </a>
             </li>
@@ -540,7 +555,7 @@
                                     <th>Status</th>
                                     <th>Default</th>
                                     <th>Created Date</th>
-                                    <th style="width: 180px;">Actions</th>
+                                    <th style="width: 320px;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -592,6 +607,13 @@
                                                     title="Test Debit">
                                                 <i class="fa fa-credit-card"></i> Test Debit
                                             </button>
+                                            <button type="button" class="btn btn-sm btn-warning"
+                                                    @onclick:preventDefault
+                                                    @onclick:stopPropagation
+                                                    @onclick='() => OpenPaymentCreditModal(config)'
+                                                    title="Test Credit">
+                                                <i class="fa fa-money-bill"></i> Test Credit
+                                            </button>
                                         </td>
                                     </tr>
                                 }
@@ -607,6 +629,144 @@
                         <button class="btn btn-sm btn-primary ml-2" @onclick="OpenCreatePaymentConfiguration">
                             <i class="fa fa-plus"></i> Create First Configuration
                         </button>
+                    </div>
+                }
+            </div>
+
+            <!-- Transactions Tab -->
+            <div class="tab-pane fade @(activeTab == "transactions" ? "show active" : "")" id="transactions" role="tabpanel" aria-labelledby="transactions-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4><i class="fa fa-history"></i> Payment Transactions</h4>
+                    <div class="d-flex align-items-center">
+                        <!-- Date Range Filter -->
+                        <div class="mr-2">
+                            <label class="form-label mb-0 mr-2">From:</label>
+                            <input type="date" class="form-control form-control-sm d-inline-block" style="width: 150px;"
+                                   @bind="transactionsStartDate" @bind:event="onchange" @bind:after="OnTransactionsDateChange" />
+                        </div>
+                        <div class="mr-2">
+                            <label class="form-label mb-0 mr-2">To:</label>
+                            <input type="date" class="form-control form-control-sm d-inline-block" style="width: 150px;"
+                                   @bind="transactionsEndDate" @bind:event="onchange" @bind:after="OnTransactionsDateChange" />
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="RefreshTransactions">
+                            <i class="fa fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                @if (isLoadingTransactions)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2">Loading transactions...</p>
+                    </div>
+                }
+                else if (transactions?.Data?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Transaction Type</th>
+                                    <th>Amount</th>
+                                    <th>Phone Number</th>
+                                    <th>Provider</th>
+                                    <th>Status</th>
+                                    <th>Reference</th>
+                                    <th>Created Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var transaction in transactions.Data)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@transaction.InvoiceNo</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge @GetTransactionTypeBadge(transaction.TransactionType)">
+                                                @transaction.TransactionType
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <strong>@transaction.Amount.ToString("F2") @transaction.Currency</strong>
+                                        </td>
+                                        <td>@transaction.PhoneNumber</td>
+                                        <td>@transaction.ProviderCode</td>
+                                        <td>
+                                            <span class="badge @GetStatusBadge(transaction.Status)">
+                                                @transaction.Status
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(transaction.ProviderReference))
+                                            {
+                                                <small class="text-muted">@transaction.ProviderReference</small>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">N/A</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small>@transaction.CreatedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    @if (transactions.TotalPages > 1)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <span class="text-muted">
+                                    Showing @((transactions.PageNumber - 1) * transactions.PageSize + 1) to 
+                                    @Math.Min(transactions.PageNumber * transactions.PageSize, transactions.TotalCount) 
+                                    of @transactions.TotalCount entries
+                                </span>
+                            </div>
+                            <nav>
+                                <ul class="pagination mb-0">
+                                    <li class="page-item @(transactions.HasPreviousPage ? "" : "disabled")">
+                                        <button class="page-link" @onclick="() => ChangeTransactionPage(transactions.PageNumber - 1)">
+                                            Previous
+                                        </button>
+                                    </li>
+                                    @for (int i = 1; i <= transactions.TotalPages; i++)
+                                    {
+                                        var pageNumber = i;
+                                        <li class="page-item @(i == transactions.PageNumber ? "active" : "")">
+                                            <button class="page-link" @onclick="async () => await ChangeTransactionPage(pageNumber)"
+                                                    @onclick:preventDefault @onclick:stopPropagation>
+                                                @i
+                                            </button>
+                                        </li>
+                                    }
+                                    <li class="page-item @(transactions.HasNextPage ? "" : "disabled")">
+                                        <button class="page-link" @onclick="() => ChangeTransactionPage(transactions.PageNumber + 1)">
+                                            Next
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="fa fa-info-circle"></i>
+                        No transactions found for this client.
+                        @if (!string.IsNullOrEmpty(transactionsErrorMessage))
+                        {
+                            <br />
+                            <small class="text-muted">@transactionsErrorMessage</small>
+                        }
                     </div>
                 }
             </div>
@@ -685,7 +845,9 @@
     private bool isLoadingSmsConfigs = false;
     private bool isLoadingOtpConfigs = false;
     private bool isLoadingPaymentConfigs = false;
+    private bool isLoadingTransactions = false;
     private string errorMessage = string.Empty;
+    private string transactionsErrorMessage = string.Empty;
     private string activeTab = "email";
     private string tabName;
 
@@ -694,9 +856,17 @@
     private List<OtpClientProviderConfigurationViewModel> otpConfigurations = new();
     private List<PaymentClientProviderConfigurationViewModel> paymentConfigurations = new();
     
+    // Transactions
+    private PaymentRequestViewModelPagedResult? transactions;
+    private DateTimeOffset? transactionsStartDate = DateTimeOffset.Now.AddDays(-30);
+    private DateTimeOffset? transactionsEndDate = DateTimeOffset.Now;
+    private int currentTransactionPage = 1;
+    private int transactionPageSize = 10;
+    
     private SmsSendModal smsSendModal = null!;
     private EmailSendModal emailSendModal = null!;
     private PaymentDebitModal paymentDebitModal = null!;
+    private PaymentCreditModal paymentCreditModal = null!;
     private OtpTestModal otpTestModal = null!;
 
     protected override async Task OnInitializedAsync()
@@ -720,6 +890,13 @@
         {
             activeTab = tabName;
             Console.WriteLine($"Switched to tab: {tabName}");
+            
+            // Load transactions when switching to transactions tab
+            if (tabName == "transactions" && clientDetails != null)
+            {
+                _ = LoadTransactionsAsync();
+            }
+            
             StateHasChanged();
         }
     }
@@ -750,7 +927,8 @@
                     LoadEmailConfigurations(clientDetails.Identifier),
                     LoadSmsConfigurations(clientDetails.Identifier),
                     LoadOtpConfigurations(clientDetails.Identifier),
-                    LoadPaymentConfigurations(clientDetails.Identifier)
+                    LoadPaymentConfigurations(clientDetails.Identifier),
+                    LoadTransactionsAsync()
                 );
             }
             else
@@ -774,6 +952,138 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task LoadTransactionsAsync()
+    {
+        if (clientDetails == null) return;
+
+        try
+        {
+            isLoadingTransactions = true;
+            transactionsErrorMessage = string.Empty;
+            StateHasChanged();
+
+            Console.WriteLine($"Loading transactions for client: {clientDetails.Identifier}");
+
+            var result = await ApiClient.ClientTransactionsAsync(
+                clientDetails.Identifier,
+                transactionsStartDate,
+                transactionsEndDate,
+                null, // providerId
+                currentTransactionPage,
+                transactionPageSize
+            );
+
+            if (result?.Success == true && result.Data != null)
+            {
+                transactions = result.Data;
+                Console.WriteLine($"Loaded {transactions.Data?.Count ?? 0} transactions");
+            }
+            else
+            {
+                transactionsErrorMessage = result?.Message ?? "No transactions found.";
+                transactions = null;
+                Console.WriteLine($"No transactions loaded: {transactionsErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            transactionsErrorMessage = $"Error loading transactions: {ex.Message}";
+            Console.WriteLine($"Error loading transactions: {ex.Message}");
+            transactions = null;
+        }
+        finally
+        {
+            isLoadingTransactions = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshTransactions()
+    {
+        currentTransactionPage = 1;
+        await LoadTransactionsAsync();
+    }
+
+    // private async Task ChangeTransactionPage(int page)
+    // {
+    //     currentTransactionPage = page;
+    //     await LoadTransactionsAsync();
+    // }
+    
+    private async Task ChangeTransactionPage(int page)
+    {
+        try
+        {
+            Console.WriteLine($"ChangeTransactionPage called with page: {page}");
+            Console.WriteLine($"Current page before change: {currentTransactionPage}");
+            Console.WriteLine($"Total pages: {transactions?.TotalPages ?? 0}");
+
+            // Validate page number
+            if (page < 1)
+            {
+                Console.WriteLine($"Page {page} is less than 1, using page 1");
+                page = 1;
+            }
+
+            if (transactions != null && page > transactions.TotalPages)
+            {
+                Console.WriteLine($"Page {page} is beyond total pages {transactions.TotalPages}, using page {transactions.TotalPages}");
+                page = transactions.TotalPages;
+            }
+
+            // Only proceed if the page actually changed
+            if (currentTransactionPage == page)
+            {
+                Console.WriteLine($"Already on page {page}, no change needed");
+                return;
+            }
+
+            Console.WriteLine($"Changing from page {currentTransactionPage} to page {page}");
+            currentTransactionPage = page;
+
+            // Force UI update before API call
+            StateHasChanged();
+        
+            // Small delay to ensure UI updates
+            await Task.Delay(10);
+        
+            await LoadTransactionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in ChangeTransactionPage: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+
+
+    private async Task OnTransactionsDateChange()
+    {
+        currentTransactionPage = 1;
+        await LoadTransactionsAsync();
+    }
+
+    private string GetStatusBadge(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "success" or "completed" => "bg-success",
+            "pending" => "bg-warning",
+            "failed" or "error" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetTransactionTypeBadge(string transactionType)
+    {
+        return transactionType?.ToLower() switch
+        {
+            "debit" => "badge-danger",
+            "credit" => "badge-success",
+            _ => "badge-secondary"
+        };
     }
 
     private async Task LoadEmailConfigurations(string clientIdentifier)
@@ -823,6 +1133,7 @@
             await emailSendModal.OpenModalWithConfiguration(config);
         }
     }
+    
     private async Task HandleEmailSent()
     {
         Console.WriteLine("Email sent successfully");
@@ -880,7 +1191,7 @@
     private async Task HandleSmsSent()
     {
         Console.WriteLine("SMS sent successfully");
-        // You can add any additional logic here, like refreshing data or showing notifications
+        // I can additional logic here, like refreshing data or showing notifications
     }
 
     private async Task LoadOtpConfigurations(string clientIdentifier)
@@ -1174,11 +1485,24 @@
             await paymentDebitModal.OpenModalWithConfiguration(config);
         }
     }
+
+    private async Task OpenPaymentCreditModal(PaymentClientProviderConfigurationViewModel config)
+    {
+        if (clientDetails != null && paymentCreditModal != null)
+        {
+            // Pass the specific configuration to pre-select
+            await paymentCreditModal.OpenModalWithConfiguration(config);
+        }
+    }
     
     private async Task HandlePaymentProcessed()
     {
-        Console.WriteLine("Payment debit processed successfully");
-        // You can add any additional logic here, like refreshing data or showing notifications
+        Console.WriteLine("Payment processed successfully");
+        // Refresh transactions when a payment is processed
+        if (activeTab == "transactions")
+        {
+            await LoadTransactionsAsync();
+        }
     }
 
     private async Task OpenEditSmsConfiguration(Guid configId)
@@ -1219,6 +1543,20 @@
         {
             await paymentConfigEditModal.OpenModal(configId);
         }
+    }
+
+    private async Task OpenOtpTestModal(OtpClientProviderConfigurationViewModel config)
+    {
+        if (clientDetails != null && otpTestModal != null)
+        {
+            // Pass the specific configuration to pre-select
+            await otpTestModal.OpenModalWithConfiguration(config);
+        }
+    }
+
+    private async Task HandleOtpTested()
+    {
+        Console.WriteLine("OTP tested successfully");
     }
 
     private async Task HandleEmailConfigurationCreated(EmailClientProviderConfigurationViewModel createdConfig)
@@ -1274,22 +1612,6 @@
             await LoadOtpConfigurations(clientDetails.Identifier);
         }
     }
-    
-    private async Task OpenOtpTestModal(OtpClientProviderConfigurationViewModel config)
-    {
-        if (clientDetails != null && otpTestModal != null)
-        {
-            // Pass the specific configuration to pre-select
-            await otpTestModal.OpenModalWithConfiguration(config);
-        }
-    }
-
-    private async Task HandleOtpTested()
-    {
-        Console.WriteLine("OTP tested successfully");
-        
-    }
-
 
     private async Task HandlePaymentConfigurationCreated(PaymentClientProviderConfigurationViewModel createdConfig)
     {

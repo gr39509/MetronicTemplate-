@@ -1,13 +1,8 @@
-
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
 @using NovaAccounts.SharedModels.QuickNav
 @inject ApiClient ApiClient
-
-@* <ReusableQuickNav NavItems="@navigationItems"  *@
-@*                   NavId="paymentConfigNav"  *@
-@*                   ActiveUrl="@currentUrl" /> *@
 
 <ReusableModal @ref="paymentConfigCreateModal"
                Title="Create Payment Provider Configuration"
@@ -81,6 +76,32 @@
                         {
                             <div class="invalid-feedback">@descriptionError</div>
                         }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">From Account *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(fromAccountError) ? "" : "is-invalid")" 
+                               @bind="fromAccount" 
+                               @oninput="OnFromAccountInput"
+                               placeholder="Enter source account number/ID" />
+                        @if (!string.IsNullOrEmpty(fromAccountError))
+                        {
+                            <div class="invalid-feedback">@fromAccountError</div>
+                        }
+                        <small class="form-text text-muted">The account number or identifier to debit payments from</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">From Account Name *</label>
+                        <input class="form-control @(string.IsNullOrEmpty(fromAccountNameError) ? "" : "is-invalid")" 
+                               @bind="fromAccountName" 
+                               @oninput="OnFromAccountNameInput"
+                               placeholder="Enter account holder name" />
+                        @if (!string.IsNullOrEmpty(fromAccountNameError))
+                        {
+                            <div class="invalid-feedback">@fromAccountNameError</div>
+                        }
+                        <small class="form-text text-muted">The name associated with the source account</small>
                     </div>
 
                     <div class="mb-3 form-check">
@@ -186,6 +207,8 @@
     private Guid? selectedClientId = null;
     private Guid? selectedProviderId = null;
     private string description = string.Empty;
+    private string fromAccount = string.Empty;
+    private string fromAccountName = string.Empty;
     private bool isDefault = false;
     private string defaultCurrency = "GHS";
     private int transactionTimeout = 30;
@@ -196,6 +219,8 @@
     private string clientError = string.Empty;
     private string providerError = string.Empty;
     private string descriptionError = string.Empty;
+    private string fromAccountError = string.Empty;
+    private string fromAccountNameError = string.Empty;
     private string formError = string.Empty;
     private string successMessage = string.Empty;
 
@@ -310,6 +335,8 @@
         selectedClientId = null;
         selectedProviderId = null;
         description = string.Empty;
+        fromAccount = string.Empty;
+        fromAccountName = string.Empty;
         isDefault = false;
         defaultCurrency = "USD";
         transactionTimeout = 30;
@@ -319,6 +346,8 @@
         clientError = string.Empty;
         providerError = string.Empty;
         descriptionError = string.Empty;
+        fromAccountError = string.Empty;
+        fromAccountNameError = string.Empty;
         formError = string.Empty;
         successMessage = string.Empty;
 
@@ -409,6 +438,48 @@
         StateHasChanged();
     }
 
+    private void OnFromAccountInput(ChangeEventArgs e)
+    {
+        fromAccountError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        fromAccount = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            fromAccountError = "From Account is required";
+        }
+        else if (value.Length > 50)
+        {
+            fromAccountError = "From Account cannot exceed 50 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnFromAccountNameInput(ChangeEventArgs e)
+    {
+        fromAccountNameError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        fromAccountName = value;
+        
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            fromAccountNameError = "From Account Name is required";
+        }
+        else if (value.Length > 100)
+        {
+            fromAccountNameError = "From Account Name cannot exceed 100 characters";
+        }
+        
+        StateHasChanged();
+    }
+
     private void OnCredentialInput(string credentialTypeName, ChangeEventArgs e)
     {
         var value = e.Value?.ToString() ?? string.Empty;
@@ -423,103 +494,105 @@
     }
 
     private async Task CreatePaymentConfiguration()
-{
-    try
     {
-        // Clear previous messages
-        formError = string.Empty;
-        successMessage = string.Empty;
-        
-        // Validate all fields
-        var isValid = ValidateForm();
-        
-        if (!isValid)
+        try
         {
-            formError = "Please fix the validation errors before creating the configuration.";
-            return;
-        }
-
-        Console.WriteLine($"Creating payment configuration for client: {selectedClientId}");
-
-        // Get client identifier
-        var client = clients.FirstOrDefault(c => c.ClientId == selectedClientId);
-        if (client == null)
-        {
-            formError = "Selected client not found.";
-            return;
-        }
-
-        // Create credentials list
-        var clientProviderCredentials = credentials
-            .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value))
-            .Select(kvp => new CreateClientProviderCredentialDto
+            // Clear previous messages
+            formError = string.Empty;
+            successMessage = string.Empty;
+            
+            // Validate all fields
+            var isValid = ValidateForm();
+            
+            if (!isValid)
             {
-                CredentialTypeName = kvp.Key,
-                CredentialKey = kvp.Value
-            })
-            .ToList();
+                formError = "Please fix the validation errors before creating the configuration.";
+                return;
+            }
 
-        // Create the configuration DTO
-        var createCommand = new CreatePaymentProviderConfigurationDto
-        {
-            ClientIdentifier = client.Identifier,
-            Description = description.Trim(),
-            ProviderId = selectedProviderId.Value,
-            ClientProviderCredentials = clientProviderCredentials,
-            IsDefault = isDefault
-        };
+            Console.WriteLine($"Creating payment configuration for client: {selectedClientId}");
 
-        Console.WriteLine("Calling Create4Async for Payment...");
-        Console.WriteLine($"Request DTO: {Newtonsoft.Json.JsonConvert.SerializeObject(createCommand, Newtonsoft.Json.Formatting.Indented)}");
+            // Get client identifier
+            var client = clients.FirstOrDefault(c => c.ClientId == selectedClientId);
+            if (client == null)
+            {
+                formError = "Selected client not found.";
+                return;
+            }
 
-        // Enable response reading as string to see the raw response
-        ApiClient.ReadResponseAsString = true;
+            // Create credentials list
+            var clientProviderCredentials = credentials
+                .Where(kvp => !string.IsNullOrWhiteSpace(kvp.Value))
+                .Select(kvp => new CreateClientProviderCredentialDto
+                {
+                    CredentialTypeName = kvp.Key,
+                    CredentialKey = kvp.Value
+                })
+                .ToList();
 
-        // Call the Create4Async method (for Payment)
-        var result = await ApiClient.Create4Async(createCommand);
+            // Create the configuration DTO
+            var createCommand = new CreatePaymentProviderConfigurationDto
+            {
+                ClientIdentifier = client.Identifier,
+                Description = description.Trim(),
+                ProviderId = selectedProviderId.Value,
+                ClientProviderCredentials = clientProviderCredentials,
+                IsDefault = isDefault,
+                FromAccount = fromAccount.Trim(),
+                FromAccountName = fromAccountName.Trim()
+            };
 
-        Console.WriteLine($"API Response Success: {result?.Success}");
-        Console.WriteLine($"API Message: {result?.Message}");
+            Console.WriteLine("Calling Create4Async for Payment...");
+            Console.WriteLine($"Request DTO: {Newtonsoft.Json.JsonConvert.SerializeObject(createCommand, Newtonsoft.Json.Formatting.Indented)}");
 
-        if (result?.Success == true && result.Data != null)
-        {
-            successMessage = result.Message ?? "Payment configuration created successfully!";
-            Console.WriteLine("Payment configuration created successfully");
-            
-            // Clear form after successful creation
-            ResetForm();
-            
-            // Notify parent component and wait for it to complete
-            await OnPaymentConfigurationCreated.InvokeAsync(result.Data);
-            
-            // Close modal after parent is notified
-            await paymentConfigCreateModal.CloseModal();
+            // Enable response reading as string to see the raw response
+            ApiClient.ReadResponseAsString = true;
+
+            // Call the Create4Async method (for Payment)
+            var result = await ApiClient.Create4Async(createCommand);
+
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
+
+            if (result?.Success == true && result.Data != null)
+            {
+                successMessage = result.Message ?? "Payment configuration created successfully!";
+                Console.WriteLine("Payment configuration created successfully");
+                
+                // Clear form after successful creation
+                ResetForm();
+                
+                // Notify parent component and wait for it to complete
+                await OnPaymentConfigurationCreated.InvokeAsync(result.Data);
+                
+                // Close modal after parent is notified
+                await paymentConfigCreateModal.CloseModal();
+            }
+            else
+            {
+                formError = result?.Message ?? "Failed to create payment configuration. Please try again.";
+                Console.WriteLine($"Payment configuration creation failed: {formError}");
+            }
         }
-        else
+        catch (ApiException ex)
         {
-            formError = result?.Message ?? "Failed to create payment configuration. Please try again.";
-            Console.WriteLine($"Payment configuration creation failed: {formError}");
+            formError = $"Server error ({ex.StatusCode}): {ex.Message}";
+            Console.WriteLine($"API Exception: {ex}");
+            Console.WriteLine($"Response Content: {ex.Response}");
         }
+        catch (Exception ex)
+        {
+            formError = $"Error creating payment configuration: {ex.Message}";
+            Console.WriteLine($"Exception: {ex}");
+        }
+        finally
+        {
+            // Reset the response reading setting
+            ApiClient.ReadResponseAsString = false;
+        }
+        
+        StateHasChanged();
     }
-    catch (ApiException ex)
-    {
-        formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-        Console.WriteLine($"API Exception: {ex}");
-        Console.WriteLine($"Response Content: {ex.Response}");
-    }
-    catch (Exception ex)
-    {
-        formError = $"Error creating payment configuration: {ex.Message}";
-        Console.WriteLine($"Exception: {ex}");
-    }
-    finally
-    {
-        // Reset the response reading setting
-        ApiClient.ReadResponseAsString = false;
-    }
-    
-    StateHasChanged();
-}
 
     private bool ValidateForm()
     {
@@ -563,6 +636,38 @@
             descriptionError = string.Empty;
         }
 
+        // Validate From Account
+        if (string.IsNullOrWhiteSpace(fromAccount))
+        {
+            fromAccountError = "From Account is required";
+            isValid = false;
+        }
+        else if (fromAccount.Length > 50)
+        {
+            fromAccountError = "From Account cannot exceed 50 characters";
+            isValid = false;
+        }
+        else
+        {
+            fromAccountError = string.Empty;
+        }
+
+        // Validate From Account Name
+        if (string.IsNullOrWhiteSpace(fromAccountName))
+        {
+            fromAccountNameError = "From Account Name is required";
+            isValid = false;
+        }
+        else if (fromAccountName.Length > 100)
+        {
+            fromAccountNameError = "From Account Name cannot exceed 100 characters";
+            isValid = false;
+        }
+        else
+        {
+            fromAccountNameError = string.Empty;
+        }
+
         return isValid;
     }
 
@@ -573,6 +678,8 @@
         selectedClientId = null;
         selectedProviderId = null;
         description = string.Empty;
+        fromAccount = string.Empty;
+        fromAccountName = string.Empty;
         isDefault = false;
         defaultCurrency = "USD";
         transactionTimeout = 30;
