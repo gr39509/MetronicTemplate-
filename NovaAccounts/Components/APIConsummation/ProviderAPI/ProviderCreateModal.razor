@@ -138,16 +138,16 @@
             if (result?.Success == true && result.Data != null)
             {
                 providerTypes = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {providerTypes.Count} provider types");
+                Console.WriteLine($"Loaded {providerTypes.Count} provider types");
             }
             else
             {
-                Console.WriteLine($"❌ Failed to load provider types: {result?.Message}");
+                Console.WriteLine($"Failed to load provider types: {result?.Message}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading provider types: {ex.Message}");
+            Console.WriteLine($"Error loading provider types: {ex.Message}");
         }
     }
 
@@ -291,9 +291,9 @@
                 return;
             }
 
-            Console.WriteLine($"📝 Creating new provider: {providerName}");
-            Console.WriteLine($"📝 Provider Type: {selectedProviderType}");
-            Console.WriteLine($"📝 URL: {providerUrl}");
+            Console.WriteLine($"Creating new provider: {providerName}");
+            Console.WriteLine($"Provider Type: {selectedProviderType}");
+            Console.WriteLine($"URL: {providerUrl}");
 
             // Create the provider DTO
             var createCommand = new CreateProviderDto
@@ -304,18 +304,18 @@
                 ProviderTypeName = selectedProviderType
             };
 
-            Console.WriteLine("🔄 Calling Create5Async...");
+            Console.WriteLine("Calling Create5Async...");
 
             // Call the Create5Async method
             var result = await ApiClient.Create5Async(createCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
                 successMessage = result.Message ?? "Provider created successfully!";
-                Console.WriteLine("✅ Provider created successfully");
+                Console.WriteLine("Provider created successfully");
                 
                 // Notify parent component
                 await OnProviderCreated.InvokeAsync(result.Data);
@@ -334,18 +334,18 @@
             else
             {
                 formError = result?.Message ?? "Failed to create provider. Please try again.";
-                Console.WriteLine($"❌ Provider creation failed: {formError}");
+                Console.WriteLine($"Provider creation failed: {formError}");
             }
         }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error creating provider: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -421,7 +421,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ ProviderCreateModal component rendered");
+            Console.WriteLine("ProviderCreateModal component rendered");
         }
     }
 }

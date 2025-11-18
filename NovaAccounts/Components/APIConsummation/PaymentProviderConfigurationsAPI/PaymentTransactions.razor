@@ -1,0 +1,561 @@
+@page "/payment-transactions"
+@using Microsoft.AspNetCore.Authorization
+@using NovaAccounts.SharedModels.DataFields
+@using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ApiService
+
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+@layout MainLayout
+
+<PageTitle>Payment Transactions</PageTitle>
+
+<h1 class="page-title">
+    Payment Transactions
+    <small>View and manage payment transactions</small>
+</h1>
+
+<!-- Filters Section -->
+<div class="portlet light bordered">
+    <div class="portlet-title">
+        <div class="caption">
+            <i class="icon-filter font-dark"></i>
+            <span class="caption-subject font-dark bold uppercase">Filters</span>
+        </div>
+    </div>
+    <div class="portlet-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" @bind="startDate" @bind:format="yyyy-MM-dd" class="form-control" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" @bind="endDate" @bind:format="yyyy-MM-dd" class="form-control" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>Client Codes</label>
+                    <input type="text" @bind="clientCodesFilter" class="form-control" placeholder="e.g., CLIENT1,CLIENT2" />
+                    <span>Leave empty if you want to get for all clients.</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>Provider</label>
+                    <select @bind="selectedProviderId" class="form-control">
+                        <option value="">All Providers</option>
+                        @foreach (var provider in providers)
+                        {
+                            <option value="@provider.ProviderId">@provider.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+        <br/>
+        <div class="row">
+            <div class="col-md-12 text-right">
+                <button class="btn btn-default" @onclick="ResetFilters">
+                    <i class="fa fa-refresh"></i> Reset
+                </button>
+                <button class="btn btn-primary" @onclick="LoadTransactions">
+                    <i class="fa fa-search"></i> Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading State -->
+@if (isLoading)
+{
+    <div class="portlet light bordered">
+        <div class="portlet-body text-center" style="padding: 50px 0;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-3">Loading payment transactions...</p>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+            <span>&times;</span>
+        </button>
+        <strong>Error!</strong> @errorMessage
+        <button class="btn btn-sm btn-warning" @onclick="LoadTransactions" style="margin-left: 10px;">
+            <i class="fa fa-refresh"></i> Retry
+        </button>
+    </div>
+}
+else
+{
+    <div class="portlet">
+        <div class="portlet-title">
+            <div class="caption font-dark">
+                <i class="icon-wallet font-dark"></i>
+                <span class="caption-subject bold uppercase">Payment Transactions</span>
+                <span class="caption-helper"> @GetTransactionSummary()</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadTransactions" title="Refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="ExportToCsv" title="Export to CSV">
+                    <i class="fa fa-download"></i>
+                </button>
+            </div>
+        </div>
+        <div class="portlet-body">
+            <!-- Custom Pagination Controls - Top -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="dataTables_info" id="sample_1_info" role="status" aria-live="polite">
+                        Showing @((currentPage - 1) * pageSize + 1) to @Math.Min(currentPage * pageSize, totalRecords) of @totalRecords entries
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="dataTables_paginate paging_bootstrap_full_number pull-right" id="sample_1_paginate">
+                        <ul class="pagination" style="visibility: visible;">
+                            <!-- First Page -->
+                            <li class="prev @(currentPage == 1 ? "disabled" : "")" style="margin: 0;">
+                                <a href="javascript:;" @onclick="() => GoToPage(1)" title="First" 
+                                   style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                    <i class="fa fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <!-- Previous Page -->
+                            <li class="prev @(currentPage == 1 ? "disabled" : "")" style="margin: 0;">
+                                <a href="javascript:;" @onclick="() => GoToPage(currentPage - 1)" title="Prev" 
+                                   style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                    <i class="fa fa-angle-left"></i>
+                                </a>
+                            </li>
+                            
+                            <!-- Page Numbers -->
+                            @foreach (var pageNum in GetVisiblePages())
+                            {
+                                <li class="@(pageNum == currentPage ? "active" : "")" style="margin: 0;">
+                                    <a href="javascript:;" @onclick="() => GoToPage(pageNum)" 
+                                       style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                        @pageNum
+                                    </a>
+                                </li>
+                            }
+                            <!-- Next Page -->
+                            <li class="next @(currentPage == totalPages ? "disabled" : "")" style="margin: 0;">
+                                <a href="javascript:;" @onclick="() => GoToPage(currentPage + 1)" title="Next" 
+                                   style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                    <i class="fa fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <!-- Last Page -->
+                            <li class="next @(currentPage == totalPages ? "disabled" : "")" style="margin: 0;">
+                                <a href="javascript:;" @onclick="() => GoToPage(totalPages)" title="Last" 
+                                   style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                    <i class="fa fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table WITHOUT built-in pagination -->
+            <ReusableDataTable TItem="PaymentRequestViewModel"
+                               Data="@transactions"
+                               Columns="@transactionColumns"
+                               Options="@transactionOptions"
+                               OnRowClick="OnTransactionRowClick"/>
+
+            <!-- Custom Pagination Controls - Bottom -->
+            <br/>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="dataTables_length pull-left">
+                        <label>
+                            Show
+                            <select @onchange="OnPageSizeChanged" class="form-control input-sm input-xsmall input-inline">
+                                <option value="10" selected="@(pageSize == 10)">10</option>
+                                <option value="25" selected="@(pageSize == 25)">25</option>
+                                <option value="50" selected="@(pageSize == 50)">50</option>
+                                <option value="100" selected="@(pageSize == 100)">100</option>
+                            </select>
+                            entries
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="dataTables_paginate paging_bootstrap_full_number pull-right" id="sample_1_paginate">
+                        <ul class="pagination" style="visibility: visible;">
+                            <!-- First Page -->
+                            <li class="prev @(currentPage == 1 ? "disabled" : "")">
+                                <a href="javascript:;" @onclick="() => GoToPage(1)" title="First"><i class="fa fa-angle-double-left"></i></a>
+                            </li>
+                            <!-- Previous Page -->
+                            <li class="prev @(currentPage == 1 ? "disabled" : "")">
+                                <a href="javascript:;" @onclick="() => GoToPage(currentPage - 1)" title="Prev"><i class="fa fa-angle-left"></i></a>
+                            </li>
+                            
+                            <!-- Page Numbers -->
+                            @foreach (var pageNum in GetVisiblePages())
+                            {
+                                <li class="@(pageNum == currentPage ? "active" : "")">
+                                    <a href="javascript:;" @onclick="() => GoToPage(pageNum)">@pageNum</a>
+                                </li>
+                            }
+                            
+                            <!-- Next Page -->
+                            <li class="next @(currentPage == totalPages ? "disabled" : "")">
+                                <a href="javascript:;" @onclick="() => GoToPage(currentPage + 1)" title="Next"><i class="fa fa-angle-right"></i></a>
+                            </li>
+                            <!-- Last Page -->
+                            <li class="next @(currentPage == totalPages ? "disabled" : "")">
+                                <a href="javascript:;" @onclick="() => GoToPage(totalPages)" title="Last"><i class="fa fa-angle-double-right"></i></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<PaymentRequestViewModel> transactions = new();
+    private List<ProviderViewModel> providers = new();
+    private List<DataTableColumn> transactionColumns = new();
+    private DataTableOptions transactionOptions = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    
+    // Filter properties
+    private DateTimeOffset? startDate = DateTimeOffset.Now.AddDays(-30);
+    private DateTimeOffset? endDate = DateTimeOffset.Now;
+    private string clientCodesFilter = string.Empty;
+    private Guid? selectedProviderId;
+    
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalRecords = 0;
+    private int totalPages = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureTransactionsTable();
+        await LoadProviders();
+        await LoadTransactions();
+    }
+
+    private async Task LoadProviders()
+    {
+        try
+        {
+            // Load payment providers
+            var result = await ApiClient.Provider2Async("Payment");
+            if (result?.Success == true && result.Data != null)
+            {
+                providers = result.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading providers: {ex.Message}");
+        }
+    }
+
+    private async Task LoadTransactions()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            // Prepare parameters
+            var startDateParam = startDate?.ToString("yyyy-MM-dd");
+            var endDateParam = endDate?.ToString("yyyy-MM-dd");
+            var clientCodes = string.IsNullOrWhiteSpace(clientCodesFilter) ? null : clientCodesFilter;
+            var providerId = selectedProviderId;
+
+            // Call the TransactionsAsync method from ApiClient
+            var result = await ApiClient.TransactionsAsync(
+                clientCodes: clientCodes,
+                startDate: startDate.HasValue ? DateTimeOffset.Parse(startDateParam!) : (DateTimeOffset?)null,
+                endDate: endDate.HasValue ? DateTimeOffset.Parse(endDateParam!) : (DateTimeOffset?)null,
+                providerId: providerId,
+                page: currentPage,
+                size: pageSize
+            );
+
+            if (result?.Success == true && result.Data != null)
+            {
+                transactions = result.Data.Data?.ToList() ?? new List<PaymentRequestViewModel>();
+                totalRecords = result.Data.TotalCount;
+                totalPages = result.Data.TotalPages;
+                
+                Console.WriteLine($"Loaded {transactions.Count} transactions (Page {currentPage} of {totalPages}, Total: {totalRecords})");
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "No transaction data received from server.";
+                transactions = new List<PaymentRequestViewModel>();
+                totalRecords = 0;
+                totalPages = 0;
+                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = $"Server error ({apiEx.StatusCode}). Please try again.";
+            Console.WriteLine($"API Exception loading transactions: {apiEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load transactions. Please try again.";
+            Console.WriteLine($"Error loading transactions: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfigureTransactionsTable()
+    {
+        transactionColumns = new List<DataTableColumn>
+        {
+            new()
+            {
+                Header = "TRANSACTION ID",
+                PropertyName = nameof(PaymentRequestViewModel.Reference),
+                CssClass = "text-center"
+            },
+            new()
+            {
+                Header = "CLIENT CODE",
+                PropertyName = nameof(PaymentRequestViewModel.ClientCode),
+                CssClass = "text-center"
+            },
+            new()
+            {
+                Header = "PROVIDER",
+                PropertyName = nameof(PaymentRequestViewModel.Provider),
+                CustomRenderer = (item) =>
+                    $"<span class='text-dark'>{((PaymentRequestViewModel)item).Provider}</span>"
+            },
+            new()
+            {
+                Header = "PHONE NUMBER",
+                PropertyName = nameof(PaymentRequestViewModel.PhoneNumber),
+                CssClass = "text-center"
+            },
+            new()
+            {
+                Header = "AMOUNT",
+                PropertyName = nameof(PaymentRequestViewModel.Amount),
+                CustomRenderer = (item) =>
+                {
+                    var amount = ((PaymentRequestViewModel)item).Amount;
+                    var currency = ((PaymentRequestViewModel)item).Currency ?? "GHS";
+                    return $"<strong class='text-success'>{amount:N2} {currency}</strong>";
+                }
+            },
+            new()
+            {
+                Header = "INVOICE NO",
+                PropertyName = nameof(PaymentRequestViewModel.InvoiceNo),
+                CssClass = "text-center"
+            },
+            new()
+            {
+                Header = "STATUS",
+                PropertyName = nameof(PaymentRequestViewModel.Status),
+                CustomRenderer = (item) =>
+                {
+                    var status = ((PaymentRequestViewModel)item).Status?.ToLower();
+                    var badgeClass = status switch
+                    {
+                        "paid" or "completed" or "success" => "bg-success",
+                        "pending" => "bg-warning",
+                        "failed" => "bg-danger",
+                        _ => "bg-default"
+                    };
+                    return $"<span class='badge {badgeClass}'>{status?.ToUpper()}</span>";
+                }
+            },
+            new()
+            {
+                Header = "TRANSACTION TYPE",
+                PropertyName = nameof(PaymentRequestViewModel.TransactionType),
+                CustomRenderer = (item) =>
+                {
+                    var type = ((PaymentRequestViewModel)item).TransactionType?.ToLower();
+                    var badgeClass = type switch
+                    {
+                        "debit" => "label label-danger",
+                        "credit" => "label label-success",
+                        _ => "label label-info"
+                    };
+                    return $"<span class='badge {badgeClass}'>{type?.ToUpper()}</span>";
+                }
+            },
+            new()
+            {
+                Header = "CREATED DATE",
+                PropertyName = nameof(PaymentRequestViewModel.CreatedAt),
+                CustomRenderer = (item) =>
+                {
+                    var createdAt = ((PaymentRequestViewModel)item).CreatedAt;
+                    return createdAt.ToString("yyyy-MM-dd HH:mm");
+                }
+            },
+            new()
+            {
+                Header = "PROCESSED DATE",
+                PropertyName = nameof(PaymentRequestViewModel.ProcessedAt),
+                CustomRenderer = (item) =>
+                {
+                    var processedAt = ((PaymentRequestViewModel)item).ProcessedAt;
+                    return processedAt?.ToString("yyyy-MM-dd HH:mm") ?? "<span class='text-muted'>Not processed</span>";
+                }
+            }
+        //     new()
+        //     {
+        //         Header = "ACTIONS",
+        //         PropertyName = "",
+        //         Sortable = false,
+        //         Searchable = false,
+        //         Width = 100,
+        //         CssClass = "text-center",
+        //         CustomRenderer = (item) => 
+        //         {
+        //             var transaction = (PaymentRequestViewModel)item;
+        //             return $@"
+        // <div class='btn-group btn-group-sm' role='group'>
+        //     <button type='button' class='btn btn-primary btn-xs' onclick='viewTransactionDetails(""{transaction.PaymentRequestId}"")' title='View Details'>
+        //         <i class='fa fa-eye'></i>
+        //     </button>
+        // </div>";
+        //         }
+        //     }
+        };
+
+        // Configure DataTable WITHOUT built-in pagination
+        transactionOptions = new DataTableOptions
+        {
+            PageLength = 0, // Disable built-in pagination
+            LengthMenu = Array.Empty<int>(), // No length menu
+            SearchPlaceholder = "Search transactions...",
+            TableId = "paymentTransactionsTable",
+            TableCssClass = "table table-striped table-bordered table-hover",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            ShowSearch = true,
+            ShowPaging = false, // Disable built-in paging
+            ShowInfo = false,   // Disable built-in info
+            Responsive = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["paging"] = false, // Disable DataTables pagination
+                ["info"] = false,   // Disable DataTables info
+                ["ordering"] = true, // Keep sorting enabled
+                ["searching"] = true // Keep searching enabled
+            }
+        };
+    }
+
+    private void ResetFilters()
+    {
+        startDate = null;
+        endDate = null;
+        clientCodesFilter = string.Empty;
+        selectedProviderId = null;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private string GetTransactionSummary()
+    {
+        if (transactions.Count == 0) return "No transactions found";
+        
+        var totalAmount = transactions.Sum(t => t.Amount);
+        var completedCount = transactions.Count(t => t.Status?.ToLower() == "paid" || t.Status?.ToLower() == "completed");
+        
+        return $"{totalRecords} total transactions, {completedCount} completed, Total: {totalAmount:N2}";
+    }
+
+    private async Task ExportToCsv()
+    {
+        try
+        {
+            // Implement CSV export logic here
+            Console.WriteLine("Export to CSV functionality to be implemented");
+            await JSRuntime.InvokeVoidAsync("alert", "Export functionality coming soon!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exporting to CSV: {ex.Message}");
+        }
+    }
+
+    private async Task OnTransactionRowClick(PaymentRequestViewModel transaction)
+    {
+        Console.WriteLine($"Transaction clicked: {transaction.Reference}");
+        await ViewTransactionDetails(transaction.PaymentRequestId.ToString());
+    }
+
+    [JSInvokable]
+    public async Task ViewTransactionDetails(string transactionId)
+    {
+        Console.WriteLine($"ViewTransactionDetails called with ID: {transactionId}");
+        NavigationManager.NavigateTo($"/transaction-details/{transactionId}");
+    }
+
+    // Pagination methods
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && page <= totalPages && page != currentPage)
+        {
+            currentPage = page;
+            await LoadTransactions();
+        }
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newSize) && newSize > 0)
+        {
+            pageSize = newSize;
+            currentPage = 1; // Reset to first page when changing page size
+            await LoadTransactions();
+        }
+    }
+
+    // Helper method to get visible page numbers for pagination
+    private List<int> GetVisiblePages()
+    {
+        var pages = new List<int>();
+        int startPage = Math.Max(1, currentPage - 2);
+        int endPage = Math.Min(totalPages, currentPage + 2);
+
+        for (int i = startPage; i <= endPage; i++)
+        {
+            pages.Add(i);
+        }
+
+        return pages;
+    }
+}

@@ -130,10 +130,10 @@
                                         }
                                         else
                                         {
-                                            <small class="form-text text-warning">
-                                                <i class="fa fa-exclamation-triangle"></i>
-                                                This credential is required for the provider to function properly
-                                            </small>
+                                            @* <small class="form-text text-warning"> *@
+                                            @*     <i class="fa fa-exclamation-triangle"></i> *@
+                                            @*     This credential is required for the provider to function properly *@
+                                            @* </small> *@
                                         }
                                     </div>
                                 }
@@ -446,36 +446,36 @@
         }
 
         // Validate From Account
-        if (string.IsNullOrWhiteSpace(fromAccount))
-        {
-            fromAccountError = "From Account is required";
-            isValid = false;
-        }
-        else if (fromAccount.Length > 50)
-        {
-            fromAccountError = "From Account cannot exceed 50 characters";
-            isValid = false;
-        }
-        else
-        {
-            fromAccountError = string.Empty;
-        }
+        // if (string.IsNullOrWhiteSpace(fromAccount))
+        // {
+        //     fromAccountError = "From Account is required";
+        //     isValid = false;
+        // }
+        // else if (fromAccount.Length > 50)
+        // {
+        //     fromAccountError = "From Account cannot exceed 50 characters";
+        //     isValid = false;
+        // }
+        // else
+        // {
+        //     fromAccountError = string.Empty;
+        // }
 
         // Validate From Account Name
-        if (string.IsNullOrWhiteSpace(fromAccountName))
-        {
-            fromAccountNameError = "From Account Name is required";
-            isValid = false;
-        }
-        else if (fromAccountName.Length > 100)
-        {
-            fromAccountNameError = "From Account Name cannot exceed 100 characters";
-            isValid = false;
-        }
-        else
-        {
-            fromAccountNameError = string.Empty;
-        }
+        // if (string.IsNullOrWhiteSpace(fromAccountName))
+        // {
+        //     fromAccountNameError = "From Account Name is required";
+        //     isValid = false;
+        // }
+        // else if (fromAccountName.Length > 100)
+        // {
+        //     fromAccountNameError = "From Account Name cannot exceed 100 characters";
+        //     isValid = false;
+        // }
+        // else
+        // {
+        //     fromAccountNameError = string.Empty;
+        // }
 
         return isValid;
     }

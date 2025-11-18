@@ -1,5 +1,6 @@
-<div class="row margin-top-30">
-    <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+@* DashboardStatCard.razor *@
+
+
         <a class="dashboard-stat dashboard-stat-v2 position-relative @ColorClass" href="@Href" @onclick="OnClick" @onclick:preventDefault="@(!string.IsNullOrEmpty(Href))">
             <div class="visual">
                 <i class="fa @IconClass"></i>
@@ -15,14 +16,13 @@
                 <div class="desc">@Description</div>
             </div>
         </a>
-    </div>
-</div>
+
 
 
 
 @code {
     [Parameter] public string IconClass { get; set; } = "fa-comments";
-    [Parameter] public string Currency { get; set; } = "GH₵";
+    [Parameter] public string Currency { get; set; } = "";
     [Parameter] public decimal Value { get; set; } = 0;
     [Parameter] public string DisplayValue { get; set; } = "";
     [Parameter] public string Description { get; set; } = "Total income";

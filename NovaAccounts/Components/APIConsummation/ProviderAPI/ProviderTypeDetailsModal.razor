@@ -216,7 +216,7 @@
             errorMessage = string.Empty;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading provider type details: {providerTypeName}");
+            Console.WriteLine($"Loading provider type details: {providerTypeName}");
 
             // First, load all provider types to get the current one
             var providerTypesResult = await ApiClient.All5Async();

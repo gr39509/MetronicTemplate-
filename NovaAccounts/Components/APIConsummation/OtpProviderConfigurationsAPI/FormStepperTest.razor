@@ -1,0 +1,874 @@
+@page "/otp-configurations/create"
+@page "/otp-configurations/create/{ClientIdentifier}"
+@rendermode InteractiveServer
+
+@using NovaAccounts.SharedModels.ApiService
+@using NovaAccounts.SharedModels.FormStepper
+@using NovaAccounts.Components.Shared
+
+@inject ApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Create OTP Provider Configuration</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Breadcrumb Navigation -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">Clients</a>
+                    </li>
+                    @if (preSelectedClient != null)
+                    {
+                        <li class="breadcrumb-item">
+                            <a href="/clients/@preSelectedClient.ClientId">@preSelectedClient.Name</a>
+                        </li>
+                    }
+                    <li class="breadcrumb-item active" aria-current="page">Create OTP Configuration</li>
+                </ol>
+            </nav>
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Create OTP Provider Configuration</h1>
+                <div>
+                    <button class="btn btn-outline-secondary mb-2" @onclick="NavigateBack">
+                        <i class="fa fa-arrow-left"></i> Back to Client
+                    </button>
+                </div>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                    <p class="mt-3">Loading wizard...</p>
+                </div>
+            }
+            else
+            {
+                <!-- Wizard Form -->
+                <ReusableFormWizard Steps="@wizardSteps" 
+                           Config="@wizardConfig" 
+                           OnFinish="@HandleWizardFinish"
+                           OnStepChanged="@HandleStepChanged"
+                           OnStepValidation="@ValidateStep" />
+
+                @if (submittedData.Any())
+                {
+                    <div class="mt-4">
+                        <h3>Configuration Created Successfully!</h3>
+                        <div class="alert alert-success">
+                            <strong>Success!</strong> OTP configuration has been created successfully.
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <h5>Configuration Details:</h5>
+                                <ul>
+                                    @foreach (var item in submittedData)
+                                    {
+                                        <li><strong>@item.Key:</strong> @item.Value</li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-outline-secondary mb-2" @onclick="NavigateBack">
+                                <i class="fa fa-arrow-left"></i> Back to Client
+                            </button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? ClientIdentifier { get; set; }
+
+    // Wizard components
+    private List<WizardStep> wizardSteps = new();
+    private WizardConfiguration wizardConfig = new();
+    private Dictionary<string, object> submittedData = new();
+
+    // Data collections
+    private List<ClientViewModel> clients = new();
+    private List<ProviderViewModel> otpProviders = new();
+    private List<CredentialTypeViewModel> availableCredentialTypes = new();
+    private ClientViewModel? preSelectedClient = null;
+    private Guid? selectedClientId = null;
+    private string selectedClientIdString = string.Empty;
+
+    // Form fields
+    private bool isDefault = false;
+    private int defaultOtpLength = 6;
+    private int defaultOtpExpiry = 5;
+    private bool allowAlphanumeric = false;
+
+    // Loading states
+    private bool isLoading = true;
+    private bool isCreating = false;
+
+    // Define required OTP credentials
+    private readonly HashSet<string> requiredOtpCredentials = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "API_KEY",
+        "APIKEY",
+        "ACCESS_KEY",
+        "SECRET_KEY"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(ClientIdentifier) && clients.Any())
+        {
+            await PreSelectClient();
+        }
+    }
+
+    private async Task LoadInitialData()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            // Load all data in parallel
+            var clientsTask = LoadClients();
+            var providersTask = LoadOtpProviders();
+            var credentialsTask = LoadCredentialTypes();
+
+            await Task.WhenAll(clientsTask, providersTask, credentialsTask);
+
+            // Setup wizard after data is loaded
+            SetupWizardConfig();
+            SetupWizardSteps();
+
+            // Pre-select client if identifier provided
+            if (!string.IsNullOrEmpty(ClientIdentifier))
+            {
+                await PreSelectClient();
+            }
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SetupWizardConfig()
+    {
+        wizardConfig = new WizardConfiguration
+        {
+            Id = "otpConfigWizard",
+            Title = "OTP Configuration Wizard",
+            ShowProgressBar = true,
+            ShowStepNumbers = true,
+            BackButtonText = "Back",
+            NextButtonText = "Continue",
+            FinishButtonText = "Create Configuration",
+            SuccessMessage = "OTP configuration has been created successfully!",
+            ErrorMessage = "Please fill in all required fields."
+        };
+    }
+
+    private void SetupWizardSteps()
+    {
+        // Create basic step structure without options first
+        wizardSteps = new List<WizardStep>
+        {
+            new WizardStep
+            {
+                Title = "Basic Information",
+                Description = "Select client and provider",
+                Icon = "fa-info-circle",
+                Fields = new List<WizardField>
+                {
+                    new WizardField
+                    {
+                        Id = "client",
+                        Name = "ClientId",
+                        Label = "CLIENT *",
+                        Type = WizardFieldType.Select,
+                        IsRequired = true,
+                        ColClass = "col-md-6",
+                        Options = new List<WizardSelectOption>()
+                    },
+                    new WizardField
+                    {
+                        Id = "provider",
+                        Name = "ProviderId",
+                        Label = "OTP PROVIDER *",
+                        Type = WizardFieldType.Select,
+                        IsRequired = true,
+                        ColClass = "col-md-6",
+                        Options = new List<WizardSelectOption>()
+                    },
+                    new WizardField
+                    {
+                        Id = "description",
+                        Name = "Description",
+                        Label = "DESCRIPTION *",
+                        Type = WizardFieldType.Text,
+                        IsRequired = true,
+                        ColClass = "col-md-12",
+                        Attributes = new Dictionary<string, object> { { "maxlength", "200" } }
+                    }
+                }
+            },
+            new WizardStep
+            {
+                Title = "OTP Settings",
+                Description = "Configure OTP behavior and security",
+                Icon = "fa-shield-alt",
+                Fields = new List<WizardField>
+                {
+                    // new WizardField
+                    // {
+                    //     Id = "defaultOtpLength",
+                    //     Name = "DefaultOtpLength",
+                    //     Label = "DEFAULT OTP LENGTH",
+                    //     Type = WizardFieldType.Number,
+                    //     ColClass = "col-md-6",
+                    //     Attributes = new Dictionary<string, object> 
+                    //     { 
+                    //         { "min", "4" }, 
+                    //         { "max", "10" },
+                    //         { "step", "1" }
+                    //     },
+                    //     Value = "6"
+                    // },
+                    // new WizardField
+                    // {
+                    //     Id = "defaultOtpExpiry",
+                    //     Name = "DefaultOtpExpiry",
+                    //     Label = "DEFAULT OTP EXPIRY (MINUTES)",
+                    //     Type = WizardFieldType.Number,
+                    //     ColClass = "col-md-6",
+                    //     Attributes = new Dictionary<string, object> 
+                    //     { 
+                    //         { "min", "1" }, 
+                    //         { "max", "60" },
+                    //         { "step", "1" }
+                    //     },
+                    //     Value = "5"
+                    // },
+                    // new WizardField
+                    // {
+                    //     Id = "allowAlphanumeric",
+                    //     Name = "AllowAlphanumeric",
+                    //     Label = "ALLOW ALPHANUMERIC OTP",
+                    //     Type = WizardFieldType.Checkbox,
+                    //     ColClass = "col-md-6"
+                    // },
+                    new WizardField
+                    {
+                        Id = "isDefault",
+                        Name = "IsDefault",
+                        Label = "SET AS DEFAULT CONFIGURATION",
+                        Type = WizardFieldType.Checkbox,
+                        ColClass = "col-md-6"
+                    }
+                }
+            },
+            new WizardStep
+            {
+                Title = "Provider Credentials",
+                Description = "Add required credentials",
+                Icon = "fa-key",
+                Fields = new List<WizardField>()
+                // Will be populated dynamically when provider is selected
+            },
+            new WizardStep
+            {
+                Title = "Review & Create",
+                Description = "Review all configuration details",
+                Icon = "fa-check-circle",
+                Fields = new List<WizardField>
+                {
+                    new WizardField
+                    {
+                        Name = "Client",
+                        Label = "Client:",
+                        Type = WizardFieldType.Display,
+                        ColClass = "col-md-12"
+                    },
+                    new WizardField
+                    {
+                        Name = "Provider",
+                        Label = "Provider:",
+                        Type = WizardFieldType.Display,
+                        ColClass = "col-md-12"
+                    },
+                    new WizardField
+                    {
+                        Name = "Description",
+                        Label = "Description:",
+                        Type = WizardFieldType.Display,
+                        ColClass = "col-md-12"
+                    },
+                    // new WizardField
+                    // {
+                    //     Name = "DefaultOtpLength",
+                    //     Label = "Default OTP Length:",
+                    //     Type = WizardFieldType.Display,
+                    //     ColClass = "col-md-12"
+                    // },
+                    // new WizardField
+                    // {
+                    //     Name = "DefaultOtpExpiry",
+                    //     Label = "Default OTP Expiry (minutes):",
+                    //     Type = WizardFieldType.Display,
+                    //     ColClass = "col-md-12"
+                    // },
+                    // new WizardField
+                    // {
+                    //     Name = "AllowAlphanumeric",
+                    //     Label = "Allow Alphanumeric OTP:",
+                    //     Type = WizardFieldType.Display,
+                    //     ColClass = "col-md-12"
+                    // },
+                    // new WizardField
+                    // {
+                    //     Name = "IsDefault",
+                    //     Label = "Default Configuration:",
+                    //     Type = WizardFieldType.Display,
+                    //     ColClass = "col-md-12"
+                    // }
+                }
+            }
+        };
+
+        // Now populate the options
+        UpdateClientOptions();
+        UpdateProviderOptions();
+    }
+
+    private async Task<bool> ValidateStep(int stepIndex)
+    {
+        if (wizardSteps == null || stepIndex >= wizardSteps.Count)
+            return false;
+
+        var currentStep = wizardSteps[stepIndex];
+        var isValid = true;
+
+        // Clear previous validation messages
+        foreach (var field in currentStep.Fields)
+        {
+            field.ValidationMessage = string.Empty;
+        }
+
+        switch (stepIndex)
+        {
+            case 0: // Basic Information
+                var clientField = currentStep.Fields.FirstOrDefault(f => f.Name == "ClientId");
+                var providerField = currentStep.Fields.FirstOrDefault(f => f.Name == "ProviderId");
+                var descriptionField = currentStep.Fields.FirstOrDefault(f => f.Name == "Description");
+
+                if (clientField != null && string.IsNullOrEmpty(clientField.Value?.ToString()))
+                {
+                    clientField.ValidationMessage = "Client selection is required";
+                    isValid = false;
+                }
+
+                if (providerField != null && string.IsNullOrEmpty(providerField.Value?.ToString()))
+                {
+                    providerField.ValidationMessage = "OTP provider selection is required";
+                    isValid = false;
+                }
+
+                if (descriptionField != null)
+                {
+                    if (string.IsNullOrEmpty(descriptionField.Value?.ToString()))
+                    {
+                        descriptionField.ValidationMessage = "Description is required";
+                        isValid = false;
+                    }
+                    else if (descriptionField.Value.ToString().Length > 200)
+                    {
+                        descriptionField.ValidationMessage = "Description cannot exceed 200 characters";
+                        isValid = false;
+                    }
+                }
+                break;
+
+            case 1: // OTP Settings
+                var otpLengthField = currentStep.Fields.FirstOrDefault(f => f.Name == "DefaultOtpLength");
+                var otpExpiryField = currentStep.Fields.FirstOrDefault(f => f.Name == "DefaultOtpExpiry");
+
+                if (otpLengthField != null)
+                {
+                    var otpLengthValue = otpLengthField.Value?.ToString();
+                    if (!string.IsNullOrEmpty(otpLengthValue) && int.TryParse(otpLengthValue, out int otpLength))
+                    {
+                        if (otpLength < 4 || otpLength > 10)
+                        {
+                            otpLengthField.ValidationMessage = "OTP length must be between 4 and 10 digits";
+                            isValid = false;
+                        }
+                    }
+                }
+
+                if (otpExpiryField != null)
+                {
+                    var otpExpiryValue = otpExpiryField.Value?.ToString();
+                    if (!string.IsNullOrEmpty(otpExpiryValue) && int.TryParse(otpExpiryValue, out int otpExpiry))
+                    {
+                        if (otpExpiry < 1 || otpExpiry > 60)
+                        {
+                            otpExpiryField.ValidationMessage = "OTP expiry must be between 1 and 60 minutes";
+                            isValid = false;
+                        }
+                    }
+                }
+                break;
+
+            case 2: // Provider Credentials
+                foreach (var field in currentStep.Fields.Where(f => f.IsRequired))
+                {
+                    if (field.Value == null || string.IsNullOrWhiteSpace(field.Value.ToString()))
+                    {
+                        field.ValidationMessage = $"{field.Label} is required";
+                        isValid = false;
+                    }
+                    else if (field.Value.ToString().Length < 3)
+                    {
+                        field.ValidationMessage = $"{field.Label} must be at least 3 characters long";
+                        isValid = false;
+                    }
+                    else if (field.Value.ToString().Length > 500)
+                    {
+                        field.ValidationMessage = $"{field.Label} cannot exceed 500 characters";
+                        isValid = false;
+                    }
+                    else if (ContainsInvalidCharacters(field.Value.ToString()))
+                    {
+                        field.ValidationMessage = $"{field.Label} contains invalid characters";
+                        isValid = false;
+                    }
+                }
+                break;
+        }
+
+        return isValid;
+    }
+
+    private void HandleStepChanged(int stepIndex)
+    {
+        if (stepIndex == 2) // Credentials step
+        {
+            UpdateCredentialFields();
+        }
+        
+        if (stepIndex == 3) // Review step
+        {
+            UpdateReviewFields();
+        }
+    }
+
+    private void UpdateCredentialFields()
+    {
+        if (wizardSteps.Count <= 2) return;
+
+        var credentialsStep = wizardSteps[2];
+        credentialsStep.Fields.Clear();
+
+        var providerId = GetFieldValue("ProviderId");
+        if (!string.IsNullOrEmpty(providerId) && availableCredentialTypes.Any())
+        {
+            foreach (var credType in availableCredentialTypes)
+            {
+                var isRequired = IsCredentialRequired(credType.CredentialTypeName);
+                
+                credentialsStep.Fields.Add(new WizardField
+                {
+                    Id = $"cred_{credType.CredentialTypeName}",
+                    Name = credType.CredentialTypeName,
+                    Label = $"{credType.DisplayName.ToUpper()} {(isRequired ? "*" : "")}",
+                    Type = WizardFieldType.Text,
+                    IsRequired = isRequired,
+                    ColClass = "col-md-12",
+                    Attributes = new Dictionary<string, object> 
+                    { 
+                        { "type", "password" },
+                        { "placeholder", $"Enter {credType.DisplayName}" },
+                        { "autocomplete", "new-password" }
+                    }
+                });
+            }
+        }
+
+        if (!credentialsStep.Fields.Any())
+        {
+            credentialsStep.Fields.Add(new WizardField
+            {
+                Id = "noCredentials",
+                Name = "NoCredentials",
+                Label = "No credentials required for selected provider",
+                Type = WizardFieldType.Display,
+                ColClass = "col-md-12",
+                Value = "Select an OTP provider to see required credentials"
+            });
+        }
+    }
+
+    private void UpdateReviewFields()
+    {
+        if (wizardSteps.Count <= 3) return;
+
+        var reviewStep = wizardSteps[3];
+        
+        foreach (var field in reviewStep.Fields)
+        {
+            switch (field.Name)
+            {
+                case "Client":
+                    var clientId = GetFieldValue("ClientId");
+                    var client = clients.FirstOrDefault(c => c.ClientId.ToString() == clientId);
+                    field.Value = client != null ? $"{client.Name} ({client.Identifier})" : "Not selected";
+                    break;
+                    
+                case "Provider":
+                    var providerId = GetFieldValue("ProviderId");
+                    var provider = otpProviders.FirstOrDefault(p => p.ProviderId.ToString() == providerId);
+                    field.Value = provider?.Name ?? "Not selected";
+                    break;
+                    
+                case "Description":
+                    field.Value = GetFieldValue("Description") ?? "Not provided";
+                    break;
+                    
+                // case "DefaultOtpLength":
+                //     var otpLength = GetFieldValue("DefaultOtpLength");
+                //     field.Value = string.IsNullOrEmpty(otpLength) ? "6 (Default)" : $"{otpLength} digits";
+                //     break;
+                //     
+                // case "DefaultOtpExpiry":
+                //     var otpExpiry = GetFieldValue("DefaultOtpExpiry");
+                //     field.Value = string.IsNullOrEmpty(otpExpiry) ? "5 (Default)" : $"{otpExpiry} minutes";
+                //     break;
+                //     
+                // case "AllowAlphanumeric":
+                //     var allowAlphanumeric = GetFieldValue("AllowAlphanumeric");
+                //     field.Value = bool.TryParse(allowAlphanumeric, out bool allowAlphaVal) && allowAlphaVal ? "Yes" : "No";
+                //     break;
+                    
+                case "IsDefault":
+                    var isDefaultValue = GetFieldValue("IsDefault");
+                    field.Value = bool.TryParse(isDefaultValue, out bool isDefaultVal) && isDefaultVal ? "Yes" : "No";
+                    break;
+            }
+        }
+    }
+
+    private string? GetFieldValue(string fieldName)
+    {
+        var field = wizardSteps.SelectMany(s => s.Fields).FirstOrDefault(f => f.Name == fieldName);
+        return field?.Value?.ToString();
+    }
+
+    private async Task HandleWizardFinish(Dictionary<string, object> formData)
+    {
+        submittedData = formData;
+        await CreateOtpConfiguration();
+    }
+
+    private async Task LoadClients()
+    {
+        try
+        {
+            var result = await ApiClient.AllAsync();
+            if (result?.Success == true && result.Data != null)
+            {
+                clients = result.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading clients: {ex.Message}");
+        }
+    }
+
+    private void UpdateClientOptions()
+    {
+        if (wizardSteps.Count == 0) return;
+
+        var clientField = wizardSteps[0].Fields.FirstOrDefault(f => f.Name == "ClientId");
+        if (clientField != null)
+        {
+            var options = clients.Select(c => new WizardSelectOption 
+            { 
+                Value = c.ClientId.ToString(), 
+                Text = $"{c.Name} ({c.Identifier})" 
+            }).ToList();
+
+            options.Insert(0, new WizardSelectOption { Value = "", Text = "-- Select Client --" });
+            clientField.Options = options;
+        }
+    }
+
+    private async Task LoadOtpProviders()
+    {
+        try
+        {
+            var result = await ApiClient.Provider2Async("OTP");
+            if (result?.Success == true && result.Data != null)
+            {
+                otpProviders = result.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading OTP providers: {ex.Message}");
+        }
+    }
+
+    private void UpdateProviderOptions()
+    {
+        if (wizardSteps.Count == 0) return;
+
+        var providerField = wizardSteps[0].Fields.FirstOrDefault(f => f.Name == "ProviderId");
+        if (providerField != null)
+        {
+            var options = otpProviders.Select(p => new WizardSelectOption 
+            { 
+                Value = p.ProviderId.ToString(), 
+                Text = p.Name 
+            }).ToList();
+
+            options.Insert(0, new WizardSelectOption { Value = "", Text = "-- Select OTP Provider --" });
+            providerField.Options = options;
+        }
+    }
+
+    private async Task LoadCredentialTypes()
+    {
+        try
+        {
+            var result = await ApiClient.All2Async();
+            if (result?.Success == true && result.Data != null)
+            {
+                availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading credential types: {ex.Message}");
+        }
+    }
+
+    private async Task PreSelectClient()
+    {
+        if (clients.Any() && !string.IsNullOrEmpty(ClientIdentifier))
+        {
+            var cleanIdentifier = ClientIdentifier;
+            if (cleanIdentifier.Contains('.'))
+            {
+                cleanIdentifier = cleanIdentifier.Split('.')[0];
+            }
+
+            var client = clients.FirstOrDefault(c =>
+                c.Identifier.Equals(cleanIdentifier, StringComparison.OrdinalIgnoreCase));
+
+            if (client != null)
+            {
+                preSelectedClient = client;
+                selectedClientId = client.ClientId;
+                selectedClientIdString = client.ClientId.ToString();
+                
+                // Pre-select in wizard
+                var clientField = wizardSteps[0].Fields.FirstOrDefault(f => f.Name == "ClientId");
+                if (clientField != null)
+                {
+                    clientField.Value = client.ClientId.ToString();
+                }
+                StateHasChanged();
+            }
+        }
+    }
+
+    private bool IsCredentialRequired(string credentialTypeName)
+    {
+        return requiredOtpCredentials.Contains(credentialTypeName.ToUpper());
+    }
+
+    private bool ContainsInvalidCharacters(string value)
+    {
+        var invalidChars = new[] { '<', '>', '&', '\"', '\'' };
+        return invalidChars.Any(c => value.Contains(c));
+    }
+
+    private async Task CreateOtpConfiguration()
+    {
+        try
+        {
+            isCreating = true;
+            StateHasChanged();
+
+            // Extract form data
+            var clientId = GetFieldValue("ClientId");
+            var providerId = GetFieldValue("ProviderId");
+            var description = GetFieldValue("Description");
+            var isDefault = GetFieldValue("IsDefault");
+            var defaultOtpLength = GetFieldValue("DefaultOtpLength");
+            var defaultOtpExpiry = GetFieldValue("DefaultOtpExpiry");
+            var allowAlphanumeric = GetFieldValue("AllowAlphanumeric");
+
+            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(providerId) || string.IsNullOrEmpty(description))
+            {
+                return;
+            }
+
+            // Get client
+            var client = clients.FirstOrDefault(c => c.ClientId.ToString() == clientId);
+            if (client == null)
+            {
+                return;
+            }
+
+            // Create credentials list
+            var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
+            foreach (var credType in availableCredentialTypes)
+            {
+                var credentialValue = GetFieldValue(credType.CredentialTypeName);
+                if (!string.IsNullOrWhiteSpace(credentialValue))
+                {
+                    clientProviderCredentials.Add(new CreateClientProviderCredentialDto
+                    {
+                        CredentialTypeName = credType.CredentialTypeName,
+                        CredentialKey = credentialValue
+                    });
+                }
+            }
+
+            // Create the configuration
+            var createCommand = new CreateOtpProviderConfigurationDto
+            {
+                ClientIdentifier = client.Identifier,
+                Description = description.Trim(),
+                ProviderId = Guid.Parse(providerId),
+                ClientProviderCredentials = clientProviderCredentials,
+                IsDefault = bool.TryParse(isDefault, out bool defaultVal) && defaultVal
+            };
+
+            var result = await ApiClient.Create3Async(createCommand);
+
+            if (result?.Success == true)
+            {
+                await Task.Delay(2000);
+                Navigation.NavigateTo($"/clients/{selectedClientId}", forceLoad: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating OTP configuration: {ex.Message}");
+        }
+        finally
+        {
+            isCreating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateBack()
+    {
+        if (selectedClientId.HasValue)
+        {
+            Navigation.NavigateTo($"/clients/{selectedClientId}", forceLoad: true);
+        }
+        else
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+    }
+}
+
+<style>
+    /* Fixed step number styling */
+    .wizard-step-number {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        border-radius: 50%;
+        background-color: #6c757d;
+        color: white;
+        margin-right: 10px;
+        font-weight: bold;
+    }
+
+    .wizard-step-active .wizard-step-number {
+        background-color: #007bff;
+    }
+
+    .wizard-step-completed .wizard-step-number {
+        background-color: #28a745;
+    }
+
+    .form-check-input {
+        margin-right: 8px;
+    }
+
+    .form-check-label {
+        margin-bottom: 0;
+    }
+    
+    .nav-pills {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .list-group.row {
+        margin-top: 10px;
+    }
+
+    .list-group.row li {
+        margin-bottom: 12px;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .form-actions {
+        margin-top: 30px;
+        padding: 20px 0;
+        border-top: 1px solid #eee;
+    }
+
+    .form-actions .row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    .button-previous {
+        margin-right: 15px !important;
+    }
+
+    .button-next, .button-submit {
+        margin-left: 10px !important;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    input[type="checkbox"] + label {
+        margin-left: 8px;
+        font-weight: normal;
+    }
+</style>

@@ -150,10 +150,10 @@
                                 }
                                 else
                                 {
-                                    <small class="form-text text-warning">
-                                        <i class="fa fa-exclamation-triangle"></i>
-                                        This credential is required for the provider to function properly
-                                    </small>
+                                    @* <small class="form-text text-warning"> *@
+                                    @*     <i class="fa fa-exclamation-triangle"></i> *@
+                                    @*     This credential is required for the provider to function properly *@
+                                    @* </small> *@
                                 }
                             </div>
                         }
@@ -413,10 +413,6 @@ private async Task UpdateOtpConfiguration()
         }
 
         Console.WriteLine($"Total credentials to update: {clientProviderCredentials.Count}");
-
-        // **CRITICAL FIX: Check if we're using the correct ID property**
-        // The error suggests the backend expects a Payment configuration ID, but we have an OTP configuration
-        // Let's try using ClientProviderConfigurationId directly as OtpClientProviderConfigurationId
         
         var updateCommand = new UpdateOtpProviderConfigurationDto
         {

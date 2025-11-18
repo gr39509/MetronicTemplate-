@@ -160,7 +160,7 @@
 
     public async Task OpenModal()
     {
-        // Reset form fields and messages
+       
         clientCode = string.Empty;
         userIdString = string.Empty;
         selectedOtpTypeString = string.Empty;
@@ -296,7 +296,7 @@
 
             Console.WriteLine($"Generating OTP for user: {userId}");
 
-            // Create the OTP request
+           
             var otpRequest = new OtpRequest
             {
                 ClientCode = string.IsNullOrWhiteSpace(clientCode) ? null : clientCode.Trim(),
@@ -307,9 +307,9 @@
                 OtpPurpose = otpPurpose.Value
             };
 
-            Console.WriteLine("🔄 Calling GenerateAsync...");
+            Console.WriteLine("Calling GenerateAsync...");
 
-            // Call the GenerateAsync method
+           
             var result = await ApiClient.GenerateAsync(otpRequest);
 
             Console.WriteLine($"API Response Success: {result?.Success}");

@@ -144,16 +144,16 @@
             if (result?.Success == true && result.Data != null)
             {
                 providerTypes = result.Data.ToList();
-                Console.WriteLine($"✅ Loaded {providerTypes.Count} provider types");
+                Console.WriteLine($"Loaded {providerTypes.Count} provider types");
             }
             else
             {
-                Console.WriteLine($"❌ Failed to load provider types: {result?.Message}");
+                Console.WriteLine($"Failed to load provider types: {result?.Message}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error loading provider types: {ex.Message}");
+            Console.WriteLine($"Error loading provider types: {ex.Message}");
         }
     }
 
@@ -180,7 +180,7 @@
         }
         else
         {
-            Console.WriteLine("❌ providerEditModal is null");
+            Console.WriteLine("providerEditModal is null");
         }
     }
 
@@ -192,7 +192,7 @@
             errorMessage = string.Empty;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading provider for edit: {providerId}");
+            Console.WriteLine($"Loading provider for edit: {providerId}");
 
             // Load provider details using the ProviderAsync method
             var result = await ApiClient.ProviderAsync(providerId);
@@ -209,25 +209,25 @@
                     ProviderTypeName = provider.ProviderTypeName ?? string.Empty
                 };
                 
-                Console.WriteLine($"✅ Loaded provider for edit: {provider.Name}");
-                Console.WriteLine($"✅ Provider Type: {provider.ProviderTypeName}");
-                Console.WriteLine($"✅ Provider URL: {provider.Url}");
+                Console.WriteLine($"Loaded provider for edit: {provider.Name}");
+                Console.WriteLine($"Provider Type: {provider.ProviderTypeName}");
+                Console.WriteLine($"Provider URL: {provider.Url}");
             }
             else
             {
                 errorMessage = result?.Message ?? "Failed to load provider data.";
-                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
             }
         }
         catch (ApiException ex)
         {
             errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
-            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            Console.WriteLine($"API Exception: {ex.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading provider: {ex.Message}";
-            Console.WriteLine($"❌ Error loading provider: {ex.Message}");
+            Console.WriteLine($"Error loading provider: {ex.Message}");
         }
         finally
         {
@@ -333,10 +333,10 @@
                 return;
             }
 
-            Console.WriteLine($"📝 Saving changes for provider: {providerEditModel.ProviderId}");
-            Console.WriteLine($"📝 Name: {providerEditModel.Name}");
-            Console.WriteLine($"📝 Type: {providerEditModel.ProviderTypeName}");
-            Console.WriteLine($"📝 URL: {providerEditModel.Url}");
+            Console.WriteLine($"Saving changes for provider: {providerEditModel.ProviderId}");
+            Console.WriteLine($"Name: {providerEditModel.Name}");
+            Console.WriteLine($"Type: {providerEditModel.ProviderTypeName}");
+            Console.WriteLine($"URL: {providerEditModel.Url}");
 
             // Create the update command with trimmed values
             var updateCommand = new UpdateProviderDto
@@ -348,35 +348,35 @@
                 ProviderTypeName = providerEditModel.ProviderTypeName?.Trim() ?? string.Empty
             };
 
-            Console.WriteLine("🔄 Calling Update5Async...");
+            Console.WriteLine("Calling Update5Async...");
 
             // Call the Update5Async method
             var result = await ApiClient.Update5Async(updateCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
-                Console.WriteLine("✅ Provider updated successfully");
+                Console.WriteLine("Provider updated successfully");
                 await providerEditModal.CloseModal();
                 await OnProviderUpdated.InvokeAsync(updateCommand);
             }
             else
             {
                 formError = result?.Message ?? "Update failed. Please try again.";
-                Console.WriteLine($"❌ Update failed: {formError}");
+                Console.WriteLine($"Update failed: {formError}");
             }
         }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error saving provider: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -452,7 +452,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ ProviderEditModal component rendered");
+            Console.WriteLine("ProviderEditModal component rendered");
         }
     }
 }

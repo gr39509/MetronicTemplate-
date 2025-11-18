@@ -86,7 +86,7 @@
                         <label class="form-label">Amount *</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
-                                <span class="input-group-text">GHC</span>
+                                <span class="input-group-text">GH₵</span>
                             </div>
                             <input type="number" 
                                    class="form-control @(string.IsNullOrEmpty(amountError) ? "" : "is-invalid")" 
@@ -100,7 +100,7 @@
                                 <div class="invalid-feedback">@amountError</div>
                             }
                         </div>
-                        <small class="form-text text-muted">Enter amount between $0.01 and $10,000</small>
+                        <small class="form-text text-muted">Enter amount between GH₵0.01 and GH₵10,000</small>
                     </div>
                 </div>
             </div>
@@ -170,7 +170,7 @@
                         <p><strong>Type:</strong> <span class="text-success">Credit (Payment to customer)</span></p>
                         <p><strong>Network:</strong> @selectedNetwork</p>
                         <p><strong>Phone Number:</strong> @phoneNumber</p>
-                        <p><strong>Amount:</strong> GHC @amount.ToString("F2")</p>
+                        <p><strong>Amount:</strong> GH₵ @amount.ToString("F2")</p>
                         <p><strong>Invoice Number:</strong> @invoiceNumber</p>
                     </div>
                 </div>
@@ -413,9 +413,9 @@
                 
                 // Notify parent component
                 await OnPaymentProcessed.InvokeAsync();
-                
-                // Don't close modal automatically to show transaction details
-                // User can close manually after reviewing the results
+               
+                await Task.Delay(10000);
+                await paymentCreditModal.CloseModal();
             }
             else
             {
