@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using NovaAccounts.SharedModels.DataFields
 @using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Pages
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 
@@ -12,9 +13,11 @@
 @inject ApiClient ApiClient
 @layout MainLayout
 
+
 <PageTitle>Morpheus Clients</PageTitle>
 
 @* The below codes are very important for the modals to open *@
+<AuthenticationCheck>
 
 <ClientEditModal @ref="clientEditModal" OnClientUpdated="HandleClientUpdated"/>
 <ClientEmailModal @ref="clientEmailModal" />
@@ -73,7 +76,7 @@ else
         </div>
     </div>
 }
-
+</AuthenticationCheck>
 @code {
     private List<ClientViewModel> clients = new();
     private List<DataTableColumn> cbsColumns = new();
@@ -94,7 +97,8 @@ else
             Console.WriteLine("OnAfterRenderAsync - First render");
             await JSRuntime.InvokeVoidAsync("setDotNetReference", 
                 DotNetObjectReference.Create(this));
-            
+          
+            await JSRuntime.InvokeVoidAsync("showWelcomeAlert");
             // Check if modal components are initialized
             if (clientDetailsModal == null)
             {
@@ -113,6 +117,8 @@ else
             {
                 Console.WriteLine("ClientEmailModal component reference is set");
             }
+           
+           
         }
     }
     
@@ -273,7 +279,8 @@ else
             <button type='button' class='btn btn-primary btn-xs' onclick='viewClient(""{client.ClientId}"")' title='View Details'>
                 <i class='fa fa-eye'></i>
             </button>
-            <button type='button' class='btn btn-info btn-xs' onclick='editClient(""{client.ClientId}"")' title='Edit Client'>
+            
+            <button type='button' class='btn btn-info btn-xs ms-2' onclick='editClient(""{client.ClientId}"")' title='Edit Client'>
                 <i class='fa fa-edit'></i>
             </button>
           
@@ -377,7 +384,7 @@ else
 
     window.viewClient = function (clientId) {
         console.log('View Client :', clientId);
-        
+
         window.location.href = '/clients/' + clientId;
     };
 
@@ -421,3 +428,36 @@ else
         window.location.href = '/clients/transactions/' + clientId;
     };
 </script>
+
+<script>
+    window.showWelcomeAlert = () => {
+        let timerInterval;
+        Swal.fire({
+            // title: "Morpheus just made it easier for you. Relax, and enjoy yourself.",
+            icon: "success",
+            width: 600,
+            // html: "I will close in some few seconds.",
+            timer: 5000000,
+            color: "#716add",
+            background: "#fff url(rich-4897_256.gif)",
+            backdrop: "rgba(0,0,123,0.4)\n" +
+                "    url(\"/rich-4897_256.gif\")\n" +
+                "    left top\n" +
+                "    no-repeat",
+            timerProgressBar: true,
+            didOpen: () => {
+                Swal.showLoading();
+                const timer = Swal.getPopup().querySelector("b");
+                timerInterval = setInterval(() => {
+                    timer.textContent = `${Swal.getTimerLeft()}`;
+                }, 100);
+            },
+            willClose: () => {
+                clearInterval(timerInterval);
+            }
+            
+        });
+    };
+
+</script>
+

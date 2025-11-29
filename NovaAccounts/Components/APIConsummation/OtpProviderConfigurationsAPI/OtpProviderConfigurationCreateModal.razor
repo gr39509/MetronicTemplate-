@@ -163,8 +163,6 @@
     private string currentUrl = "/otp-configurations";
     private ReusableModal otpConfigCreateModal = null!;
     
-    private List<NavItem> navigationItems = new();
-
     // Data collections
     private List<ClientViewModel> clients = new();
     private List<ProviderViewModel> otpProviders = new();
@@ -182,6 +180,7 @@
     private bool allowAlphanumeric = false;
     private Dictionary<string, string> credentials = new();
     private Dictionary<string, string> credentialErrors = new();
+    private List<NavBarItem> navigationItems = new(); 
 
     // Validation errors
     private string clientError = string.Empty;
@@ -207,9 +206,10 @@
 
     protected override async Task OnInitializedAsync()
     {
-        navigationItems = new()
+        
+        navigationItems = new ()
         {
-            new NavItem
+            new NavBarItem
             {
                 Text = "Create OTP Configuration",
                 Url = "/otp-configurations",
@@ -217,7 +217,7 @@
                 OnClick = async () => await OpenModal(),
                 PreventNavigation = true
             },
-            new NavItem
+            new NavBarItem
             {
                 Text = "View Configurations",
                 Url = "/otp-configurations",

@@ -56,7 +56,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">From Account *</label>
+                        <label class="form-label">From Account</label>
                         <input class="form-control @(string.IsNullOrEmpty(fromAccountError) ? "" : "is-invalid")" 
                                @bind="fromAccount" 
                                @oninput="OnFromAccountInput"
@@ -65,11 +65,11 @@
                         {
                             <div class="invalid-feedback">@fromAccountError</div>
                         }
-                        <small class="form-text text-muted">The account number or identifier to debit payments from</small>
+                        <small class="form-text text-muted">The account number or identifier to debit payments from (optional)</small>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">From Account Name *</label>
+                        <label class="form-label">From Account Name</label>
                         <input class="form-control @(string.IsNullOrEmpty(fromAccountNameError) ? "" : "is-invalid")" 
                                @bind="fromAccountName" 
                                @oninput="OnFromAccountNameInput"
@@ -78,17 +78,38 @@
                         {
                             <div class="invalid-feedback">@fromAccountNameError</div>
                         }
-                        <small class="form-text text-muted">The name associated with the source account</small>
+                        <small class="form-text text-muted">The name associated with the source account (optional)</small>
                     </div>
 
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" @bind="isDefault" />
-                        <label class="form-check-label">Set as default configuration</label>
-                        <small class="form-text text-muted d-block">This configuration will be used when no specific configuration is selected</small>
+                    <div class="mb-3">
+                        <label class="form-label">Callback URL</label>
+                        <input class="form-control @(string.IsNullOrEmpty(callbackUrlError) ? "" : "is-invalid")" 
+                               @bind="callbackUrl" 
+                               @oninput="OnCallbackUrlInput"
+                               placeholder="https://example.com/api/payments/callback" />
+                        @if (!string.IsNullOrEmpty(callbackUrlError))
+                        {
+                            <div class="invalid-feedback">@callbackUrlError</div>
+                        }
+                        <small class="form-text text-muted">URL to receive payment status notifications (optional)</small>
                     </div>
                 </div>
 
                 <div class="col-md-6">
+                    <!-- Default Configuration Setting -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Configuration Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" @bind="isDefault" />
+                                <label class="form-check-label">Set as default configuration</label>
+                                <small class="form-text text-muted d-block">This configuration will be used when no specific configuration is selected</small>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Credentials Section -->
                     <div class="card">
                         <div class="card-header">
@@ -194,6 +215,7 @@
     private string description = string.Empty;
     private string fromAccount = string.Empty;
     private string fromAccountName = string.Empty;
+    private string callbackUrl = string.Empty;
     private bool isDefault = false;
     private bool isActive = true;
     private string defaultCurrency = "GHS";
@@ -206,6 +228,7 @@
     private string descriptionError = string.Empty;
     private string fromAccountError = string.Empty;
     private string fromAccountNameError = string.Empty;
+    private string callbackUrlError = string.Empty;
     private Dictionary<string, string> credentialErrors = new();
 
     [Parameter] public EventCallback<PaymentClientProviderConfigurationViewModel> OnPaymentConfigurationUpdated { get; set; }
@@ -273,12 +296,14 @@
                             
                             // Populate form fields
                             description = configuration.Description ?? "";
-                            // fromAccount = configuration.FromAccount ?? "";
-                            // fromAccountName = configuration.FromAccountName ?? "";
+                            fromAccount = configuration.FromAccount ?? "";
+                            fromAccountName = configuration.FromAccountName ?? "";
+                            callbackUrl = configuration.CallbackURL ?? "";
                             isDefault = configuration.IsDefault;
                             isActive = configuration.IsActive;
 
                             Console.WriteLine($"Loaded payment configuration: {configuration.Description}");
+                            Console.WriteLine($"Callback URL: {callbackUrl}");
 
                             // Populate credentials
                             credentials.Clear();
@@ -349,6 +374,7 @@
             }
 
             Console.WriteLine($"Updating payment configuration: {configuration.PaymentProviderConfigurationId}");
+            Console.WriteLine($"Callback URL: {callbackUrl}");
 
             // Create credentials list - include ALL credentials, even empty ones for required fields
             var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
@@ -378,8 +404,9 @@
                 ClientProviderCredentials = clientProviderCredentials,
                 PaymentClientProviderConfigurationId = configuration.PaymentProviderConfigurationId,
                 IsDefault = isDefault,
-                FromAccount = fromAccount.Trim(),
-                FromAccountName = fromAccountName.Trim()
+                FromAccount = string.IsNullOrWhiteSpace(fromAccount) ? null : fromAccount.Trim(),
+                FromAccountName = string.IsNullOrWhiteSpace(fromAccountName) ? null : fromAccountName.Trim(),
+                CallbackURL = string.IsNullOrWhiteSpace(callbackUrl) ? null : callbackUrl.Trim()
             };
 
             Console.WriteLine("Calling Update4Async for Payment...");
@@ -445,37 +472,50 @@
             descriptionError = string.Empty;
         }
 
-        // Validate From Account
-        // if (string.IsNullOrWhiteSpace(fromAccount))
-        // {
-        //     fromAccountError = "From Account is required";
-        //     isValid = false;
-        // }
-        // else if (fromAccount.Length > 50)
-        // {
-        //     fromAccountError = "From Account cannot exceed 50 characters";
-        //     isValid = false;
-        // }
-        // else
-        // {
-        //     fromAccountError = string.Empty;
-        // }
+        // Validate From Account (optional)
+        if (!string.IsNullOrWhiteSpace(fromAccount) && fromAccount.Length > 50)
+        {
+            fromAccountError = "From Account cannot exceed 50 characters";
+            isValid = false;
+        }
+        else
+        {
+            fromAccountError = string.Empty;
+        }
 
-        // Validate From Account Name
-        // if (string.IsNullOrWhiteSpace(fromAccountName))
-        // {
-        //     fromAccountNameError = "From Account Name is required";
-        //     isValid = false;
-        // }
-        // else if (fromAccountName.Length > 100)
-        // {
-        //     fromAccountNameError = "From Account Name cannot exceed 100 characters";
-        //     isValid = false;
-        // }
-        // else
-        // {
-        //     fromAccountNameError = string.Empty;
-        // }
+        // Validate From Account Name (optional)
+        if (!string.IsNullOrWhiteSpace(fromAccountName) && fromAccountName.Length > 100)
+        {
+            fromAccountNameError = "From Account Name cannot exceed 100 characters";
+            isValid = false;
+        }
+        else
+        {
+            fromAccountNameError = string.Empty;
+        }
+
+        // Validate Callback URL (optional)
+        if (!string.IsNullOrWhiteSpace(callbackUrl))
+        {
+            if (callbackUrl.Length > 500)
+            {
+                callbackUrlError = "Callback URL cannot exceed 500 characters";
+                isValid = false;
+            }
+            else if (!Uri.TryCreate(callbackUrl, UriKind.Absolute, out _))
+            {
+                callbackUrlError = "Please enter a valid URL (e.g., https://example.com/api/callback)";
+                isValid = false;
+            }
+            else
+            {
+                callbackUrlError = string.Empty;
+            }
+        }
+        else
+        {
+            callbackUrlError = string.Empty;
+        }
 
         return isValid;
     }
@@ -515,11 +555,8 @@
         var value = e.Value?.ToString() ?? string.Empty;
         fromAccount = value;
         
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            fromAccountError = "From Account is required";
-        }
-        else if (value.Length > 50)
+        // Only validate length if value is provided
+        if (!string.IsNullOrWhiteSpace(value) && value.Length > 50)
         {
             fromAccountError = "From Account cannot exceed 50 characters";
         }
@@ -536,13 +573,35 @@
         var value = e.Value?.ToString() ?? string.Empty;
         fromAccountName = value;
         
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            fromAccountNameError = "From Account Name is required";
-        }
-        else if (value.Length > 100)
+        // Only validate length if value is provided
+        if (!string.IsNullOrWhiteSpace(value) && value.Length > 100)
         {
             fromAccountNameError = "From Account Name cannot exceed 100 characters";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void OnCallbackUrlInput(ChangeEventArgs e)
+    {
+        callbackUrlError = string.Empty;
+        formError = string.Empty;
+        successMessage = string.Empty;
+        
+        var value = e.Value?.ToString() ?? string.Empty;
+        callbackUrl = value;
+        
+        // Validate URL format if provided
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            if (value.Length > 500)
+            {
+                callbackUrlError = "Callback URL cannot exceed 500 characters";
+            }
+            else if (!Uri.TryCreate(value, UriKind.Absolute, out _))
+            {
+                callbackUrlError = "Please enter a valid URL (e.g., https://example.com/api/callback)";
+            }
         }
         
         StateHasChanged();
@@ -584,3 +643,591 @@
         }
     }
 }
+
+
+@* @using NovaAccounts.Components.Shared *@
+@* @using NovaAccounts.SharedModels.ApiService *@
+@* @using NovaAccounts.SharedModels.ModalFields *@
+@* @inject ApiClient ApiClient *@
+@* *@
+@* <ReusableModal @ref="paymentConfigEditModal" *@
+@*                Title="Edit Payment Provider Configuration" *@
+@*                TriggerButtonText="" *@
+@*                ShowTriggerButton="false" *@
+@*                Size="ModalSize.Large" *@
+@*                TitleFontSize="1.2rem" *@
+@*                TitleColor="#007bff" *@
+@*                BodyFontSize="0.95rem" *@
+@*                HeaderClass="leadBold bg-blue-chambray font-white" *@
+@*                BodyColor="#333" *@
+@*                ShowSaveButton="true" *@
+@*                SaveButtonText="Update Configuration" *@
+@*                OnSave="@UpdatePaymentConfiguration" *@
+@*                ShowCancelButton="true" *@
+@*                CancelButtonText="Cancel"> *@
+@* *@
+@*     <BodyContent> *@
+@*         @if (isLoading) *@
+@*         { *@
+@*             <div class="text-center p-4"> *@
+@*                 <div class="spinner-border text-primary" role="status"></div> *@
+@*                 <p class="mt-2">Loading configuration details...</p> *@
+@*             </div> *@
+@*         } *@
+@*         else if (configuration != null) *@
+@*         { *@
+@*             <div class="row"> *@
+@*                 <div class="col-md-6"> *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Client</label> *@
+@*                         <input class="form-control" value="@configuration.ClientIdentifier" disabled /> *@
+@*                         <small class="form-text text-muted">Client cannot be changed</small> *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Provider</label> *@
+@*                         <input class="form-control" value="@configuration.Provider.Name" disabled /> *@
+@*                         <small class="form-text text-muted">Provider cannot be changed</small> *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">Description *</label> *@
+@*                         <input class="form-control @(string.IsNullOrEmpty(descriptionError) ? "" : "is-invalid")" *@
+@*                                @bind="description" *@
+@*                                @oninput="OnDescriptionInput" *@
+@*                                placeholder="Enter configuration description" /> *@
+@*                         @if (!string.IsNullOrEmpty(descriptionError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@descriptionError</div> *@
+@*                         } *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">From Account *</label> *@
+@*                         <input class="form-control @(string.IsNullOrEmpty(fromAccountError) ? "" : "is-invalid")"  *@
+@*                                @bind="fromAccount"  *@
+@*                                @oninput="OnFromAccountInput" *@
+@*                                placeholder="Enter source account number/ID" /> *@
+@*                         @if (!string.IsNullOrEmpty(fromAccountError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@fromAccountError</div> *@
+@*                         } *@
+@*                         <small class="form-text text-muted">The account number or identifier to debit payments from</small> *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3"> *@
+@*                         <label class="form-label">From Account Name *</label> *@
+@*                         <input class="form-control @(string.IsNullOrEmpty(fromAccountNameError) ? "" : "is-invalid")"  *@
+@*                                @bind="fromAccountName"  *@
+@*                                @oninput="OnFromAccountNameInput" *@
+@*                                placeholder="Enter account holder name" /> *@
+@*                         @if (!string.IsNullOrEmpty(fromAccountNameError)) *@
+@*                         { *@
+@*                             <div class="invalid-feedback">@fromAccountNameError</div> *@
+@*                         } *@
+@*                         <small class="form-text text-muted">The name associated with the source account</small> *@
+@*                     </div> *@
+@* *@
+@*                     <div class="mb-3 form-check"> *@
+@*                         <input type="checkbox" class="form-check-input" @bind="isDefault" /> *@
+@*                         <label class="form-check-label">Set as default configuration</label> *@
+@*                         <small class="form-text text-muted d-block">This configuration will be used when no specific configuration is selected</small> *@
+@*                     </div> *@
+@*                 </div> *@
+@* *@
+@*                 <div class="col-md-6"> *@
+@*                     <!-- Credentials Section --> *@
+@*                     <div class="card"> *@
+@*                         <div class="card-header"> *@
+@*                             <h5 class="card-title mb-0">Provider Credentials</h5> *@
+@*                             <small class="text-muted"> *@
+@*                                 @if (availableCredentialTypes.Any()) *@
+@*                                 { *@
+@*                                     <text>Update credentials for @configuration.ProviderName</text> *@
+@*                                 } *@
+@*                                 else *@
+@*                                 { *@
+@*                                     <text>Loading credential types...</text> *@
+@*                                 } *@
+@*                             </small> *@
+@*                         </div> *@
+@*                         <div class="card-body"> *@
+@*                             @if (availableCredentialTypes.Any()) *@
+@*                             { *@
+@*                                 @foreach (var credType in availableCredentialTypes) *@
+@*                                 { *@
+@*                                     var existingCredential = configuration.ClientProviderCredentials? *@
+@*                                         .FirstOrDefault(c => c.CredentialType?.CredentialTypeName == credType.CredentialTypeName); *@
+@*                                      *@
+@*                                     <div class="mb-2"> *@
+@*                                         <label class="form-label">@credType.DisplayName</label> *@
+@*                                         <input type="password" *@
+@*                                                class="form-control" *@
+@*                                                placeholder="Enter @credType.DisplayName" *@
+@*                                                value="@GetCredentialValue(credType.CredentialTypeName)" *@
+@*                                                @oninput="@(e => OnCredentialInput(credType.CredentialTypeName, e))" /> *@
+@*                                         <small class="form-text text-muted">@credType.CredentialTypeName</small> *@
+@*                                          *@
+@*                                         @if (existingCredential != null && !string.IsNullOrEmpty(existingCredential.CredentialKey)) *@
+@*                                         { *@
+@*                                             <small class="form-text text-info"> *@
+@*                                                 <i class="fa fa-info-circle"></i> *@
+@*                                                 Current value is set (enter new value only if you want to change it) *@
+@*                                             </small> *@
+@*                                         } *@
+@*                                         else *@
+@*                                         { *@
+@*                                             $1$ <small class="form-text text-warning"> #1# *@
+@*                                             $1$     <i class="fa fa-exclamation-triangle"></i> #1# *@
+@*                                             $1$     This credential is required for the provider to function properly #1# *@
+@*                                             $1$ </small> #1# *@
+@*                                         } *@
+@*                                     </div> *@
+@*                                 } *@
+@*                             } *@
+@*                             else if (!isLoadingCredentialTypes) *@
+@*                             { *@
+@*                                 <p class="text-muted">No credential types available for this provider type.</p> *@
+@*                             } *@
+@*                             else *@
+@*                             { *@
+@*                                 <div class="text-center"> *@
+@*                                     <div class="spinner-border spinner-border-sm" role="status"></div> *@
+@*                                     <span class="ml-2">Loading credential types...</span> *@
+@*                                 </div> *@
+@*                             } *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@* *@
+@*             @if (!string.IsNullOrEmpty(successMessage)) *@
+@*             { *@
+@*                 <div class="alert alert-success mt-3"> *@
+@*                     <strong>Success!</strong> @successMessage *@
+@*                 </div> *@
+@*             } *@
+@* *@
+@*             @if (!string.IsNullOrEmpty(formError)) *@
+@*             { *@
+@*                 <div class="alert alert-danger mt-3"> *@
+@*                     <strong>Error!</strong> @formError *@
+@*                 </div> *@
+@*             } *@
+@*         } *@
+@*         else if (!string.IsNullOrEmpty(errorMessage)) *@
+@*         { *@
+@*             <div class="alert alert-danger"> *@
+@*                 <strong>Error!</strong> @errorMessage *@
+@*                 <button class="btn btn-sm btn-warning ml-2" @onclick="() => LoadConfiguration(currentConfigId)"> *@
+@*                     <i class="fa fa-refresh"></i> Retry *@
+@*                 </button> *@
+@*             </div> *@
+@*         } *@
+@*     </BodyContent> *@
+@* </ReusableModal> *@
+@* *@
+@* @code { *@
+@*     private ReusableModal paymentConfigEditModal = null!; *@
+@*     private PaymentClientProviderConfigurationViewModel? configuration; *@
+@*     private bool isLoading = false; *@
+@*     private bool isLoadingCredentialTypes = false; *@
+@*     private string errorMessage = string.Empty; *@
+@*     private string formError = string.Empty; *@
+@*     private string successMessage = string.Empty; *@
+@*     private Guid currentConfigId; *@
+@* *@
+@*     // Form fields *@
+@*     private string description = string.Empty; *@
+@*     private string fromAccount = string.Empty; *@
+@*     private string fromAccountName = string.Empty; *@
+@*     private bool isDefault = false; *@
+@*     private bool isActive = true; *@
+@*     private string defaultCurrency = "GHS"; *@
+@*     private int transactionTimeout = 30; *@
+@*     private bool enableWebhooks = true; *@
+@*     private Dictionary<string, string> credentials = new(); *@
+@*     private List<CredentialTypeViewModel> availableCredentialTypes = new(); *@
+@* *@
+@*     // Validation errors *@
+@*     private string descriptionError = string.Empty; *@
+@*     private string fromAccountError = string.Empty; *@
+@*     private string fromAccountNameError = string.Empty; *@
+@*     private Dictionary<string, string> credentialErrors = new(); *@
+@* *@
+@*     [Parameter] public EventCallback<PaymentClientProviderConfigurationViewModel> OnPaymentConfigurationUpdated { get; set; } *@
+@* *@
+@*     public async Task OpenModal(Guid configId) *@
+@*     { *@
+@*         errorMessage = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*         configuration = null; *@
+@*         currentConfigId = configId; *@
+@* *@
+@*         if (paymentConfigEditModal != null) *@
+@*         { *@
+@*             await paymentConfigEditModal.OpenModal(); *@
+@*             await LoadCredentialTypes(); *@
+@*             await LoadConfiguration(currentConfigId); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task LoadCredentialTypes() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             isLoadingCredentialTypes = true; *@
+@*             var result = await ApiClient.All2Async(); *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 availableCredentialTypes = result.Data.Where(ct => ct.Active).ToList(); *@
+@*                 Console.WriteLine($"Loaded {availableCredentialTypes.Count} credential types for payment editing"); *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Console.WriteLine($"Error loading credential types: {ex.Message}"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoadingCredentialTypes = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task LoadConfiguration(Guid configId) *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             isLoading = true; *@
+@*             errorMessage = string.Empty; *@
+@*             StateHasChanged(); *@
+@* *@
+@*             // Get all clients first to find which client this configuration belongs to *@
+@*             var clientsResult = await ApiClient.AllAsync(); *@
+@*             if (clientsResult?.Success == true && clientsResult.Data != null) *@
+@*             { *@
+@*                 foreach (var client in clientsResult.Data) *@
+@*                 { *@
+@*                     var configsResult = await ApiClient.ConfigurationsPerClient3Async(client.Identifier); *@
+@*                     if (configsResult?.Success == true && configsResult.Data != null) *@
+@*                     { *@
+@*                         var config = configsResult.Data.FirstOrDefault(c => c.PaymentProviderConfigurationId == configId); *@
+@*                         if (config != null) *@
+@*                         { *@
+@*                             configuration = config; *@
+@*                              *@
+@*                             // Populate form fields *@
+@*                             description = configuration.Description ?? ""; *@
+@*                             // fromAccount = configuration.FromAccount ?? ""; *@
+@*                             // fromAccountName = configuration.FromAccountName ?? ""; *@
+@*                             isDefault = configuration.IsDefault; *@
+@*                             isActive = configuration.IsActive; *@
+@* *@
+@*                             Console.WriteLine($"Loaded payment configuration: {configuration.Description}"); *@
+@* *@
+@*                             // Populate credentials *@
+@*                             credentials.Clear(); *@
+@*                             if (configuration.ClientProviderCredentials != null) *@
+@*                             { *@
+@*                                 foreach (var cred in configuration.ClientProviderCredentials) *@
+@*                                 { *@
+@*                                     if (cred.CredentialType != null && !string.IsNullOrEmpty(cred.CredentialKey)) *@
+@*                                     { *@
+@*                                         credentials[cred.CredentialType.CredentialTypeName] = cred.CredentialKey; *@
+@*                                     } *@
+@*                                 } *@
+@*                             } *@
+@* *@
+@*                             // Ensure we have entries for all available credential types *@
+@*                             foreach (var credType in availableCredentialTypes) *@
+@*                             { *@
+@*                                 if (!credentials.ContainsKey(credType.CredentialTypeName)) *@
+@*                                 { *@
+@*                                     credentials[credType.CredentialTypeName] = string.Empty; *@
+@*                                 } *@
+@*                             } *@
+@*                             return; *@
+@*                         } *@
+@*                     } *@
+@*                 } *@
+@*                 errorMessage = "Payment configuration not found in any client."; *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 errorMessage = "Failed to load clients."; *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             errorMessage = $"Error loading payment configuration: {ex.Message}"; *@
+@*             Console.WriteLine($"Error loading payment configuration: {ex.Message}"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoading = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task UpdatePaymentConfiguration() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             // Clear previous messages *@
+@*             formError = string.Empty; *@
+@*             successMessage = string.Empty; *@
+@*             credentialErrors.Clear(); *@
+@*              *@
+@*             // Validate all fields *@
+@*             var isValid = ValidateForm(); *@
+@*              *@
+@*             if (!isValid) *@
+@*             { *@
+@*                 formError = "Please fix the validation errors before updating the configuration."; *@
+@*                 return; *@
+@*             } *@
+@* *@
+@*             if (configuration == null) *@
+@*             { *@
+@*                 formError = "Configuration data is not loaded."; *@
+@*                 return; *@
+@*             } *@
+@* *@
+@*             Console.WriteLine($"Updating payment configuration: {configuration.PaymentProviderConfigurationId}"); *@
+@* *@
+@*             // Create credentials list - include ALL credentials, even empty ones for required fields *@
+@*             var clientProviderCredentials = new List<CreateClientProviderCredentialDto>(); *@
+@*              *@
+@*             foreach (var credType in availableCredentialTypes) *@
+@*             { *@
+@*                 var credentialValue = credentials.ContainsKey(credType.CredentialTypeName)  *@
+@*                     ? credentials[credType.CredentialTypeName]  *@
+@*                     : string.Empty; *@
+@* *@
+@*                 // Only add if there's a value (empty values will not update existing credentials) *@
+@*                 if (!string.IsNullOrWhiteSpace(credentialValue)) *@
+@*                 { *@
+@*                     clientProviderCredentials.Add(new CreateClientProviderCredentialDto *@
+@*                     { *@
+@*                         CredentialTypeName = credType.CredentialTypeName, *@
+@*                         CredentialKey = credentialValue *@
+@*                     }); *@
+@*                 } *@
+@*             } *@
+@* *@
+@*             // Create the update DTO *@
+@*             var updateCommand = new UpdatePaymentProviderConfigurationDto *@
+@*             { *@
+@*                 Description = description.Trim(), *@
+@*                 ProviderId = configuration.ProviderId, *@
+@*                 ClientProviderCredentials = clientProviderCredentials, *@
+@*                 PaymentClientProviderConfigurationId = configuration.PaymentProviderConfigurationId, *@
+@*                 IsDefault = isDefault, *@
+@*                 FromAccount = fromAccount.Trim(), *@
+@*                 FromAccountName = fromAccountName.Trim() *@
+@*             }; *@
+@* *@
+@*             Console.WriteLine("Calling Update4Async for Payment..."); *@
+@* *@
+@*             // Call the Update4Async method (for Payment) *@
+@*             var result = await ApiClient.Update4Async(updateCommand); *@
+@* *@
+@*             Console.WriteLine($"API Response Success: {result?.Success}"); *@
+@*             Console.WriteLine($"API Message: {result?.Message}"); *@
+@* *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 successMessage = result.Message ?? "Payment configuration updated successfully!"; *@
+@*                 Console.WriteLine("Payment configuration updated successfully"); *@
+@*                  *@
+@*                 // Update local configuration with new data *@
+@*                 configuration = result.Data; *@
+@* *@
+@*                 // Notify parent component *@
+@*                 await OnPaymentConfigurationUpdated.InvokeAsync(result.Data); *@
+@*                  *@
+@*                 // Close modal after a brief delay to show success message *@
+@*                 await Task.Delay(1500); *@
+@*                 await paymentConfigEditModal.CloseModal(); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 formError = result?.Message ?? "Failed to update payment configuration. Please try again."; *@
+@*                 Console.WriteLine($"Payment configuration update failed: {formError}"); *@
+@*             } *@
+@*         } *@
+@*         catch (ApiException ex) *@
+@*         { *@
+@*             formError = $"Server error ({ex.StatusCode}): {ex.Message}"; *@
+@*             Console.WriteLine($"API Exception: {ex}"); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             formError = $"Error updating payment configuration: {ex.Message}"; *@
+@*             Console.WriteLine($"Exception: {ex}"); *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private bool ValidateForm() *@
+@*     { *@
+@*         var isValid = true; *@
+@* *@
+@*         // Validate Description *@
+@*         if (string.IsNullOrWhiteSpace(description)) *@
+@*         { *@
+@*             descriptionError = "Description is required"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else if (description.Length > 200) *@
+@*         { *@
+@*             descriptionError = "Description cannot exceed 200 characters"; *@
+@*             isValid = false; *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             descriptionError = string.Empty; *@
+@*         } *@
+@* *@
+@*         // Validate From Account *@
+@*         // if (string.IsNullOrWhiteSpace(fromAccount)) *@
+@*         // { *@
+@*         //     fromAccountError = "From Account is required"; *@
+@*         //     isValid = false; *@
+@*         // } *@
+@*         // else if (fromAccount.Length > 50) *@
+@*         // { *@
+@*         //     fromAccountError = "From Account cannot exceed 50 characters"; *@
+@*         //     isValid = false; *@
+@*         // } *@
+@*         // else *@
+@*         // { *@
+@*         //     fromAccountError = string.Empty; *@
+@*         // } *@
+@* *@
+@*         // Validate From Account Name *@
+@*         // if (string.IsNullOrWhiteSpace(fromAccountName)) *@
+@*         // { *@
+@*         //     fromAccountNameError = "From Account Name is required"; *@
+@*         //     isValid = false; *@
+@*         // } *@
+@*         // else if (fromAccountName.Length > 100) *@
+@*         // { *@
+@*         //     fromAccountNameError = "From Account Name cannot exceed 100 characters"; *@
+@*         //     isValid = false; *@
+@*         // } *@
+@*         // else *@
+@*         // { *@
+@*         //     fromAccountNameError = string.Empty; *@
+@*         // } *@
+@* *@
+@*         return isValid; *@
+@*     } *@
+@* *@
+@*     private string GetCredentialError(string credentialTypeName) *@
+@*     { *@
+@*         return credentialErrors.ContainsKey(credentialTypeName) ? credentialErrors[credentialTypeName] : string.Empty; *@
+@*     } *@
+@* *@
+@*     private void OnDescriptionInput(ChangeEventArgs e) *@
+@*     { *@
+@*         descriptionError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         description = value; *@
+@*          *@
+@*         if (string.IsNullOrWhiteSpace(value)) *@
+@*         { *@
+@*             descriptionError = "Description is required"; *@
+@*         } *@
+@*         else if (value.Length > 200) *@
+@*         { *@
+@*             descriptionError = "Description cannot exceed 200 characters"; *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void OnFromAccountInput(ChangeEventArgs e) *@
+@*     { *@
+@*         fromAccountError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         fromAccount = value; *@
+@*          *@
+@*         if (string.IsNullOrWhiteSpace(value)) *@
+@*         { *@
+@*             fromAccountError = "From Account is required"; *@
+@*         } *@
+@*         else if (value.Length > 50) *@
+@*         { *@
+@*             fromAccountError = "From Account cannot exceed 50 characters"; *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void OnFromAccountNameInput(ChangeEventArgs e) *@
+@*     { *@
+@*         fromAccountNameError = string.Empty; *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         fromAccountName = value; *@
+@*          *@
+@*         if (string.IsNullOrWhiteSpace(value)) *@
+@*         { *@
+@*             fromAccountNameError = "From Account Name is required"; *@
+@*         } *@
+@*         else if (value.Length > 100) *@
+@*         { *@
+@*             fromAccountNameError = "From Account Name cannot exceed 100 characters"; *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void OnCredentialInput(string credentialTypeName, ChangeEventArgs e) *@
+@*     { *@
+@*         formError = string.Empty; *@
+@*         successMessage = string.Empty; *@
+@*          *@
+@*         var value = e.Value?.ToString() ?? string.Empty; *@
+@*         if (!string.IsNullOrEmpty(credentialTypeName)) *@
+@*         { *@
+@*             credentials[credentialTypeName] = value; *@
+@*              *@
+@*             // Clear error for this credential when user starts typing *@
+@*             if (credentialErrors.ContainsKey(credentialTypeName)) *@
+@*             { *@
+@*                 credentialErrors.Remove(credentialTypeName); *@
+@*             } *@
+@*         } *@
+@*          *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private string GetCredentialValue(string credentialTypeName) *@
+@*     { *@
+@*         if (string.IsNullOrEmpty(credentialTypeName)) *@
+@*             return string.Empty; *@
+@*              *@
+@*         return credentials.ContainsKey(credentialTypeName) ? credentials[credentialTypeName] : string.Empty; *@
+@*     } *@
+@* *@
+@*     protected override void OnAfterRender(bool firstRender) *@
+@*     { *@
+@*         if (firstRender) *@
+@*         { *@
+@*             Console.WriteLine("PaymentProviderConfigurationEditModal component rendered"); *@
+@*         } *@
+@*     } *@
+@* } *@

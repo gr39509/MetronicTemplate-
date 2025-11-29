@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.Circuits;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using NovaAccounts.Components;
 using NovaAccounts.Components.APIConsummation.Debug;
+using NovaAccounts.Services;
 using NovaAccounts.SharedModels.ApiService;
 
 
@@ -27,6 +29,12 @@ builder.Services.AddSignalR(options =>
 });
 
 builder.Services.AddSingleton<CircuitHandler, CustomCircuitHandler>();
+
+// Register authentication service
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
+// Register session storage (if not already registered)
+builder.Services.AddScoped<ProtectedSessionStorage>();
 
 //builder.Services.AddRazorPages();
 //builder.Services.AddServerSideBlazor();
@@ -70,7 +78,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-// app.MapStaticAssets(); if enabled, the loading will be slowed.
+//app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

@@ -31,16 +31,16 @@
 <div class="quick-nav-overlay"></div>
 
 @code {
-    [Parameter] public List<NavItem> NavItems { get; set; } = new();
+    [Parameter] public List<NavBarItem> NavItems { get; set; } = new();
     [Parameter] public string NavId { get; set; } = "myNav";
     [Parameter] public string ActiveUrl { get; set; } = string.Empty;
 
-    private string GetNavItemClass(NavItem item)
+    private string GetNavItemClass(NavBarItem item)
     {
         return item.Url == ActiveUrl || item.IsActive ? "active" : "";
     }
 
-    private void HandleNavClick(NavItem item)
+    private void HandleNavClick(NavBarItem item)
     {
         if (item.OnClick != null)
         {

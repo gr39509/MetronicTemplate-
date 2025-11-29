@@ -162,7 +162,7 @@
     private string currentUrl = "/sms-configurations";
     private ReusableModal smsConfigCreateModal = null!;
     
-    private List<NavItem> navigationItems = new();
+    private List<NavBarItem> navigationItems = new();
 
     // Data collections
     private List<ClientViewModel> clients = new();
@@ -209,7 +209,7 @@
     {
         navigationItems = new()
         {
-            new NavItem
+            new NavBarItem
             {
                 Text = "Create SMS Configuration",
                 Url = "/sms-configurations",
@@ -217,7 +217,7 @@
                 OnClick = async () => await OpenModal(),
                 PreventNavigation = true
             },
-            new NavItem
+            new NavBarItem
             {
                 Text = "View Configurations",
                 Url = "/sms-configurations",

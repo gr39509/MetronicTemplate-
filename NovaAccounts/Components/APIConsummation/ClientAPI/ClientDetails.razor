@@ -10,13 +10,12 @@
 @using NovaAccounts.SharedModels.Charts.DonutChart
 @using NovaAccounts.SharedModels.Charts.LineChart
 @using NovaAccounts.SharedModels.ModalFields
-
+@inject IJSRuntime JSRuntime
 @inject IConfiguration Configuration
 @inject NavigationManager NavigationManager
 @inject ApiClient ApiClient
 @layout MainLayout
 
-@* Include all Configuration Modals *@
 <EmailProviderConfigurationCreateModal @ref="emailConfigCreateModal"
                                        OnEmailConfigurationCreated="HandleEmailConfigurationCreated" />
 
@@ -61,6 +60,7 @@
               ClientIdentifier="@clientDetails?.Identifier"
               OnOtpTested="HandleOtpTested" />
 
+
 <div class="container-fluid mt-4">
     @if (isLoading)
     {
@@ -95,9 +95,9 @@
                             <i class="fa fa-arrow-left"></i> Back to Clients
                         </button>
                         <h2 class="mb-0">
-                            <i class="fa fa-building"></i> @clientDetails.Name
+                            <i class="fa fa-building"></i> @clientDetails.Name (@clientDetails.Identifier)
                         </h2>
-                        <p class="text-muted mb-0">Client Details & Configurations</p>
+                        <p class="text-muted mb-0">@clientDetails.Description</p>
                     </div>
                     <div>
                         <span class="badge badge-success badge-lg">Active</span>
@@ -105,52 +105,8 @@
                 </div>
             </div>
         </div>
-
-        <!-- Client Information Card -->
-        <div class="card mb-4">
-            <div class="card-header leadBold bg-blue-chambray font-white">
-                <h5 class="mb-0"><i class="fa fa-info-circle"></i> Client Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="detail-group">
-                            <label class="detail-label text-muted">Client ID:</label>
-                            <div class="detail-value font-weight-bold">@clientDetails.ClientId</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="detail-group">
-                            <label class="detail-label text-muted">Identifier:</label>
-                            <div class="detail-value font-weight-bold">@clientDetails.Identifier</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="detail-group">
-                            <label class="detail-label text-muted">Client Name:</label>
-                            <div class="detail-value font-weight-bold">@clientDetails.Name</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="detail-group">
-                            <label class="detail-label text-muted">Created Date:</label>
-                            <div class="detail-value">@clientDetails.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
-                        </div>
-                    </div>
-                </div>
-
-                @if (!string.IsNullOrEmpty(clientDetails.Description))
-                {
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <label class="detail-label text-muted">Description:</label>
-                            <p class="detail-value">@clientDetails.Description</p>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-        if (totalTransactions != 0)
+        
+         if (totalTransactions != 0)
         {
             <div class="row">
                 <div class="col-md-4">
@@ -158,31 +114,99 @@
                         IconClass="fa-exchange"
                         Value="@totalTransactions"
                         DisplayValue="@totalTransactions.ToString("N0")"
-                        Description="Total Transactions"
+                        Description="Total Transactions Initiated"
                         ColorClass="blue"
                         ElementId="totalTransactions" />
+                </div>
+                @* <div class="col-md-4"> *@
+                @*     <DashboardStatCard  *@
+                @*         IconClass="fa-money" *@
+                @*         Currency="GH₵" *@
+                @*         Value="@totalAmount" *@
+                @*         DisplayValue="@totalAmount.ToString("N2")" *@
+                @*         Description="Total Amount ( Processed plus Failed)" *@
+                @*         ColorClass="green" *@
+                @*         ElementId="totalAmount" /> *@
+                @* </div> *@
+                
+                <div class="col-md-4">
+                    <DashboardStatCard 
+                        IconClass="fa-money"
+                        Currency="GH₵"
+                        Value="@totalAmountPaid"
+                        DisplayValue="@totalAmountPaid.ToString("N2")"
+                        Description="Total Amount Processed"
+                        ColorClass="green"
+                        ElementId="totalAmountPaid" />
                 </div>
                 <div class="col-md-4">
                     <DashboardStatCard 
                         IconClass="fa-money"
                         Currency="GH₵"
-                        Value="@totalAmount"
-                        DisplayValue="@totalAmount.ToString("F2")"
-                        Description="Total Amount"
-                        ColorClass="green"
-                        ElementId="totalAmount" />
+                        Value="@totalAmountFailed"
+                        DisplayValue="@totalAmountFailed.ToString("N2")"
+                        Description="Total Amount Failed"
+                        ColorClass="red"
+                        ElementId="totalAmountFailed" />
                 </div>
-                <div class="col-md-4">
-                    <DashboardStatCard 
-                        IconClass="fa-server"
-                        Value="@activeProviders"
-                        DisplayValue="@activeProviders.ToString("N0")"
-                        Description="Active Providers"
-                        ColorClass="purple"
-                        ElementId="activeProviders" />
-                </div>
+                
+                @* <div class="col-md-4"> *@
+                @*     <DashboardStatCard  *@
+                @*         IconClass="fa-server" *@
+                @*         Value="@activeProviders" *@
+                @*         DisplayValue="@activeProviders.ToString("N0")" *@
+                @*         Description="Active Providers" *@
+                @*         ColorClass="purple" *@
+                @*         ElementId="activeProviders" /> *@
+                @* </div> *@
             </div>
         }
+
+        <!-- Client Information Card -->
+        @* <div class="card mb-4"> *@
+        @*     <div class="card-header leadBold bg-blue-chambray font-white"> *@
+        @*         <h5 class="mb-0"><i class="fa fa-info-circle"></i> Client Information</h5> *@
+        @*     </div> *@
+        @*     <div class="card-body"> *@
+        @*         <div class="row"> *@
+        @*             <div class="col-md-3"> *@
+        @*                 <div class="detail-group"> *@
+        @*                     <label class="detail-label text-muted">Client ID:</label> *@
+        @*                     <div class="detail-value font-weight-bold">@clientDetails.ClientId</div> *@
+        @*                 </div> *@
+        @*             </div> *@
+        @*             <div class="col-md-3"> *@
+        @*                 <div class="detail-group"> *@
+        @*                     <label class="detail-label text-muted">Identifier:</label> *@
+        @*                     <div class="detail-value font-weight-bold">@clientDetails.Identifier</div> *@
+        @*                 </div> *@
+        @*             </div> *@
+        @*             <div class="col-md-3"> *@
+        @*                 <div class="detail-group"> *@
+        @*                     <label class="detail-label text-muted">Client Name:</label> *@
+        @*                     <div class="detail-value font-weight-bold">@clientDetails.Name</div> *@
+        @*                 </div> *@
+        @*             </div> *@
+        @*             <div class="col-md-3"> *@
+        @*                 <div class="detail-group"> *@
+        @*                     <label class="detail-label text-muted">Created Date:</label> *@
+        @*                     <div class="detail-value">@clientDetails.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div> *@
+        @*                 </div> *@
+        @*             </div> *@
+        @*         </div> *@
+        @* *@
+        @*         @if (!string.IsNullOrEmpty(clientDetails.Description)) *@
+        @*         { *@
+        @*             <div class="row mt-3"> *@
+        @*                 <div class="col-12"> *@
+        @*                     <label class="detail-label text-muted">Description:</label> *@
+        @*                     <p class="detail-value">@clientDetails.Description</p> *@
+        @*                 </div> *@
+        @*             </div> *@
+        @*         } *@
+        @*     </div> *@
+        @* </div> *@
+       
 
 
 
@@ -731,6 +755,7 @@
                                 <th>Status</th>
                                 <th>Reference</th>
                                 <th>Created Date</th>
+                                <th>Processed Date</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -766,8 +791,20 @@
                                         }
                                     </td>
                                     <td>
-                                        <small>@transaction.CreatedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                                        <small>@transaction.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss tt")</small>
                                     </td>
+                                   @if (transaction.ProcessedAt != null)
+                                   {
+                                       <td>
+                                           <small>@transaction.ProcessedAt?.ToString("yyyy-MM-dd HH:mm:ss tt")</small>
+                                       </td>
+                                   }
+                                   else
+                                   {
+                                       <td>
+                                           <small>Not Processed</small>
+                                       </td>
+                                   }
                                 </tr>
                             }
                             </tbody>
@@ -785,30 +822,9 @@
                                     of @transactions.TotalCount entries
                                 </span>
                             </div>
-                            <nav>
-                                <ul class="pagination mb-0">
-                                    <li class="page-item @(transactions.HasPreviousPage ? "" : "disabled")">
-                                        <button class="page-link" @onclick="() => ChangeTransactionPage(transactions.PageNumber - 1)">
-                                            Previous
-                                        </button>
-                                    </li>
-                                    @for (int i = 1; i <= transactions.TotalPages; i++)
-                                    {
-                                        var pageNumber = i;
-                                        <li class="page-item @(i == transactions.PageNumber ? "active" : "")">
-                                            <button class="page-link" @onclick="async () => await ChangeTransactionPage(pageNumber)"
-                                                    @onclick:preventDefault @onclick:stopPropagation>
-                                                @i
-                                            </button>
-                                        </li>
-                                    }
-                                    <li class="page-item @(transactions.HasNextPage ? "" : "disabled")">
-                                        <button class="page-link" @onclick="() => ChangeTransactionPage(transactions.PageNumber + 1)">
-                                            Next
-                                        </button>
-                                    </li>
-                                </ul>
-                            </nav>
+                            <ReusablePagination CurrentPage="transactions.PageNumber" 
+                                        TotalPages="transactions.TotalPages"
+                                        PageChanged="ChangeTransactionPage" />
                         </div>
                     }
                 }
@@ -983,7 +999,17 @@
         }
     }
 </div>
+@code{
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("showWelcomeAlert");
+        }
+    }
+
+}
 <style>
     .detail-group {
         margin-bottom: 1rem;
@@ -1035,3 +1061,35 @@
         background-color: #fff;
     }
 </style>
+
+<script>
+    window.showWelcomeAlert = () => {
+        let timerInterval;
+        Swal.fire({
+            // title: "Morpheus just made it easier for you. Relax, and enjoy yourself.",
+            icon: "success",
+            width: 600,
+            // html: "I will close in some few seconds.",
+            timer: 2000,
+            color: "#716add",
+            background: "#fff url(rich-4897_256.gif)",
+            backdrop: "rgba(0,0,123,0.4)\n" +
+                "    url(\"/rich-4897_256.gif\")\n" +
+                "    left top\n" +
+                "    no-repeat",
+            timerProgressBar: true,
+            didOpen: () => {
+                Swal.showLoading();
+                const timer = Swal.getPopup().querySelector("b");
+                timerInterval = setInterval(() => {
+                    timer.textContent = `${Swal.getTimerLeft()}`;
+                }, 100);
+            },
+            willClose: () => {
+                clearInterval(timerInterval);
+            }
+
+        });
+    };
+
+</script>

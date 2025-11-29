@@ -76,7 +76,7 @@
     private string currentUrl = "/clients";
     private ReusableModal clientCreateModal = null!;
     
-    private List<NavItem> navigationItems = new();
+    private List<NavBarItem> navigationItems = new();
 
     // Form fields
     private string clientName = string.Empty;
@@ -94,7 +94,7 @@
     {
         navigationItems = new()
         {
-            new NavItem
+            new NavBarItem
             {
                 Text = "Create New Client",
                 Url = "/clients",

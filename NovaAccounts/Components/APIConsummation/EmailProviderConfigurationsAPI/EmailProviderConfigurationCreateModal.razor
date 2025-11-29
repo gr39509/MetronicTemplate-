@@ -166,7 +166,7 @@
     private string currentUrl = "/email-configurations";
     private ReusableModal emailConfigCreateModal = null!;
     
-    private List<NavItem> navigationItems = new();
+    private List<NavBarItem> navigationItems = new();
 
     // Data collections
     private List<ClientViewModel> clients = new();
@@ -203,7 +203,7 @@
     {
         navigationItems = new()
         {
-            new NavItem
+            new NavBarItem
             {
                 Text = "Create Email Configuration",
                 Url = "/email-configurations",
@@ -211,7 +211,7 @@
                 OnClick = async () => await OpenModal(),
                 PreventNavigation = true
             },
-            new NavItem
+            new NavBarItem
             {
                 Text = "View Configurations",
                 Url = "/email-configurations",

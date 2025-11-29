@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using NovaAccounts.Components.APIConsummation.EmailProviderConfigurationsAPI;
 using NovaAccounts.Components.APIConsummation.OtpProviderConfigurationsAPI;
 using NovaAccounts.Components.APIConsummation.PaymentProviderConfigurationsAPI;
@@ -6,6 +7,7 @@ using NovaAccounts.Components.APIConsummation.SMSProviderConfigurationsAPI;
 using NovaAccounts.SharedModels.ApiService;
 using NovaAccounts.SharedModels.Charts.DonutChart;
 using NovaAccounts.SharedModels.Charts.LineChart;
+
 
 namespace NovaAccounts.Components.APIConsummation.ClientAPI;
 
@@ -60,18 +62,24 @@ public partial class ClientDetails
 
     // Color palettes
     private List<string> providerColors = new() { "#3598DC", "#28a745", "#ffc107", "#dc3545", "#6f42c1", "#e83e8c", "#20c997", "#fd7e14" };
-    private List<string> statusColors = new() { "#28a745", "#ffc107", "#dc3545", "#6c757d", "#17a2b8" };
+    private List<string> statusColors = new() { "#ffc107", "#28a745", "#dc3545", "#6c757d", "#17a2b8" };
 
     // Statistics
     private int totalTransactions = 0;
     private decimal successRate = 0;
     private decimal totalAmount = 0;
+    private decimal totalAmountPaid = 0;
+    private decimal totalAmountFailed = 0;
     private int activeProviders = 0;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadClientData();
+        
+        
     }
+
+
     
     // For now I will comment this out in case of loading issues I will uncomment it.
     // protected override async Task OnParametersSetAsync()
@@ -155,6 +163,11 @@ public partial class ClientDetails
                     LoadPaymentConfigurations(clientDetails.Identifier),
                     LoadTransactionsAsync()
                 );
+                
+                if (string.IsNullOrEmpty(errorMessage))
+                {
+                    await LoadTransactionAnalytics();
+                }
             }
             else
             {
@@ -192,7 +205,7 @@ public partial class ClientDetails
                 endDate: endDate,
                 providerId: null,
                 page: 1,
-                size: 1000
+                size: 10000
             );
 
             if (transactionsResult?.Success == true && transactionsResult.Data?.Data != null)
@@ -326,6 +339,12 @@ public partial class ClientDetails
                 t.Status?.ToLower() == "success" || t.Status?.ToLower() == "completed");
             successRate = totalTransactions > 0 ? (decimal)successfulTransactions / totalTransactions : 0;
             
+            var paidTransactions = transactions.Where(t => 
+                t.Status?.ToLower() == "paid");
+            var failedTransactions = transactions.Where(t => 
+                t.Status?.ToLower() == "failed");
+            totalAmountPaid = (decimal)paidTransactions.Sum(t => t.Amount);
+            totalAmountFailed = (decimal)failedTransactions.Sum(t => t.Amount);
             totalAmount = (decimal)transactions.Sum(t => t.Amount);
             
             // Count all active providers from all service types
@@ -430,7 +449,7 @@ public partial class ClientDetails
             "success" or "completed" => "bg-success",
             "pending" => "bg-warning",
             "failed" or "error" => "bg-danger",
-            _ => "bg-secondary"
+            _ => "bg-success"
         };
     }
 

@@ -1,81 +1,81 @@
-@* @inherits LayoutComponentBase *@
-@* @inject NavigationManager Navigation *@
-@* *@
-@* <HeadContent> *@
-@*     <!--begin::Fonts(mandatory for all pages)--> *@
-@*     $1$ <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" /> #1# *@
-@*     $1$ <!--end::Fonts--> #1# *@
-@*     $1$ <!--begin::Global Stylesheets Bundle(mandatory for all pages)--> #1# *@
-@*     $1$ <link href="@Assets["account/assets/plugins/global/plugins.bundle.css"]" rel="stylesheet" type="text/css" /> #1# *@
-@*     $1$ <link href="@Assets["account/assets/css/style.bundle.css"]" rel="stylesheet" type="text/css" /> #1# *@
-@*     $1$ #1# *@
-@*     $1$ <script src="@Assets["account/assets/plugins/global/plugins.bundle.js"]"></script> #1# *@
-@*     $1$ <script src="@Assets["account/assets/js/scripts.bundle.js"]"></script> #1# *@
-@*     <!--end::Global Javascript Bundle--> *@
-@*     <script src="_framework/blazor.web.js"></script> *@
-@*         <!-- BEGIN GLOBAL MANDATORY STYLES --> *@
-@*     <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" /> *@
-@*     <link href="@Assets["/assets/global/plugins/font-awesome/css/font-awesome.min.css"]" rel="stylesheet" type="text/css" /> *@
-@*     <link href="@Assets["/assets/global/plugins/simple-line-icons/simple-line-icons.min.css"]" rel="stylesheet" type="text/css" /> *@
-@*     <link href="@Assets["/assets/global/plugins/bootstrap/css/bootstrap.min.css"]" rel="stylesheet" type="text/css" /> *@
-@*     <link href="@Assets["/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css"]" rel="stylesheet" type="text/css" /> *@
-@*     <!-- END GLOBAL MANDATORY STYLES --> *@
-@*     <!-- BEGIN PAGE LEVEL PLUGINS --> *@
-@*     <link href="@Assets["/assets/global/plugins/select2/css/select2.min.css"]" rel="stylesheet" type="text/css" /> *@
-@*     <link href="@Assets["/assets/global/plugins/select2/css/select2-bootstrap.min.css"]" rel="stylesheet" type="text/css" /> *@
-@*     <!-- END PAGE LEVEL PLUGINS --> *@
-@*     <!-- BEGIN THEME GLOBAL STYLES --> *@
-@*     <link href="@Assets["/assets/global/css/components-rounded.min.css"]" rel="stylesheet" id="style_components" type="text/css" /> *@
-@*     <link href="@Assets["/assets/global/css/plugins.min.css"]" rel="stylesheet" type="text/css" /> *@
-@*     <!-- END THEME GLOBAL STYLES --> *@
-@*     <!-- BEGIN PAGE LEVEL STYLES --> *@
-@*     <link href="@Assets["/assets/pages/css/login-5.min.css"]" rel="stylesheet" type="text/css" /> *@
-@*     <!-- END PAGE LEVEL STYLES --> *@
-@*     <!-- BEGIN THEME LAYOUT STYLES --> *@
-@*     <!-- END THEME LAYOUT STYLES --> *@
-@*     <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png"> *@
-@*     <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png"> *@
-@*     <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png"> *@
-@*     <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png"> *@
-@*     <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png"> *@
-@*     <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png"> *@
-@*     <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png"> *@
-@*     <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png"> *@
-@*     <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png"> *@
-@*     <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png"> *@
-@*     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"> *@
-@*     <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png"> *@
-@*     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"> *@
-@*     <link rel="manifest" href="/manifest.json"> *@
-@*      *@
-@*     <script src="@Assets["/assets/global/plugins/jquery.min.js"]" type="text/javascript"></script> *@
-@*     <script src="@Assets["/assets/global/plugins/bootstrap/js/bootstrap.min.js"]" type="text/javascript"></script> *@
-@*     <script src="@Assets["/assets/global/plugins/js.cookie.min.js"]" type="text/javascript"></script> *@
-@*     <script src="@Assets["/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js"]" type="text/javascript"></script> *@
-@*     <script src="@Assets["/assets/global/plugins/jquery.blockui.min.js"]" type="text/javascript"></script> *@
-@*     <script src="@Assets["/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js"]" type="text/javascript"></script> *@
-@*     <!-- END CORE PLUGINS --> *@
-@*     <!-- BEGIN PAGE LEVEL PLUGINS --> *@
-@*     <script src="@Assets["/assets/global/plugins/jquery-validation/js/jquery.validate.min.js"]" type="text/javascript"></script> *@
-@*     <script src="@Assets["/assets/global/plugins/jquery-validation/js/additional-methods.min.js"]" type="text/javascript"></script> *@
-@*     <script src="@Assets["/assets/global/plugins/select2/js/select2.full.min.js"]" type="text/javascript"></script> *@
-@*     <script src="@Assets["/assets/global/plugins/backstretch/jquery.backstretch.min.js"]" type="text/javascript"></script> *@
-@*     <!-- END PAGE LEVEL PLUGINS --> *@
-@*     <!-- BEGIN THEME GLOBAL SCRIPTS --> *@
-@*     <script src="@Assets["/assets/global/scripts/app.min.js"]" type="text/javascript"></script> *@
-@*     <!-- END THEME GLOBAL SCRIPTS --> *@
-@*     <!-- BEGIN PAGE LEVEL SCRIPTS --> *@
-@*     <script src="@Assets["/assets/pages/scripts/login-5.min.js"]" type="text/javascript"></script> *@
-@*     <style> *@
-@*         .row{ *@
-@*             display: flex; *@
-@*             justify-content: space-between; *@
-@*         } *@
-@*     </style> *@
-@*        *@
-@*    *@
-@* *@
-@* </HeadContent> *@
-@* *@
-@* @Body *@
-@* *@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+
+<HeadContent>
+    <!--begin::Fonts(mandatory for all pages)-->
+    @* <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" /> *@
+    @* <!--end::Fonts--> *@
+    @* <!--begin::Global Stylesheets Bundle(mandatory for all pages)--> *@
+    @* <link href="@Assets["account/assets/plugins/global/plugins.bundle.css"]" rel="stylesheet" type="text/css" /> *@
+    @* <link href="@Assets["account/assets/css/style.bundle.css"]" rel="stylesheet" type="text/css" /> *@
+    @* *@
+    @* <script src="@Assets["account/assets/plugins/global/plugins.bundle.js"]"></script> *@
+    @* <script src="@Assets["account/assets/js/scripts.bundle.js"]"></script> *@
+    <!--end::Global Javascript Bundle-->
+    <script src="_framework/blazor.web.js"></script>
+        <!-- BEGIN GLOBAL MANDATORY STYLES -->
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,300,600,700&subset=all" rel="stylesheet" type="text/css" />
+    <link href="@Assets["/assets/global/plugins/font-awesome/css/font-awesome.min.css"]" rel="stylesheet" type="text/css" />
+    <link href="@Assets["/assets/global/plugins/simple-line-icons/simple-line-icons.min.css"]" rel="stylesheet" type="text/css" />
+    <link href="@Assets["/assets/global/plugins/bootstrap/css/bootstrap.min.css"]" rel="stylesheet" type="text/css" />
+    <link href="@Assets["/assets/global/plugins/bootstrap-switch/css/bootstrap-switch.min.css"]" rel="stylesheet" type="text/css" />
+    <!-- END GLOBAL MANDATORY STYLES -->
+    <!-- BEGIN PAGE LEVEL PLUGINS -->
+    <link href="@Assets["/assets/global/plugins/select2/css/select2.min.css"]" rel="stylesheet" type="text/css" />
+    <link href="@Assets["/assets/global/plugins/select2/css/select2-bootstrap.min.css"]" rel="stylesheet" type="text/css" />
+    <!-- END PAGE LEVEL PLUGINS -->
+    <!-- BEGIN THEME GLOBAL STYLES -->
+    <link href="@Assets["/assets/global/css/components-rounded.min.css"]" rel="stylesheet" id="style_components" type="text/css" />
+    <link href="@Assets["/assets/global/css/plugins.min.css"]" rel="stylesheet" type="text/css" />
+    <!-- END THEME GLOBAL STYLES -->
+    <!-- BEGIN PAGE LEVEL STYLES -->
+    <link href="@Assets["/assets/pages/css/login-5.min.css"]" rel="stylesheet" type="text/css" />
+    <!-- END PAGE LEVEL STYLES -->
+    <!-- BEGIN THEME LAYOUT STYLES -->
+    <!-- END THEME LAYOUT STYLES -->
+    <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+
+    <script src="@Assets["/assets/global/plugins/jquery.min.js"]" type="text/javascript"></script>
+    <script src="@Assets["/assets/global/plugins/bootstrap/js/bootstrap.min.js"]" type="text/javascript"></script>
+    <script src="@Assets["/assets/global/plugins/js.cookie.min.js"]" type="text/javascript"></script>
+    <script src="@Assets["/assets/global/plugins/jquery-slimscroll/jquery.slimscroll.min.js"]" type="text/javascript"></script>
+    <script src="@Assets["/assets/global/plugins/jquery.blockui.min.js"]" type="text/javascript"></script>
+    <script src="@Assets["/assets/global/plugins/bootstrap-switch/js/bootstrap-switch.min.js"]" type="text/javascript"></script>
+    <!-- END CORE PLUGINS -->
+    <!-- BEGIN PAGE LEVEL PLUGINS -->
+    <script src="@Assets["/assets/global/plugins/jquery-validation/js/jquery.validate.min.js"]" type="text/javascript"></script>
+    <script src="@Assets["/assets/global/plugins/jquery-validation/js/additional-methods.min.js"]" type="text/javascript"></script>
+    <script src="@Assets["/assets/global/plugins/select2/js/select2.full.min.js"]" type="text/javascript"></script>
+    <script src="@Assets["/assets/global/plugins/backstretch/jquery.backstretch.min.js"]" type="text/javascript"></script>
+    <!-- END PAGE LEVEL PLUGINS -->
+    <!-- BEGIN THEME GLOBAL SCRIPTS -->
+    <script src="@Assets["/assets/global/scripts/app.min.js"]" type="text/javascript"></script>
+    <!-- END THEME GLOBAL SCRIPTS -->
+    <!-- BEGIN PAGE LEVEL SCRIPTS -->
+    <script src="@Assets["/assets/pages/scripts/login-5.min.js"]" type="text/javascript"></script>
+    <style>
+        .row{
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+
+
+
+</HeadContent>
+
+@Body
+

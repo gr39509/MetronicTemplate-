@@ -194,7 +194,7 @@
     private string currentUrl = "/payment-configurations";
     private ReusableModal paymentConfigCreateModal = null!;
     
-    private List<NavItem> navigationItems = new();
+    private List<NavBarItem> navigationItems = new();
 
     // Data collections
     private List<ClientViewModel> clients = new();
@@ -234,7 +234,7 @@
     {
         navigationItems = new()
         {
-            new NavItem
+            new NavBarItem
             {
                 Text = "Create Payment Configuration",
                 Url = "/payment-configurations",
@@ -242,7 +242,7 @@
                 OnClick = async () => await OpenModal(),
                 PreventNavigation = true
             },
-            new NavItem
+            new NavBarItem
             {
                 Text = "View Configurations",
                 Url = "/payment-configurations",

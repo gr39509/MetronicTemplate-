@@ -30,13 +30,13 @@
     private string currentUrl = "/Inventories/AddNewInventoryItem";
     private ReusableModal quickActionModal = null!;
     
-    private List<NavItem> navigationItems = new();
+    private List<NavBarItem> navigationItems = new();
 
     protected override void OnInitialized()
     {
         navigationItems = new()
         {
-            new NavItem
+            new NavBarItem
             {
                 Text = "Add New Item",
                 Url = "/clients",
@@ -44,13 +44,13 @@
                 OnClick = async () => await OpenModal(), // Link to modal
                 PreventNavigation = true // Prevent URL navigation
             },
-            new NavItem
+            new NavBarItem
             {
                 Text = "View Inventory",
                 Url = "/Inventories/ViewInventory",
                 IconClass = "icon-list"
             },
-            new NavItem
+            new NavBarItem
             {
                 Text = "Settings",
                 Url = "/Settings",

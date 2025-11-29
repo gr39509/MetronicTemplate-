@@ -1,0 +1,185 @@
+
+<nav aria-label="Page navigation">
+    <ul class="pagination">
+        <li class="page-item @(CurrentPage == 1 ? "disabled" : "")">
+            <button class="page-link" @onclick="() => OnPageChanged(CurrentPage - 1)" 
+                    disabled="@(CurrentPage == 1)" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </button>
+        </li>
+
+        @foreach (var pageItem in GetVisiblePages())
+        {
+            if (pageItem.IsEllipsis)
+            {
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            }
+            else
+            {
+                <li class="page-item @(pageItem.PageNumber == CurrentPage ? "active" : "")">
+                    <button class="page-link" @onclick="() => OnPageChanged(pageItem.PageNumber)">
+                        @pageItem.PageNumber
+                    </button>
+                </li>
+            }
+        }
+
+        <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")">
+            <button class="page-link" @onclick="() => OnPageChanged(CurrentPage + 1)" 
+                    disabled="@(CurrentPage == TotalPages)" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </button>
+        </li>
+    </ul>
+</nav>
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; }
+    [Parameter] public int Range { get; set; } = 2;
+    [Parameter] public EventCallback<int> PageChanged { get; set; }
+
+    private List<PageItem> GetVisiblePages()
+    {
+        var pages = new List<PageItem>();
+        
+        // Always show first page
+        pages.Add(new PageItem(1));
+        
+        // Calculate start and end of middle pages
+        int start = Math.Max(2, CurrentPage - Range);
+        int end = Math.Min(TotalPages - 1, CurrentPage + Range);
+        
+        // Add ellipsis after first page if needed
+        if (start > 2)
+        {
+            pages.Add(new PageItem(0, true)); // Ellipsis
+        }
+        
+        // Add middle pages
+        for (int i = start; i <= end; i++)
+        {
+            pages.Add(new PageItem(i));
+        }
+        
+        // Add ellipsis before last page if needed
+        if (end < TotalPages - 1)
+        {
+            pages.Add(new PageItem(0, true)); // Ellipsis
+        }
+        
+        // Always show last page if there is more than one page
+        if (TotalPages > 1)
+        {
+            pages.Add(new PageItem(TotalPages));
+        }
+        
+        return pages;
+    }
+    
+    private async Task OnPageChanged(int page)
+    {
+        if (page >= 1 && page <= TotalPages && page != CurrentPage)
+        {
+            await PageChanged.InvokeAsync(page);
+        }
+    }
+    
+    private record PageItem(int PageNumber, bool IsEllipsis = false);
+}
+
+
+@* @typeparam TItem *@
+@* *@
+@* <nav aria-label="Page navigation"> *@
+@*     <ul class="pagination"> *@
+@*         <li class="page-item @(CurrentPage == 1 ? "disabled" : "")"> *@
+@*             <button class="page-link" @onclick="() => OnPageChanged(CurrentPage - 1)"  *@
+@*                     disabled="@(CurrentPage == 1)" aria-label="Previous"> *@
+@*                 <span aria-hidden="true">&laquo;</span> *@
+@*             </button> *@
+@*         </li> *@
+@* *@
+@*         @foreach (var pageItem in GetVisiblePages()) *@
+@*         { *@
+@*             if (pageItem.IsEllipsis) *@
+@*             { *@
+@*                 <li class="page-item disabled"> *@
+@*                     <span class="page-link">...</span> *@
+@*                 </li> *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 <li class="page-item @(pageItem.PageNumber == CurrentPage ? "active" : "")"> *@
+@*                     <button class="page-link" @onclick="() => OnPageChanged(pageItem.PageNumber)"> *@
+@*                         @pageItem.PageNumber *@
+@*                     </button> *@
+@*                 </li> *@
+@*             } *@
+@*         } *@
+@* *@
+@*         <li class="page-item @(CurrentPage == TotalPages ? "disabled" : "")"> *@
+@*             <button class="page-link" @onclick="() => OnPageChanged(CurrentPage + 1)"  *@
+@*                     disabled="@(CurrentPage == TotalPages)" aria-label="Next"> *@
+@*                 <span aria-hidden="true">&raquo;</span> *@
+@*             </button> *@
+@*         </li> *@
+@*     </ul> *@
+@* </nav> *@
+@* *@
+@* @code { *@
+@*     [Parameter] public int CurrentPage { get; set; } = 1; *@
+@*     [Parameter] public int TotalPages { get; set; } *@
+@*     [Parameter] public int Range { get; set; } = 2; *@
+@*     [Parameter] public EventCallback<int> PageChanged { get; set; } *@
+@* *@
+@*     private List<PageItem> GetVisiblePages() *@
+@*     { *@
+@*         var pages = new List<PageItem>(); *@
+@*          *@
+@*         // Always show first page *@
+@*         pages.Add(new PageItem(1)); *@
+@*          *@
+@*         // Calculate start and end of middle pages *@
+@*         int start = Math.Max(2, CurrentPage - Range); *@
+@*         int end = Math.Min(TotalPages - 1, CurrentPage + Range); *@
+@*          *@
+@*         // Add ellipsis after first page if needed *@
+@*         if (start > 2) *@
+@*         { *@
+@*             pages.Add(new PageItem(0, true)); // Ellipsis *@
+@*         } *@
+@*          *@
+@*         // Add middle pages *@
+@*         for (int i = start; i <= end; i++) *@
+@*         { *@
+@*             pages.Add(new PageItem(i)); *@
+@*         } *@
+@*          *@
+@*         // Add ellipsis before last page if needed *@
+@*         if (end < TotalPages - 1) *@
+@*         { *@
+@*             pages.Add(new PageItem(0, true)); // Ellipsis *@
+@*         } *@
+@*          *@
+@*         // Always show last page if there is more than one page *@
+@*         if (TotalPages > 1) *@
+@*         { *@
+@*             pages.Add(new PageItem(TotalPages)); *@
+@*         } *@
+@*          *@
+@*         return pages; *@
+@*     } *@
+@*      *@
+@*     private async Task OnPageChanged(int page) *@
+@*     { *@
+@*         if (page >= 1 && page <= TotalPages && page != CurrentPage) *@
+@*         { *@
+@*             await PageChanged.InvokeAsync(page); *@
+@*         } *@
+@*     } *@
+@*      *@
+@*     private record PageItem(int PageNumber, bool IsEllipsis = false); *@
+@* } *@

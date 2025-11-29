@@ -1,7 +1,7 @@
 namespace NovaAccounts.SharedModels.QuickNav;
 
 
-public class NavItem
+public class NavBarItem
 {
     public string Text { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;

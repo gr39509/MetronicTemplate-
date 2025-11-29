@@ -1,0 +1,299 @@
+@page "/login"
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using NovaAccounts.Components.Layout
+@inject ProtectedSessionStorage SessionStorage
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@layout AccountLayout
+<PageTitle>Login - Morpheus</PageTitle>
+
+<div class="login-container">
+    <div class="login-box">
+        <div class="login-logo">
+            <i class="fa fa-lock"></i>
+        </div>
+        <h2>Morpheus Login</h2>
+        <p class="text-muted">Enter your credentials to access the system</p>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <i class="fa fa-exclamation-circle"></i> @errorMessage
+            </div>
+        }
+
+        <form @onsubmit="HandleLogin">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-group">
+                    <span class="input-group-addon"><i class="fa fa-user"></i></span>
+                    <input type="text" 
+                           class="form-control" 
+                           id="username" 
+                           @bind="username" 
+                           placeholder="Enter username"
+                           required />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-group">
+                    <span class="input-group-addon"><i class="fa fa-lock"></i></span>
+                    <input type="@(showPassword ? "text" : "password")" 
+                           class="form-control" 
+                           id="password" 
+                           @bind="password" 
+                           placeholder="Enter password"
+                           required />
+                    <span class="input-group-addon" style="cursor: pointer;" @onclick="TogglePasswordVisibility">
+                        <i class="fa @(showPassword ? "fa-eye-slash" : "fa-eye")"></i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-inline">
+                    <input type="checkbox" @bind="rememberMe" /> Remember me
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <i class="fa fa-spinner fa-spin"></i> <text>Logging in...</text>
+                }
+                else
+                {
+                    <i class="fa fa-sign-in"></i> <text>Login</text>
+                }
+            </button>
+        </form>
+
+        @* <div class="login-footer"> *@
+        @*     <p class="text-muted mt-3"> *@
+        @*         <small> *@
+        @*             <i class="fa fa-info-circle"></i>  *@
+        @*             Demo Credentials: admin / admin123 *@
+        @*         </small> *@
+        @*     </p> *@
+        @* </div> *@
+    </div>
+</div>
+
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-image: url("morpheus3.jpeg");
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: cover;
+        padding: 20px;
+    }
+
+    .login-box {
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .login-logo {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .login-logo i {
+        font-size: 60px;
+        color: #667eea;
+    }
+
+    .login-box h2 {
+        text-align: center;
+        margin-bottom: 10px;
+        color: #333;
+    }
+
+    .login-box p {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .input-group {
+        display: flex;
+        width: 100%;
+    }
+
+    .input-group-addon {
+        padding: 6px 12px;
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        border-right: none;
+        border-radius: 4px 0 0 4px;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-group .form-control {
+        border-left: none;
+        border-radius: 0;
+    }
+
+    .input-group .form-control:last-child {
+        border-radius: 0 4px 4px 0;
+        border-left: 1px solid #ccc;
+    }
+
+    .input-group-addon:last-child {
+        border-left: none;
+        border-right: 1px solid #ccc;
+        border-radius: 0 4px 4px 0;
+    }
+
+    .btn-block {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .login-footer {
+        margin-top: 20px;
+        text-align: center;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+
+    .alert-danger {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+
+    .checkbox-inline {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .checkbox-inline input {
+        margin-right: 8px;
+    }
+</style>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private bool rememberMe = false;
+    private bool showPassword = false;
+    private bool isLoading = false;
+    private string errorMessage = "";
+
+   
+    private readonly Dictionary<string, string> validUsers = new()
+    {
+        
+        { "morpheus", "morpheus2025" }
+       
+    };
+
+    private bool hasCheckedAuth = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasCheckedAuth)
+        {
+            hasCheckedAuth = true;
+            
+            try
+            {
+                // Check if user is already logged in
+                var result = await SessionStorage.GetAsync<bool>("IsAuthenticated");
+                if (result.Success && result.Value)
+                {
+                    NavigationManager.NavigateTo("/", true);
+                }
+            }
+            catch
+            {
+                // Ignore errors during auth check
+            }
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        // Simulate network delay
+        await Task.Delay(500);
+
+        // Validate credentials
+        if (validUsers.TryGetValue(username.ToLower(), out var validPassword) && 
+            password == validPassword)
+        {
+            // Store authentication state
+            await SessionStorage.SetAsync("IsAuthenticated", true);
+            await SessionStorage.SetAsync("Username", username);
+
+            // Show success message
+            await JSRuntime.InvokeVoidAsync("showLoginSuccess", username);
+
+            // Redirect to home page
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/", true);
+        }
+        else
+        {
+            errorMessage = "Invalid username or password. Please try again.";
+            await JSRuntime.InvokeVoidAsync("showLoginError");
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+}
+
+<script>
+    window.showLoginSuccess = (username) => {
+        Swal.fire({
+            icon: 'success',
+            title: 'Login Successful!',
+            text: `Welcome back, ${username}!`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    };
+
+    window.showLoginError = () => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Login Failed',
+            text: 'Invalid username or password',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    };
+</script>

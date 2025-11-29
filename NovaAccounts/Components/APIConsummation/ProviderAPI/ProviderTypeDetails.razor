@@ -5,6 +5,7 @@
 @using NovaAccounts.SharedModels.ModalFields
 @using NovaAccounts.Components.Layout
 @layout MainLayout
+@inject IJSRuntime JSRuntime
 
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
@@ -262,11 +263,20 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadProviderTypeDetails();
+        
     }
 
     protected override async Task OnParametersSetAsync()
     {
         await LoadProviderTypeDetails();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("showWelcomeAlert");
+        }
     }
 
     private void NavigateBack()
@@ -398,3 +408,37 @@
         await LoadProviders();
     }
 }
+
+
+
+<script>
+    window.showWelcomeAlert = () => {
+        let timerInterval;
+        Swal.fire({
+            // title: "Morpheus just made it easier for you. Relax, and enjoy yourself.",
+            icon: "success",
+            width: 600,
+            // html: "I will close in some few seconds.",
+            timer: 5000,
+            color: "#716add",
+            background: "#fff url(rich-4897_256.gif)",
+            backdrop: "rgba(0,0,123,0.4)\n" +
+                "    url(\"/rich-4897_256.gif\")\n" +
+                "    left top\n" +
+                "    no-repeat",
+            timerProgressBar: true,
+            didOpen: () => {
+                Swal.showLoading();
+                const timer = Swal.getPopup().querySelector("b");
+                timerInterval = setInterval(() => {
+                    timer.textContent = `${Swal.getTimerLeft()}`;
+                }, 100);
+            },
+            willClose: () => {
+                clearInterval(timerInterval);
+            }
+
+        });
+    };
+
+</script>

@@ -1,19 +1,21 @@
 @page "/payment-transactions"
+@using System.Text
 @using Microsoft.AspNetCore.Authorization
 @using NovaAccounts.SharedModels.DataFields
 @using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Pages
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
+@inject ApiClient ApiClient
 
 @rendermode InteractiveServer
-@inject ApiClient ApiClient
 @layout MainLayout
 
 <PageTitle>Payment Transactions</PageTitle>
-
+<AuthenticationCheck>
 <h1 class="page-title">
     Payment Transactions
     <small>View and manage payment transactions</small>
@@ -45,7 +47,7 @@
                 <div class="form-group">
                     <label>Client Codes</label>
                     <input type="text" @bind="clientCodesFilter" class="form-control" placeholder="e.g., CLIENT1,CLIENT2" />
-                    <span>Leave empty if you want to get for all clients.</span>
+                    <span class="help-block">Leave empty if you want to get for all clients.</span>
                 </div>
             </div>
             <div class="col-md-3">
@@ -61,7 +63,6 @@
                 </div>
             </div>
         </div>
-        <br/>
         <div class="row">
             <div class="col-md-12 text-right">
                 <button class="btn btn-default" @onclick="ResetFilters">
@@ -90,7 +91,7 @@
 else if (!string.IsNullOrEmpty(errorMessage))
 {
     <div class="alert alert-danger alert-dismissible">
-        <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)">
+        <button type="button" class="close" @onclick="ClearErrorMessage">
             <span>&times;</span>
         </button>
         <strong>Error!</strong> @errorMessage
@@ -112,7 +113,10 @@ else
                 <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadTransactions" title="Refresh">
                     <i class="fa fa-refresh"></i>
                 </button>
-                <button class="btn btn-circle btn-icon-only btn-default" @onclick="ExportToCsv" title="Export to CSV">
+                @* <button class="btn btn-circle btn-icon-only btn-default" @onclick="ShowColumnSelection" title="Select Columns"> *@
+                @*     <i class="fa fa-columns"></i> *@
+                @* </button> *@
+                <button class="btn btn-circle btn-icon-only btn-default" @onclick="ShowExportModal" title="Export to CSV">
                     <i class="fa fa-download"></i>
                 </button>
             </div>
@@ -121,24 +125,22 @@ else
             <!-- Custom Pagination Controls - Top -->
             <div class="row">
                 <div class="col-md-6">
-                    <div class="dataTables_info" id="sample_1_info" role="status" aria-live="polite">
+                    <div class="dataTables_info" role="status" aria-live="polite">
                         Showing @((currentPage - 1) * pageSize + 1) to @Math.Min(currentPage * pageSize, totalRecords) of @totalRecords entries
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="dataTables_paginate paging_bootstrap_full_number pull-right" id="sample_1_paginate">
+                    <div class="dataTables_paginate paging_bootstrap_full_number pull-right">
                         <ul class="pagination" style="visibility: visible;">
                             <!-- First Page -->
                             <li class="prev @(currentPage == 1 ? "disabled" : "")" style="margin: 0;">
-                                <a href="javascript:;" @onclick="() => GoToPage(1)" title="First" 
-                                   style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                <a href="javascript:;" @onclick="() => GoToPage(1)" title="First" style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
                                     <i class="fa fa-angle-double-left"></i>
                                 </a>
                             </li>
                             <!-- Previous Page -->
                             <li class="prev @(currentPage == 1 ? "disabled" : "")" style="margin: 0;">
-                                <a href="javascript:;" @onclick="() => GoToPage(currentPage - 1)" title="Prev" 
-                                   style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                <a href="javascript:;" @onclick="() => GoToPage(currentPage - 1)" title="Prev" style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
                                     <i class="fa fa-angle-left"></i>
                                 </a>
                             </li>
@@ -147,23 +149,21 @@ else
                             @foreach (var pageNum in GetVisiblePages())
                             {
                                 <li class="@(pageNum == currentPage ? "active" : "")" style="margin: 0;">
-                                    <a href="javascript:;" @onclick="() => GoToPage(pageNum)" 
-                                       style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                    <a href="javascript:;" @onclick="() => GoToPage(pageNum)" style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
                                         @pageNum
                                     </a>
                                 </li>
                             }
+                            
                             <!-- Next Page -->
                             <li class="next @(currentPage == totalPages ? "disabled" : "")" style="margin: 0;">
-                                <a href="javascript:;" @onclick="() => GoToPage(currentPage + 1)" title="Next" 
-                                   style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                <a href="javascript:;" @onclick="() => GoToPage(currentPage + 1)" title="Next" style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
                                     <i class="fa fa-angle-right"></i>
                                 </a>
                             </li>
                             <!-- Last Page -->
                             <li class="next @(currentPage == totalPages ? "disabled" : "")" style="margin: 0;">
-                                <a href="javascript:;" @onclick="() => GoToPage(totalPages)" title="Last" 
-                                   style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
+                                <a href="javascript:;" @onclick="() => GoToPage(totalPages)" title="Last" style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;">
                                     <i class="fa fa-angle-double-right"></i>
                                 </a>
                             </li>
@@ -172,7 +172,7 @@ else
                 </div>
             </div>
 
-            <!-- Data Table WITHOUT built-in pagination -->
+            <!-- Data Table -->
             <ReusableDataTable TItem="PaymentRequestViewModel"
                                Data="@transactions"
                                Columns="@transactionColumns"
@@ -180,7 +180,6 @@ else
                                OnRowClick="OnTransactionRowClick"/>
 
             <!-- Custom Pagination Controls - Bottom -->
-            <br/>
             <div class="row">
                 <div class="col-md-6">
                     <div class="dataTables_length pull-left">
@@ -197,7 +196,7 @@ else
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="dataTables_paginate paging_bootstrap_full_number pull-right" id="sample_1_paginate">
+                    <div class="dataTables_paginate paging_bootstrap_full_number pull-right">
                         <ul class="pagination" style="visibility: visible;">
                             <!-- First Page -->
                             <li class="prev @(currentPage == 1 ? "disabled" : "")">
@@ -232,7 +231,115 @@ else
     </div>
 }
 
+<!-- Column Selection Modal -->
+@if (showColumnModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Select Columns to Export</h4>
+                    <button type="button" class="close ms-2" @onclick="HideColumnSelection">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        @foreach (var column in availableColumns)
+                        {
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" checked="@column.IsSelected" 
+                                           @onchange="@((e) => ToggleColumn(column, (bool)e.Value))" />
+                                    @column.DisplayName
+                                </label>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" @onclick="SelectAllColumns">Select All</button>
+                    <button type="button" class="btn btn-default" @onclick="DeselectAllColumns">Deselect All</button>
+                    <button type="button" class="btn btn-primary" @onclick="HideColumnSelection">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Export Options Modal -->
+@if (showExportModal)
+{
+    <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Export Options</h4>
+                    <button type="button" class="close ms-2" @onclick="HideExportModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Status Filter -->
+                    <div class="form-group">
+                        <label class="font-weight-bold">Include Transactions with Status:</label>
+                        <div class="mt-2">
+                            @foreach (var status in availableStatuses)
+                            {
+                                <div class="checkbox">
+                                    <label class="mr-3">
+                                        <input type="checkbox" checked="@selectedStatuses.Contains(status)" 
+                                               @onchange="@((e) => ToggleStatus(status, (bool)e.Value))" />
+                                        @(char.ToUpper(status[0]) + status.Substring(1))
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Transaction Type Filter -->
+                    <div class="form-group">
+                        <label class="font-weight-bold">Include Transaction Types:</label>
+                        <div class="mt-2">
+                            @foreach (var type in availableTransactionTypes)
+                            {
+                                <div class="checkbox">
+                                    <label class="mr-3">
+                                        <input type="checkbox" checked="@selectedTransactionTypes.Contains(type)" 
+                                               @onchange="@((e) => ToggleTransactionType(type, (bool)e.Value))" />
+                                        @(char.ToUpper(type[0]) + type.Substring(1))
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    
+                    <!-- Column Selection -->
+                    <div class="form-group">
+                        <label class="font-weight-bold">Columns to Export:</label>
+                        <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
+                            @foreach (var column in availableColumns)
+                            {
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" checked="@column.IsSelected" 
+                                               @onchange="@((e) => ToggleColumn(column, (bool)e.Value))" />
+                                        @column.DisplayName
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" @onclick="SelectAllColumns">Select All Columns</button>
+                    <button type="button" class="btn btn-default" @onclick="DeselectAllColumns">Deselect All Columns</button>
+                    <button type="button" class="btn btn-primary" @onclick="ExecuteExport">Export to CSV</button>
+                    <button type="button" class="btn btn-default" @onclick="HideExportModal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+</AuthenticationCheck>
 @code {
+    #region Properties and State
     private List<PaymentRequestViewModel> transactions = new();
     private List<ProviderViewModel> providers = new();
     private List<DataTableColumn> transactionColumns = new();
@@ -251,19 +358,45 @@ else
     private int pageSize = 10;
     private int totalRecords = 0;
     private int totalPages = 0;
+    
+    // Modal states
+    private bool showColumnModal = false;
+    private bool showExportModal = false;
+    
+    // Export configuration
+    private List<ExportColumn> availableColumns = new();
+    private List<ExportColumn> selectedColumns = new();
+    private List<string> selectedStatuses = new() { "paid", "failed" }; 
+    private List<string> selectedTransactionTypes = new() { "debit", "credit" }; 
+    
+    // Constants
+    private readonly List<string> availableStatuses = new() { "paid", "failed" };
+    private readonly List<string> availableTransactionTypes = new() { "debit", "credit" };
+    #endregion
 
+    #region Lifecycle Methods
     protected override async Task OnInitializedAsync()
     {
         ConfigureTransactionsTable();
+        InitializeExportColumns();
         await LoadProviders();
         await LoadTransactions();
     }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("showWelcomeAlert");
+        }
+    }
+    #endregion
 
+    #region Data Loading Methods
     private async Task LoadProviders()
     {
         try
         {
-            // Load payment providers
             var result = await ApiClient.Provider2Async("Payment");
             if (result?.Success == true && result.Data != null)
             {
@@ -284,48 +417,36 @@ else
             errorMessage = string.Empty;
             StateHasChanged();
 
-            // Prepare parameters
-            var startDateParam = startDate?.ToString("yyyy-MM-dd");
-            var endDateParam = endDate?.ToString("yyyy-MM-dd");
-            var clientCodes = string.IsNullOrWhiteSpace(clientCodesFilter) ? null : clientCodesFilter;
-            var providerId = selectedProviderId;
-
-            // Call the TransactionsAsync method from ApiClient
             var result = await ApiClient.TransactionsAsync(
-                clientCodes: clientCodes,
-                startDate: startDate.HasValue ? DateTimeOffset.Parse(startDateParam!) : (DateTimeOffset?)null,
-                endDate: endDate.HasValue ? DateTimeOffset.Parse(endDateParam!) : (DateTimeOffset?)null,
-                providerId: providerId,
+                clientCodes: string.IsNullOrWhiteSpace(clientCodesFilter) ? null : clientCodesFilter,
+                startDate: startDate,
+                endDate: endDate,
+                providerId: selectedProviderId,
                 page: currentPage,
                 size: pageSize
             );
 
             if (result?.Success == true && result.Data != null)
             {
-                transactions = result.Data.Data?.ToList() ?? new List<PaymentRequestViewModel>();
+                transactions = result.Data.Data?.ToList() ?? new();
                 totalRecords = result.Data.TotalCount;
                 totalPages = result.Data.TotalPages;
-                
-                Console.WriteLine($"Loaded {transactions.Count} transactions (Page {currentPage} of {totalPages}, Total: {totalRecords})");
             }
             else
             {
                 errorMessage = result?.Message ?? "No transaction data received from server.";
-                transactions = new List<PaymentRequestViewModel>();
+                transactions = new();
                 totalRecords = 0;
                 totalPages = 0;
-                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
             }
         }
         catch (ApiException apiEx)
         {
             errorMessage = $"Server error ({apiEx.StatusCode}). Please try again.";
-            Console.WriteLine($"API Exception loading transactions: {apiEx.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = "Failed to load transactions. Please try again.";
-            Console.WriteLine($"Error loading transactions: {ex.Message}");
         }
         finally
         {
@@ -333,198 +454,91 @@ else
             StateHasChanged();
         }
     }
+    #endregion
 
+    #region UI Configuration Methods
     private void ConfigureTransactionsTable()
     {
         transactionColumns = new List<DataTableColumn>
         {
-            new()
-            {
-                Header = "TRANSACTION ID",
-                PropertyName = nameof(PaymentRequestViewModel.Reference),
-                CssClass = "text-center"
-            },
-            new()
-            {
-                Header = "CLIENT CODE",
-                PropertyName = nameof(PaymentRequestViewModel.ClientCode),
-                CssClass = "text-center"
-            },
-            new()
-            {
-                Header = "PROVIDER",
-                PropertyName = nameof(PaymentRequestViewModel.Provider),
-                CustomRenderer = (item) =>
-                    $"<span class='text-dark'>{((PaymentRequestViewModel)item).Provider}</span>"
-            },
-            new()
-            {
-                Header = "PHONE NUMBER",
-                PropertyName = nameof(PaymentRequestViewModel.PhoneNumber),
-                CssClass = "text-center"
-            },
-            new()
-            {
-                Header = "AMOUNT",
-                PropertyName = nameof(PaymentRequestViewModel.Amount),
-                CustomRenderer = (item) =>
-                {
-                    var amount = ((PaymentRequestViewModel)item).Amount;
-                    var currency = ((PaymentRequestViewModel)item).Currency ?? "GHS";
-                    return $"<strong class='text-success'>{amount:N2} {currency}</strong>";
-                }
-            },
-            new()
-            {
-                Header = "INVOICE NO",
-                PropertyName = nameof(PaymentRequestViewModel.InvoiceNo),
-                CssClass = "text-center"
-            },
-            new()
-            {
-                Header = "STATUS",
-                PropertyName = nameof(PaymentRequestViewModel.Status),
-                CustomRenderer = (item) =>
-                {
-                    var status = ((PaymentRequestViewModel)item).Status?.ToLower();
-                    var badgeClass = status switch
-                    {
-                        "paid" or "completed" or "success" => "bg-success",
-                        "pending" => "bg-warning",
-                        "failed" => "bg-danger",
-                        _ => "bg-default"
-                    };
-                    return $"<span class='badge {badgeClass}'>{status?.ToUpper()}</span>";
-                }
-            },
-            new()
-            {
-                Header = "TRANSACTION TYPE",
-                PropertyName = nameof(PaymentRequestViewModel.TransactionType),
-                CustomRenderer = (item) =>
-                {
-                    var type = ((PaymentRequestViewModel)item).TransactionType?.ToLower();
-                    var badgeClass = type switch
-                    {
-                        "debit" => "label label-danger",
-                        "credit" => "label label-success",
-                        _ => "label label-info"
-                    };
-                    return $"<span class='badge {badgeClass}'>{type?.ToUpper()}</span>";
-                }
-            },
-            new()
-            {
-                Header = "CREATED DATE",
-                PropertyName = nameof(PaymentRequestViewModel.CreatedAt),
-                CustomRenderer = (item) =>
-                {
-                    var createdAt = ((PaymentRequestViewModel)item).CreatedAt;
-                    return createdAt.ToString("yyyy-MM-dd HH:mm");
-                }
-            },
-            new()
-            {
-                Header = "PROCESSED DATE",
-                PropertyName = nameof(PaymentRequestViewModel.ProcessedAt),
-                CustomRenderer = (item) =>
-                {
-                    var processedAt = ((PaymentRequestViewModel)item).ProcessedAt;
-                    return processedAt?.ToString("yyyy-MM-dd HH:mm") ?? "<span class='text-muted'>Not processed</span>";
-                }
-            }
-        //     new()
-        //     {
-        //         Header = "ACTIONS",
-        //         PropertyName = "",
-        //         Sortable = false,
-        //         Searchable = false,
-        //         Width = 100,
-        //         CssClass = "text-center",
-        //         CustomRenderer = (item) => 
-        //         {
-        //             var transaction = (PaymentRequestViewModel)item;
-        //             return $@"
-        // <div class='btn-group btn-group-sm' role='group'>
-        //     <button type='button' class='btn btn-primary btn-xs' onclick='viewTransactionDetails(""{transaction.PaymentRequestId}"")' title='View Details'>
-        //         <i class='fa fa-eye'></i>
-        //     </button>
-        // </div>";
-        //         }
-        //     }
+            new() { Header = "TRANSACTION ID", PropertyName = nameof(PaymentRequestViewModel.Reference), CssClass = "text-center" },
+            new() { Header = "CLIENT CODE", PropertyName = nameof(PaymentRequestViewModel.ClientCode), CssClass = "text-center" },
+            new() { Header = "PROVIDER", PropertyName = nameof(PaymentRequestViewModel.Provider), CustomRenderer = ProviderRenderer },
+            new() { Header = "PHONE NUMBER", PropertyName = nameof(PaymentRequestViewModel.PhoneNumber), CssClass = "text-center" },
+            new() { Header = "AMOUNT", PropertyName = nameof(PaymentRequestViewModel.Amount), CustomRenderer = AmountRenderer },
+            new() { Header = "INVOICE NO", PropertyName = nameof(PaymentRequestViewModel.InvoiceNo), CssClass = "text-center" },
+            new() { Header = "STATUS", PropertyName = nameof(PaymentRequestViewModel.Status), CustomRenderer = StatusRenderer },
+            new() { Header = "TRANSACTION TYPE", PropertyName = nameof(PaymentRequestViewModel.TransactionType), CustomRenderer = TransactionTypeRenderer },
+            new() { Header = "CREATED DATE", PropertyName = nameof(PaymentRequestViewModel.CreatedAt), CustomRenderer = CreatedAtRenderer },
+            new() { Header = "PROCESSED DATE", PropertyName = nameof(PaymentRequestViewModel.ProcessedAt), CustomRenderer = ProcessedAtRenderer }
         };
 
-        // Configure DataTable WITHOUT built-in pagination
         transactionOptions = new DataTableOptions
         {
-            PageLength = 0, // Disable built-in pagination
-            LengthMenu = Array.Empty<int>(), // No length menu
+            PageLength = 0,
+            LengthMenu = Array.Empty<int>(),
             SearchPlaceholder = "Search transactions...",
             TableId = "paymentTransactionsTable",
             TableCssClass = "table table-striped table-bordered table-hover",
             HeaderCssClass = "leadBold bg-blue-chambray font-white",
             ShowSearch = true,
-            ShowPaging = false, // Disable built-in paging
-            ShowInfo = false,   // Disable built-in info
+            ShowPaging = false,
+            ShowInfo = false,
             Responsive = true,
             AdditionalOptions = new Dictionary<string, object>
             {
-                ["paging"] = false, // Disable DataTables pagination
-                ["info"] = false,   // Disable DataTables info
-                ["ordering"] = true, // Keep sorting enabled
-                ["searching"] = true // Keep searching enabled
+                ["paging"] = false,
+                ["info"] = false,
+                ["ordering"] = true,
+                ["searching"] = true
             }
         };
     }
 
+    private void InitializeExportColumns()
+    {
+        availableColumns = new List<ExportColumn>
+        {
+            new() { PropertyName = "Reference", DisplayName = "Transaction ID" },
+            new() { PropertyName = "ClientCode", DisplayName = "Client Code" },
+            new() { PropertyName = "Provider", DisplayName = "Provider" },
+            new() { PropertyName = "PhoneNumber", DisplayName = "Phone Number" },
+            new() { PropertyName = "Amount", DisplayName = "Amount" },
+            new() { PropertyName = "Currency", DisplayName = "Currency" },
+            new() { PropertyName = "InvoiceNo", DisplayName = "Invoice Number" },
+            new() { PropertyName = "Status", DisplayName = "Status" },
+            new() { PropertyName = "TransactionType", DisplayName = "Transaction Type" },
+            new() { PropertyName = "CreatedAt", DisplayName = "Created Date" },
+            new() { PropertyName = "ProcessedAt", DisplayName = "Processed Date" }
+        };
+    
+        selectedColumns = availableColumns.Where(c => c.IsSelected).ToList();
+    }
+    #endregion
+
+    #region Filter and Pagination Methods
     private void ResetFilters()
     {
-        startDate = null;
-        endDate = null;
+        startDate = DateTimeOffset.Now.AddDays(-30);
+        endDate = DateTimeOffset.Now;
         clientCodesFilter = string.Empty;
         selectedProviderId = null;
         currentPage = 1;
         StateHasChanged();
     }
 
+    private void ClearErrorMessage() => errorMessage = string.Empty;
+
     private string GetTransactionSummary()
     {
         if (transactions.Count == 0) return "No transactions found";
         
         var totalAmount = transactions.Sum(t => t.Amount);
-        var completedCount = transactions.Count(t => t.Status?.ToLower() == "paid" || t.Status?.ToLower() == "completed");
+        var completedCount = transactions.Count(t => t.Status?.ToLower() is "paid" or "completed");
         
         return $"{totalRecords} total transactions, {completedCount} completed, Total: {totalAmount:N2}";
     }
 
-    private async Task ExportToCsv()
-    {
-        try
-        {
-            // Implement CSV export logic here
-            Console.WriteLine("Export to CSV functionality to be implemented");
-            await JSRuntime.InvokeVoidAsync("alert", "Export functionality coming soon!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error exporting to CSV: {ex.Message}");
-        }
-    }
-
-    private async Task OnTransactionRowClick(PaymentRequestViewModel transaction)
-    {
-        Console.WriteLine($"Transaction clicked: {transaction.Reference}");
-        await ViewTransactionDetails(transaction.PaymentRequestId.ToString());
-    }
-
-    [JSInvokable]
-    public async Task ViewTransactionDetails(string transactionId)
-    {
-        Console.WriteLine($"ViewTransactionDetails called with ID: {transactionId}");
-        NavigationManager.NavigateTo($"/transaction-details/{transactionId}");
-    }
-
-    // Pagination methods
     private async Task GoToPage(int page)
     {
         if (page >= 1 && page <= totalPages && page != currentPage)
@@ -539,12 +553,11 @@ else
         if (int.TryParse(e.Value?.ToString(), out int newSize) && newSize > 0)
         {
             pageSize = newSize;
-            currentPage = 1; // Reset to first page when changing page size
+            currentPage = 1;
             await LoadTransactions();
         }
     }
 
-    // Helper method to get visible page numbers for pagination
     private List<int> GetVisiblePages()
     {
         var pages = new List<int>();
@@ -558,4 +571,1197 @@ else
 
         return pages;
     }
+    #endregion
+
+    #region Export Methods
+    private async Task ExportToCsv()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("showLoading", "Preparing export...");
+            
+            var exportResult = await ApiClient.TransactionsAsync(
+                clientCodes: string.IsNullOrWhiteSpace(clientCodesFilter) ? null : clientCodesFilter,
+                startDate: startDate,
+                endDate: endDate,
+                providerId: selectedProviderId,
+                page: 1,
+                size: 1000000
+            );
+
+            if (exportResult?.Success == true && exportResult.Data?.Data != null)
+            {
+                var allTransactions = exportResult.Data.Data.ToList();
+                var filteredTransactions = ApplyExportFilters(allTransactions);
+                
+                if (filteredTransactions.Any())
+                {
+                    await JSRuntime.InvokeVoidAsync("showLoading", "Generating CSV file...");
+                    
+                    var selectedPropertyNames = selectedColumns
+                        .Where(c => c.IsSelected)
+                        .Select(c => c.PropertyName)
+                        .ToList();
+                    
+                    var csvContent = CsvHelper.ConvertToCsv(filteredTransactions, selectedPropertyNames);
+                    var filename = GenerateExportFilename();
+                    
+                    await DownloadCsvFile(csvContent, filename);
+                    await JSRuntime.InvokeVoidAsync("hideLoading");
+                    await JSRuntime.InvokeVoidAsync("showSuccess", $"Exported {filteredTransactions.Count} transactions successfully!");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("hideLoading");
+                    await JSRuntime.InvokeVoidAsync("showWarning", "No data matches your selected filters.");
+                }
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("hideLoading");
+                await JSRuntime.InvokeVoidAsync("showError", "Failed to load data for export.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("hideLoading");
+            await JSRuntime.InvokeVoidAsync("showError", $"Export failed: {ex.Message}");
+        }
+    }
+
+    private List<PaymentRequestViewModel> ApplyExportFilters(List<PaymentRequestViewModel> transactions)
+    {
+        var filtered = transactions.AsEnumerable();
+        
+        if (selectedStatuses.Any())
+        {
+            filtered = filtered.Where(t => 
+                t.Status != null && selectedStatuses.Contains(t.Status.ToLower()));
+        }
+        
+        if (selectedTransactionTypes.Any())
+        {
+            filtered = filtered.Where(t => 
+                t.TransactionType != null && selectedTransactionTypes.Contains(t.TransactionType.ToLower()));
+        }
+        
+        return filtered.ToList();
+    }
+
+    private string GenerateExportFilename()
+    {
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var filters = new List<string>();
+
+        if (startDate.HasValue) filters.Add($"from_{startDate:yyyyMMdd}");
+        if (endDate.HasValue) filters.Add($"to_{endDate:yyyyMMdd}");
+        if (!string.IsNullOrEmpty(clientCodesFilter)) filters.Add($"clients_{clientCodesFilter.Replace(",", "_")}");
+        
+        if (selectedProviderId.HasValue)
+        {
+            var providerName = providers.FirstOrDefault(p => p.ProviderId == selectedProviderId)?.Name ?? "provider";
+            filters.Add(providerName.Replace(" ", "_"));
+        }
+        
+        // Add status and type filters to filename
+        if (selectedStatuses.Count == 1) filters.Add($"status_{selectedStatuses[0]}");
+        else if (selectedStatuses.Count < availableStatuses.Count) filters.Add($"status_{string.Join("_", selectedStatuses)}");
+        
+        if (selectedTransactionTypes.Count == 1) filters.Add($"type_{selectedTransactionTypes[0]}");
+        else if (selectedTransactionTypes.Count < availableTransactionTypes.Count) filters.Add($"type_{string.Join("_", selectedTransactionTypes)}");
+
+        var filterString = filters.Any() ? $"_{string.Join("_", filters)}" : "";
+        return $"PaymentTransactions_{timestamp}{filterString}.csv";
+    }
+
+    private async Task DownloadCsvFile(string csvContent, string filename)
+    {
+        var bytes = Encoding.UTF8.GetBytes(csvContent);
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", base64, filename, "text/csv");
+    }
+    #endregion
+
+    #region Modal Methods
+    private void ShowColumnSelection()
+    {
+        showColumnModal = true;
+        StateHasChanged();
+    }
+
+    private void HideColumnSelection()
+    {
+        showColumnModal = false;
+        selectedColumns = availableColumns.Where(c => c.IsSelected).ToList();
+        StateHasChanged();
+    }
+
+    private void ShowExportModal()
+    {
+        showExportModal = true;
+        StateHasChanged();
+    }
+
+    private void HideExportModal()
+    {
+        showExportModal = false;
+        StateHasChanged();
+    }
+
+    private async Task ExecuteExport()
+    {
+        showExportModal = false;
+        StateHasChanged();
+        await ExportToCsv();
+    }
+    #endregion
+
+    #region Column Management Methods
+    private void ToggleColumn(ExportColumn column, bool isSelected)
+    {
+        column.IsSelected = isSelected;
+    }
+
+    private void SelectAllColumns()
+    {
+        foreach (var column in availableColumns)
+        {
+            column.IsSelected = true;
+        }
+    }
+
+    private void DeselectAllColumns()
+    {
+        foreach (var column in availableColumns)
+        {
+            column.IsSelected = false;
+        }
+    }
+    #endregion
+
+    #region Filter Toggle Methods
+    private void ToggleStatus(string status, bool isSelected)
+    {
+        if (isSelected && !selectedStatuses.Contains(status))
+            selectedStatuses.Add(status);
+        else if (!isSelected && selectedStatuses.Contains(status))
+            selectedStatuses.Remove(status);
+    }
+
+    private void ToggleTransactionType(string transactionType, bool isSelected)
+    {
+        if (isSelected && !selectedTransactionTypes.Contains(transactionType))
+            selectedTransactionTypes.Add(transactionType);
+        else if (!isSelected && selectedTransactionTypes.Contains(transactionType))
+            selectedTransactionTypes.Remove(transactionType);
+    }
+    #endregion
+
+    #region Custom Renderers
+    private string ProviderRenderer(object item)
+    {
+        var transaction = (PaymentRequestViewModel)item;
+        return $"<span class='text-dark'>{transaction.Provider}</span>";
+    }
+
+    private string AmountRenderer(object item)
+    {
+        var transaction = (PaymentRequestViewModel)item;
+        var currency = transaction.Currency ?? "GHS";
+        return $"<strong class='text-success'>{transaction.Amount:N2} {currency}</strong>";
+    }
+
+    private string StatusRenderer(object item)
+    {
+        var transaction = (PaymentRequestViewModel)item;
+        var status = transaction.Status?.ToLower();
+        var badgeClass = status switch
+        {
+            "paid" or "completed" or "success" => "bg-success",
+            "pending" => "bg-warning",
+            "failed" => "bg-danger",
+            _ => "bg-default"
+        };
+        return $"<span class='badge {badgeClass}'>{status?.ToUpper()}</span>";
+    }
+
+    private string TransactionTypeRenderer(object item)
+    {
+        var transaction = (PaymentRequestViewModel)item;
+        var type = transaction.TransactionType?.ToLower();
+        var badgeClass = type switch
+        {
+            "debit" => "label label-danger",
+            "credit" => "label label-success",
+            _ => "label label-info"
+        };
+        return $"<span class='badge {badgeClass}'>{type?.ToUpper()}</span>";
+    }
+
+    private string CreatedAtRenderer(object item)
+    {
+        var transaction = (PaymentRequestViewModel)item;
+        return transaction.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss tt");
+    }
+
+    private string ProcessedAtRenderer(object item)
+    {
+        var transaction = (PaymentRequestViewModel)item;
+        return transaction.ProcessedAt?.ToString("yyyy-MM-dd HH:mm:ss tt") ?? "<span class='text-muted'>Not processed</span>";
+    }
+    #endregion
+
+    #region Event Handlers
+    private async Task OnTransactionRowClick(PaymentRequestViewModel transaction)
+    {
+        await ViewTransactionDetails(transaction.PaymentRequestId.ToString());
+    }
+
+    [JSInvokable]
+    public async Task ViewTransactionDetails(string transactionId)
+    {
+        NavigationManager.NavigateTo($"/transaction-details/{transactionId}");
+    }
+    #endregion
+
+    #region Helper Classes
+    private class ExportColumn
+    {
+        public string PropertyName { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public bool IsSelected { get; set; } = true;
+    }
+    #endregion
 }
+
+<!-- JavaScript Functions -->
+<script>
+    window.showWelcomeAlert = () => {
+        let timerInterval;
+        Swal.fire({
+            icon: "success",
+            width: 600,
+            timer: 5000,
+            color: "#716add",
+            background: "#fff url(rich-4897_256.gif)",
+            backdrop: "rgba(0,0,123,0.4) url(\"/rich-4897_256.gif\") left top no-repeat",
+            timerProgressBar: true,
+            didOpen: () => {
+                Swal.showLoading();
+                const timer = Swal.getPopup().querySelector("b");
+                timerInterval = setInterval(() => {
+                    timer.textContent = `${Swal.getTimerLeft()}`;
+                }, 100);
+            },
+            willClose: () => {
+                clearInterval(timerInterval);
+            }
+        });
+    };
+
+    window.downloadFile = (base64Data, fileName, contentType) => {
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: contentType });
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    };
+
+    window.showLoading = (message) => {
+        Swal.fire({
+            title: message,
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+    };
+
+    window.hideLoading = () => Swal.close();
+
+    window.showSuccess = (message) => {
+        Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: message,
+            timer: 3000
+        });
+    };
+
+    window.showWarning = (message) => {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Warning',
+            text: message
+        });
+    };
+
+    window.showError = (message) => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: message
+        });
+    };
+</script>
+
+
+
+@* *@
+@* @page "/payment-transactions" *@
+@* @using System.Text *@
+@* @using Microsoft.AspNetCore.Authorization *@
+@* @using NovaAccounts.SharedModels.DataFields *@
+@* @using NovaAccounts.Components.Layout *@
+@* @using NovaAccounts.Components.Shared *@
+@* @using NovaAccounts.SharedModels.ApiService *@
+@* *@
+@* @inject IJSRuntime JSRuntime *@
+@* @inject NavigationManager NavigationManager *@
+@* *@
+@* @rendermode InteractiveServer *@
+@* @inject ApiClient ApiClient *@
+@* @layout MainLayout *@
+@* *@
+@* <PageTitle>Payment Transactions</PageTitle> *@
+@* *@
+@* <h1 class="page-title"> *@
+@*     Payment Transactions *@
+@*     <small>View and manage payment transactions</small> *@
+@* </h1> *@
+@* *@
+@* <!-- Filters Section --> *@
+@* <div class="portlet light bordered"> *@
+@*     <div class="portlet-title"> *@
+@*         <div class="caption"> *@
+@*             <i class="icon-filter font-dark"></i> *@
+@*             <span class="caption-subject font-dark bold uppercase">Filters</span> *@
+@*         </div> *@
+@*     </div> *@
+@*     <div class="portlet-body"> *@
+@*         <div class="row"> *@
+@*             <div class="col-md-3"> *@
+@*                 <div class="form-group"> *@
+@*                     <label>Start Date</label> *@
+@*                     <input type="date" @bind="startDate" @bind:format="yyyy-MM-dd" class="form-control" /> *@
+@*                 </div> *@
+@*             </div> *@
+@*             <div class="col-md-3"> *@
+@*                 <div class="form-group"> *@
+@*                     <label>End Date</label> *@
+@*                     <input type="date" @bind="endDate" @bind:format="yyyy-MM-dd" class="form-control" /> *@
+@*                 </div> *@
+@*             </div> *@
+@*             <div class="col-md-3"> *@
+@*                 <div class="form-group"> *@
+@*                     <label>Client Codes</label> *@
+@*                     <input type="text" @bind="clientCodesFilter" class="form-control" placeholder="e.g., CLIENT1,CLIENT2" /> *@
+@*                     <span>Leave empty if you want to get for all clients.</span> *@
+@*                 </div> *@
+@*             </div> *@
+@*             <div class="col-md-3"> *@
+@*                 <div class="form-group"> *@
+@*                     <label>Provider</label> *@
+@*                     <select @bind="selectedProviderId" class="form-control"> *@
+@*                         <option value="">All Providers</option> *@
+@*                         @foreach (var provider in providers) *@
+@*                         { *@
+@*                             <option value="@provider.ProviderId">@provider.Name</option> *@
+@*                         } *@
+@*                     </select> *@
+@*                 </div> *@
+@*             </div> *@
+@*         </div> *@
+@*         <br/> *@
+@*         <div class="row"> *@
+@*             <div class="col-md-12 text-right"> *@
+@*                 <button class="btn btn-default" @onclick="ResetFilters"> *@
+@*                     <i class="fa fa-refresh"></i> Reset *@
+@*                 </button> *@
+@*                 <button class="btn btn-primary" @onclick="LoadTransactions"> *@
+@*                     <i class="fa fa-search"></i> Apply Filters *@
+@*                 </button> *@
+@*             </div> *@
+@*         </div> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* <!-- Loading State --> *@
+@* @if (isLoading) *@
+@* { *@
+@*     <div class="portlet light bordered"> *@
+@*         <div class="portlet-body text-center" style="padding: 50px 0;"> *@
+@*             <div class="spinner-border text-primary" role="status"> *@
+@*                 <span class="sr-only">Loading...</span> *@
+@*             </div> *@
+@*             <p class="mt-3">Loading payment transactions...</p> *@
+@*         </div> *@
+@*     </div> *@
+@* } *@
+@* else if (!string.IsNullOrEmpty(errorMessage)) *@
+@* { *@
+@*     <div class="alert alert-danger alert-dismissible"> *@
+@*         <button type="button" class="close" @onclick="@(() => errorMessage = string.Empty)"> *@
+@*             <span>&times;</span> *@
+@*         </button> *@
+@*         <strong>Error!</strong> @errorMessage *@
+@*         <button class="btn btn-sm btn-warning" @onclick="LoadTransactions" style="margin-left: 10px;"> *@
+@*             <i class="fa fa-refresh"></i> Retry *@
+@*         </button> *@
+@*     </div> *@
+@* } *@
+@* else *@
+@* { *@
+@*     <div class="portlet"> *@
+@*         <div class="portlet-title"> *@
+@*             <div class="caption font-dark"> *@
+@*                 <i class="icon-wallet font-dark"></i> *@
+@*                 <span class="caption-subject bold uppercase">Payment Transactions</span> *@
+@*                 <span class="caption-helper"> @GetTransactionSummary()</span> *@
+@*             </div> *@
+@*             <div class="actions"> *@
+@*                 <button class="btn btn-circle btn-icon-only btn-default" @onclick="LoadTransactions" title="Refresh"> *@
+@*                     <i class="fa fa-refresh"></i> *@
+@*                 </button> *@
+@*                 <button class="btn btn-circle btn-icon-only btn-default" @onclick="ShowColumnSelection" title="Select Columns"> *@
+@*                     <i class="fa fa-columns"></i> *@
+@*                 </button> *@
+@*                 <button class="btn btn-circle btn-icon-only btn-default" @onclick="ExportToCsv" title="Export to CSV"> *@
+@*                     <i class="fa fa-download"></i> *@
+@*                 </button> *@
+@*                 @if (showColumnModal) *@
+@*                 { *@
+@*                     <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);"> *@
+@*                         <div class="modal-dialog"> *@
+@*                             <div class="modal-content"> *@
+@*                                 <div class="modal-header"> *@
+@*                                     <h4 class="modal-title">Select Columns to Export</h4> *@
+@*                                     <button type="button" class="close ms-2" @onclick="HideColumnSelection">&times;</button> *@
+@*                                 </div> *@
+@*                                 <div class="modal-body"> *@
+@*                                     <div class="form-group"> *@
+@*                                         @foreach (var column in availableColumns) *@
+@*                                         { *@
+@*                                             <div class="checkbox"> *@
+@*                                                 <label> *@
+@*                                                     <input type="checkbox" checked="@column.IsSelected"  *@
+@*                                                            @onchange="@((e) => ToggleColumn(column, (bool)e.Value))" /> *@
+@*                                                     @column.DisplayName *@
+@*                                                 </label> *@
+@*                                             </div> *@
+@*                                         } *@
+@*                                     </div> *@
+@*                                 </div> *@
+@*                                 <div class="modal-footer"> *@
+@*                                     <button type="button" class="btn btn-default" @onclick="SelectAllColumns">Select All</button> *@
+@*                                     <button type="button" class="btn btn-default" @onclick="DeselectAllColumns">Deselect All</button> *@
+@*                                     <button type="button" class="btn btn-primary" @onclick="HideColumnSelection">Apply</button> *@
+@*                                 </div> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 } *@
+@*             </div> *@
+@*         </div> *@
+@*         <div class="portlet-body"> *@
+@*             <!-- Custom Pagination Controls - Top --> *@
+@*             <div class="row"> *@
+@*                 <div class="col-md-6"> *@
+@*                     <div class="dataTables_info" id="sample_1_info" role="status" aria-live="polite"> *@
+@*                         Showing @((currentPage - 1) * pageSize + 1) to @Math.Min(currentPage * pageSize, totalRecords) of @totalRecords entries *@
+@*                     </div> *@
+@*                 </div> *@
+@*                 <div class="col-md-6"> *@
+@*                     <div class="dataTables_paginate paging_bootstrap_full_number pull-right" id="sample_1_paginate"> *@
+@*                         <ul class="pagination" style="visibility: visible;"> *@
+@*                             <!-- First Page --> *@
+@*                             <li class="prev @(currentPage == 1 ? "disabled" : "")" style="margin: 0;"> *@
+@*                                 <a href="javascript:;" @onclick="() => GoToPage(1)" title="First"  *@
+@*                                    style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;"> *@
+@*                                     <i class="fa fa-angle-double-left"></i> *@
+@*                                 </a> *@
+@*                             </li> *@
+@*                             <!-- Previous Page --> *@
+@*                             <li class="prev @(currentPage == 1 ? "disabled" : "")" style="margin: 0;"> *@
+@*                                 <a href="javascript:;" @onclick="() => GoToPage(currentPage - 1)" title="Prev"  *@
+@*                                    style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;"> *@
+@*                                     <i class="fa fa-angle-left"></i> *@
+@*                                 </a> *@
+@*                             </li> *@
+@*                              *@
+@*                             <!-- Page Numbers --> *@
+@*                             @foreach (var pageNum in GetVisiblePages()) *@
+@*                             { *@
+@*                                 <li class="@(pageNum == currentPage ? "active" : "")" style="margin: 0;"> *@
+@*                                     <a href="javascript:;" @onclick="() => GoToPage(pageNum)"  *@
+@*                                        style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;"> *@
+@*                                         @pageNum *@
+@*                                     </a> *@
+@*                                 </li> *@
+@*                             } *@
+@*                             <!-- Next Page --> *@
+@*                             <li class="next @(currentPage == totalPages ? "disabled" : "")" style="margin: 0;"> *@
+@*                                 <a href="javascript:;" @onclick="() => GoToPage(currentPage + 1)" title="Next"  *@
+@*                                    style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;"> *@
+@*                                     <i class="fa fa-angle-right"></i> *@
+@*                                 </a> *@
+@*                             </li> *@
+@*                             <!-- Last Page --> *@
+@*                             <li class="next @(currentPage == totalPages ? "disabled" : "")" style="margin: 0;"> *@
+@*                                 <a href="javascript:;" @onclick="() => GoToPage(totalPages)" title="Last"  *@
+@*                                    style="padding: 4px 8px; margin: 0; min-width: 40px; text-align: center; display: block; border-radius: 3px;"> *@
+@*                                     <i class="fa fa-angle-double-right"></i> *@
+@*                                 </a> *@
+@*                             </li> *@
+@*                         </ul> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@* *@
+@*             <!-- Data Table WITHOUT built-in pagination --> *@
+@*             <ReusableDataTable TItem="PaymentRequestViewModel" *@
+@*                                Data="@transactions" *@
+@*                                Columns="@transactionColumns" *@
+@*                                Options="@transactionOptions" *@
+@*                                OnRowClick="OnTransactionRowClick"/> *@
+@* *@
+@*             <!-- Custom Pagination Controls - Bottom --> *@
+@*             <br/> *@
+@*             <div class="row"> *@
+@*                 <div class="col-md-6"> *@
+@*                     <div class="dataTables_length pull-left"> *@
+@*                         <label> *@
+@*                             Show *@
+@*                             <select @onchange="OnPageSizeChanged" class="form-control input-sm input-xsmall input-inline"> *@
+@*                                 <option value="10" selected="@(pageSize == 10)">10</option> *@
+@*                                 <option value="25" selected="@(pageSize == 25)">25</option> *@
+@*                                 <option value="50" selected="@(pageSize == 50)">50</option> *@
+@*                                 <option value="100" selected="@(pageSize == 100)">100</option> *@
+@*                             </select> *@
+@*                             entries *@
+@*                         </label> *@
+@*                     </div> *@
+@*                 </div> *@
+@*                 <div class="col-md-6"> *@
+@*                     <div class="dataTables_paginate paging_bootstrap_full_number pull-right" id="sample_1_paginate"> *@
+@*                         <ul class="pagination" style="visibility: visible;"> *@
+@*                             <!-- First Page --> *@
+@*                             <li class="prev @(currentPage == 1 ? "disabled" : "")"> *@
+@*                                 <a href="javascript:;" @onclick="() => GoToPage(1)" title="First"><i class="fa fa-angle-double-left"></i></a> *@
+@*                             </li> *@
+@*                             <!-- Previous Page --> *@
+@*                             <li class="prev @(currentPage == 1 ? "disabled" : "")"> *@
+@*                                 <a href="javascript:;" @onclick="() => GoToPage(currentPage - 1)" title="Prev"><i class="fa fa-angle-left"></i></a> *@
+@*                             </li> *@
+@*                              *@
+@*                             <!-- Page Numbers --> *@
+@*                             @foreach (var pageNum in GetVisiblePages()) *@
+@*                             { *@
+@*                                 <li class="@(pageNum == currentPage ? "active" : "")"> *@
+@*                                     <a href="javascript:;" @onclick="() => GoToPage(pageNum)">@pageNum</a> *@
+@*                                 </li> *@
+@*                             } *@
+@*                              *@
+@*                             <!-- Next Page --> *@
+@*                             <li class="next @(currentPage == totalPages ? "disabled" : "")"> *@
+@*                                 <a href="javascript:;" @onclick="() => GoToPage(currentPage + 1)" title="Next"><i class="fa fa-angle-right"></i></a> *@
+@*                             </li> *@
+@*                             <!-- Last Page --> *@
+@*                             <li class="next @(currentPage == totalPages ? "disabled" : "")"> *@
+@*                                 <a href="javascript:;" @onclick="() => GoToPage(totalPages)" title="Last"><i class="fa fa-angle-double-right"></i></a> *@
+@*                             </li> *@
+@*                         </ul> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </div> *@
+@*         </div> *@
+@*     </div> *@
+@* } *@
+@* *@
+@* @code { *@
+@*     private List<PaymentRequestViewModel> transactions = new(); *@
+@*     private List<ProviderViewModel> providers = new(); *@
+@*     private List<DataTableColumn> transactionColumns = new(); *@
+@*     private DataTableOptions transactionOptions = new(); *@
+@*     private bool isLoading = true; *@
+@*     private string errorMessage = string.Empty; *@
+@*      *@
+@*     // Filter properties *@
+@*     private DateTimeOffset? startDate = DateTimeOffset.Now.AddDays(-30); *@
+@*     private DateTimeOffset? endDate = DateTimeOffset.Now; *@
+@*     private string clientCodesFilter = string.Empty; *@
+@*     private Guid? selectedProviderId; *@
+@*      *@
+@*     // Pagination *@
+@*     private int currentPage = 1; *@
+@*     private int pageSize = 10; *@
+@*     private int totalRecords = 0; *@
+@*     private int totalPages = 0; *@
+@*      *@
+@*     private bool showColumnModal = false; *@
+@*     private List<ExportColumn> availableColumns = new(); *@
+@*     private List<ExportColumn> selectedColumns = new(); *@
+@*      *@
+@* *@
+@* *@
+@*     private class ExportColumn *@
+@*     { *@
+@*         public string PropertyName { get; set; } *@
+@*         public string DisplayName { get; set; } *@
+@*         public bool IsSelected { get; set; } = true; *@
+@*     } *@
+@* *@
+@*     protected override async Task OnInitializedAsync() *@
+@*     { *@
+@*         ConfigureTransactionsTable(); *@
+@*         await LoadProviders(); *@
+@*         await LoadTransactions(); *@
+@*         InitializeExportColumns(); *@
+@*     } *@
+@*      *@
+@*     protected override async Task OnAfterRenderAsync(bool firstRender) *@
+@*     { *@
+@*         if (firstRender) *@
+@*         { *@
+@*             await JSRuntime.InvokeVoidAsync("showWelcomeAlert"); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task LoadProviders() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             // Load payment providers *@
+@*             var result = await ApiClient.Provider2Async("Payment"); *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 providers = result.Data.ToList(); *@
+@*             } *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             Console.WriteLine($"Error loading providers: {ex.Message}"); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task LoadTransactions() *@
+@*     { *@
+@*         try *@
+@*         { *@
+@*             isLoading = true; *@
+@*             errorMessage = string.Empty; *@
+@*             StateHasChanged(); *@
+@* *@
+@*             // Prepare parameters *@
+@*             var startDateParam = startDate?.ToString("yyyy-MM-dd"); *@
+@*             var endDateParam = endDate?.ToString("yyyy-MM-dd"); *@
+@*             var clientCodes = string.IsNullOrWhiteSpace(clientCodesFilter) ? null : clientCodesFilter; *@
+@*             var providerId = selectedProviderId; *@
+@* *@
+@*             // Call the TransactionsAsync method from ApiClient *@
+@*             var result = await ApiClient.TransactionsAsync( *@
+@*                 clientCodes: clientCodes, *@
+@*                 startDate: startDate.HasValue ? DateTimeOffset.Parse(startDateParam!) : (DateTimeOffset?)null, *@
+@*                 endDate: endDate.HasValue ? DateTimeOffset.Parse(endDateParam!) : (DateTimeOffset?)null, *@
+@*                 providerId: providerId, *@
+@*                 page: currentPage, *@
+@*                 size: pageSize *@
+@*             ); *@
+@* *@
+@*             if (result?.Success == true && result.Data != null) *@
+@*             { *@
+@*                 transactions = result.Data.Data?.ToList() ?? new List<PaymentRequestViewModel>(); *@
+@*                 totalRecords = result.Data.TotalCount; *@
+@*                 totalPages = result.Data.TotalPages; *@
+@*                  *@
+@*                 Console.WriteLine($"Loaded {transactions.Count} transactions (Page {currentPage} of {totalPages}, Total: {totalRecords})"); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 errorMessage = result?.Message ?? "No transaction data received from server."; *@
+@*                 transactions = new List<PaymentRequestViewModel>(); *@
+@*                 totalRecords = 0; *@
+@*                 totalPages = 0; *@
+@*                 Console.WriteLine($"API returned unsuccessful: {errorMessage}"); *@
+@*             } *@
+@*         } *@
+@*         catch (ApiException apiEx) *@
+@*         { *@
+@*             errorMessage = $"Server error ({apiEx.StatusCode}). Please try again."; *@
+@*             Console.WriteLine($"API Exception loading transactions: {apiEx.Message}"); *@
+@*         } *@
+@*         catch (Exception ex) *@
+@*         { *@
+@*             errorMessage = "Failed to load transactions. Please try again."; *@
+@*             Console.WriteLine($"Error loading transactions: {ex.Message}"); *@
+@*         } *@
+@*         finally *@
+@*         { *@
+@*             isLoading = false; *@
+@*             StateHasChanged(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void ConfigureTransactionsTable() *@
+@*     { *@
+@*         transactionColumns = new List<DataTableColumn> *@
+@*         { *@
+@*             new() *@
+@*             { *@
+@*                 Header = "TRANSACTION ID", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.Reference), *@
+@*                 CssClass = "text-center" *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "CLIENT CODE", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.ClientCode), *@
+@*                 CssClass = "text-center" *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "PROVIDER", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.Provider), *@
+@*                 CustomRenderer = (item) => *@
+@*                     $"<span class='text-dark'>{((PaymentRequestViewModel)item).Provider}</span>" *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "PHONE NUMBER", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.PhoneNumber), *@
+@*                 CssClass = "text-center" *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "AMOUNT", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.Amount), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var amount = ((PaymentRequestViewModel)item).Amount; *@
+@*                     var currency = ((PaymentRequestViewModel)item).Currency ?? "GHS"; *@
+@*                     return $"<strong class='text-success'>{amount:N2} {currency}</strong>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "INVOICE NO", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.InvoiceNo), *@
+@*                 CssClass = "text-center" *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "STATUS", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.Status), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var status = ((PaymentRequestViewModel)item).Status?.ToLower(); *@
+@*                     var badgeClass = status switch *@
+@*                     { *@
+@*                         "paid" or "completed" or "success" => "bg-success", *@
+@*                         "pending" => "bg-warning", *@
+@*                         "failed" => "bg-danger", *@
+@*                         _ => "bg-default" *@
+@*                     }; *@
+@*                     return $"<span class='badge {badgeClass}'>{status?.ToUpper()}</span>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "TRANSACTION TYPE", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.TransactionType), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var type = ((PaymentRequestViewModel)item).TransactionType?.ToLower(); *@
+@*                     var badgeClass = type switch *@
+@*                     { *@
+@*                         "debit" => "label label-danger", *@
+@*                         "credit" => "label label-success", *@
+@*                         _ => "label label-info" *@
+@*                     }; *@
+@*                     return $"<span class='badge {badgeClass}'>{type?.ToUpper()}</span>"; *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "CREATED DATE", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.CreatedAt), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var createdAt = ((PaymentRequestViewModel)item).CreatedAt; *@
+@*                     return createdAt.ToString("yyyy-MM-dd HH:mm:ss tt"); *@
+@*                 } *@
+@*             }, *@
+@*             new() *@
+@*             { *@
+@*                 Header = "PROCESSED DATE", *@
+@*                 PropertyName = nameof(PaymentRequestViewModel.ProcessedAt), *@
+@*                 CustomRenderer = (item) => *@
+@*                 { *@
+@*                     var processedAt = ((PaymentRequestViewModel)item).ProcessedAt; *@
+@*                     return processedAt?.ToString("yyyy-MM-dd HH:mm:ss tt") ?? "<span class='text-muted'>Not processed</span>"; *@
+@*                 } *@
+@*             } *@
+@*         //     new() *@
+@*         //     { *@
+@*         //         Header = "ACTIONS", *@
+@*         //         PropertyName = "", *@
+@*         //         Sortable = false, *@
+@*         //         Searchable = false, *@
+@*         //         Width = 100, *@
+@*         //         CssClass = "text-center", *@
+@*         //         CustomRenderer = (item) =>  *@
+@*         //         { *@
+@*         //             var transaction = (PaymentRequestViewModel)item; *@
+@*         //             return $@" *@
+@*         // <div class='btn-group btn-group-sm' role='group'> *@
+@*         //     <button type='button' class='btn btn-primary btn-xs' onclick='viewTransactionDetails(""{transaction.PaymentRequestId}"")' title='View Details'> *@
+@*         //         <i class='fa fa-eye'></i> *@
+@*         //     </button> *@
+@*         // </div>"; *@
+@*         //         } *@
+@*         //     } *@
+@*         }; *@
+@* *@
+@*         // Configure DataTable WITHOUT built-in pagination *@
+@*         transactionOptions = new DataTableOptions *@
+@*         { *@
+@*             PageLength = 0, // Disable built-in pagination *@
+@*             LengthMenu = Array.Empty<int>(), // No length menu *@
+@*             SearchPlaceholder = "Search transactions...", *@
+@*             TableId = "paymentTransactionsTable", *@
+@*             TableCssClass = "table table-striped table-bordered table-hover", *@
+@*             HeaderCssClass = "leadBold bg-blue-chambray font-white", *@
+@*             ShowSearch = true, *@
+@*             ShowPaging = false, // Disable built-in paging *@
+@*             ShowInfo = false,   // Disable built-in info *@
+@*             Responsive = true, *@
+@*             AdditionalOptions = new Dictionary<string, object> *@
+@*             { *@
+@*                 ["paging"] = false, // Disable DataTables pagination *@
+@*                 ["info"] = false,   // Disable DataTables info *@
+@*                 ["ordering"] = true, // Keep sorting enabled *@
+@*                 ["searching"] = true // Keep searching enabled *@
+@*             } *@
+@*         }; *@
+@*     } *@
+@* *@
+@*     private void ResetFilters() *@
+@*     { *@
+@*         startDate = null; *@
+@*         endDate = null; *@
+@*         clientCodesFilter = string.Empty; *@
+@*         selectedProviderId = null; *@
+@*         currentPage = 1; *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private string GetTransactionSummary() *@
+@*     { *@
+@*         if (transactions.Count == 0) return "No transactions found"; *@
+@*          *@
+@*         var totalAmount = transactions.Sum(t => t.Amount); *@
+@*         var completedCount = transactions.Count(t => t.Status?.ToLower() == "paid" || t.Status?.ToLower() == "completed"); *@
+@*          *@
+@*         return $"{totalRecords} total transactions, {completedCount} completed, Total: {totalAmount:N2}"; *@
+@*     } *@
+@*      *@
+@*     /// <summary> *@
+@*     /// *@
+@*      *@
+@*     private void InitializeExportColumns() *@
+@*     { *@
+@*         availableColumns = new List<ExportColumn> *@
+@*         { *@
+@*             new() { PropertyName = "Reference", DisplayName = "Transaction ID" }, *@
+@*             new() { PropertyName = "ClientCode", DisplayName = "Client Code" }, *@
+@*             new() { PropertyName = "Provider", DisplayName = "Provider" }, *@
+@*             new() { PropertyName = "PhoneNumber", DisplayName = "Phone Number" }, *@
+@*             new() { PropertyName = "Amount", DisplayName = "Amount" }, *@
+@*             new() { PropertyName = "Currency", DisplayName = "Currency" }, *@
+@*             new() { PropertyName = "InvoiceNo", DisplayName = "Invoice Number" }, *@
+@*             new() { PropertyName = "Status", DisplayName = "Status" }, *@
+@*             new() { PropertyName = "TransactionType", DisplayName = "Transaction Type" }, *@
+@*             new() { PropertyName = "CreatedAt", DisplayName = "Created Date" }, *@
+@*             new() { PropertyName = "ProcessedAt", DisplayName = "Processed Date" } *@
+@*         }; *@
+@*      *@
+@*         selectedColumns = availableColumns.Where(c => c.IsSelected).ToList(); *@
+@*     } *@
+@* *@
+@*     private void ShowColumnSelection() *@
+@*     { *@
+@*         showColumnModal = true; *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void HideColumnSelection() *@
+@*     { *@
+@*         showColumnModal = false; *@
+@*         selectedColumns = availableColumns.Where(c => c.IsSelected).ToList(); *@
+@*         StateHasChanged(); *@
+@*     } *@
+@* *@
+@*     private void ToggleColumn(ExportColumn column, bool isSelected) *@
+@*     { *@
+@*         column.IsSelected = isSelected; *@
+@*     } *@
+@* *@
+@*     private void SelectAllColumns() *@
+@*     { *@
+@*         foreach (var column in availableColumns) *@
+@*         { *@
+@*             column.IsSelected = true; *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private void DeselectAllColumns() *@
+@*     { *@
+@*         foreach (var column in availableColumns) *@
+@*         { *@
+@*             column.IsSelected = false; *@
+@*         } *@
+@*     } *@
+@*      *@
+@*     private async Task ExportToCsv() *@
+@* { *@
+@*     try *@
+@*     { *@
+@*         await JSRuntime.InvokeVoidAsync("showLoading", "Preparing export..."); *@
+@*          *@
+@*         // Get data *@
+@*         var exportResult = await ApiClient.TransactionsAsync( *@
+@*             clientCodes: string.IsNullOrWhiteSpace(clientCodesFilter) ? null : clientCodesFilter, *@
+@*             startDate: startDate, *@
+@*             endDate: endDate, *@
+@*             providerId: selectedProviderId, *@
+@*             page: 1, *@
+@*             size: 1000000 *@
+@*         ); *@
+@* *@
+@*         if (exportResult?.Success == true && exportResult.Data?.Data != null) *@
+@*         { *@
+@*             var allTransactions = exportResult.Data.Data.ToList(); *@
+@*              *@
+@*             if (allTransactions.Any()) *@
+@*             { *@
+@*                 await JSRuntime.InvokeVoidAsync("showLoading", "Generating CSV file..."); *@
+@*                  *@
+@*                 // Use selected columns for export *@
+@*                 var selectedPropertyNames = selectedColumns.Select(c => c.PropertyName).ToList(); *@
+@*                 var csvContent = CsvHelper.ConvertToCsv(allTransactions, selectedPropertyNames); *@
+@*                  *@
+@*                 var filename = GenerateExportFilename(); *@
+@*                 await DownloadCsvFile(csvContent, filename); *@
+@*                  *@
+@*                 await JSRuntime.InvokeVoidAsync("hideLoading"); *@
+@*                 await JSRuntime.InvokeVoidAsync("showSuccess", $"Exported {allTransactions.Count} transactions successfully!"); *@
+@*             } *@
+@*             else *@
+@*             { *@
+@*                 await JSRuntime.InvokeVoidAsync("hideLoading"); *@
+@*                 await JSRuntime.InvokeVoidAsync("showWarning", "No data available to export."); *@
+@*             } *@
+@*         } *@
+@*         else *@
+@*         { *@
+@*             await JSRuntime.InvokeVoidAsync("hideLoading"); *@
+@*             await JSRuntime.InvokeVoidAsync("showError", "Failed to load data for export."); *@
+@*         } *@
+@*     } *@
+@*     catch (Exception ex) *@
+@*     { *@
+@*         await JSRuntime.InvokeVoidAsync("hideLoading"); *@
+@*         await JSRuntime.InvokeVoidAsync("showError", $"Export failed: {ex.Message}"); *@
+@*     } *@
+@* } *@
+@*      *@
+@*      *@
+@*     private string GenerateExportFilename() *@
+@*     { *@
+@*         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss"); *@
+@*         var filters = new List<string>(); *@
+@*      *@
+@*         if (startDate.HasValue) *@
+@*             filters.Add($"from_{startDate:yyyyMMdd}"); *@
+@*         if (endDate.HasValue) *@
+@*             filters.Add($"to_{endDate:yyyyMMdd}"); *@
+@*         if (!string.IsNullOrEmpty(clientCodesFilter)) *@
+@*             filters.Add($"clients_{clientCodesFilter.Replace(",", "_")}"); *@
+@*         if (selectedProviderId.HasValue) *@
+@*         { *@
+@*             var providerName = providers.FirstOrDefault(p => p.ProviderId == selectedProviderId)?.Name ?? "provider"; *@
+@*             filters.Add(providerName.Replace(" ", "_")); *@
+@*         } *@
+@*      *@
+@*         var filterString = filters.Any() ? $"_{string.Join("_", filters)}" : ""; *@
+@*         return $"PaymentTransactions_{timestamp}{filterString}.csv"; *@
+@*     } *@
+@* *@
+@*     private async Task DownloadCsvFile(string csvContent, string filename) *@
+@*     { *@
+@*         var bytes = Encoding.UTF8.GetBytes(csvContent); *@
+@*         var base64 = Convert.ToBase64String(bytes); *@
+@*         await JSRuntime.InvokeVoidAsync("downloadFile", base64, filename, "text/csv"); *@
+@*     } *@
+@* *@
+@*     /// </summary> *@
+@*      *@
+@*      *@
+@* *@
+@* *@
+@* *@
+@* *@
+@*     private async Task OnTransactionRowClick(PaymentRequestViewModel transaction) *@
+@*     { *@
+@*         Console.WriteLine($"Transaction clicked: {transaction.Reference}"); *@
+@*         await ViewTransactionDetails(transaction.PaymentRequestId.ToString()); *@
+@*     } *@
+@* *@
+@*     [JSInvokable] *@
+@*     public async Task ViewTransactionDetails(string transactionId) *@
+@*     { *@
+@*         Console.WriteLine($"ViewTransactionDetails called with ID: {transactionId}"); *@
+@*         NavigationManager.NavigateTo($"/transaction-details/{transactionId}"); *@
+@*     } *@
+@* *@
+@*     // Pagination methods *@
+@*     private async Task GoToPage(int page) *@
+@*     { *@
+@*         if (page >= 1 && page <= totalPages && page != currentPage) *@
+@*         { *@
+@*             currentPage = page; *@
+@*             await LoadTransactions(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     private async Task OnPageSizeChanged(ChangeEventArgs e) *@
+@*     { *@
+@*         if (int.TryParse(e.Value?.ToString(), out int newSize) && newSize > 0) *@
+@*         { *@
+@*             pageSize = newSize; *@
+@*             currentPage = 1; // Reset to first page when changing page size *@
+@*             await LoadTransactions(); *@
+@*         } *@
+@*     } *@
+@* *@
+@*     // Helper method to get visible page numbers for pagination *@
+@*     private List<int> GetVisiblePages() *@
+@*     { *@
+@*         var pages = new List<int>(); *@
+@*         int startPage = Math.Max(1, currentPage - 2); *@
+@*         int endPage = Math.Min(totalPages, currentPage + 2); *@
+@* *@
+@*         for (int i = startPage; i <= endPage; i++) *@
+@*         { *@
+@*             pages.Add(i); *@
+@*         } *@
+@* *@
+@*         return pages; *@
+@*     } *@
+@* } *@
+@* *@
+@* *@
+@* <script> *@
+@*     window.showWelcomeAlert = () => { *@
+@*         let timerInterval; *@
+@*         Swal.fire({ *@
+@*             // title: "Morpheus just made it easier for you. Relax, and enjoy yourself.", *@
+@*             icon: "success", *@
+@*             width: 600, *@
+@*             // html: "I will close in some few seconds.", *@
+@*             timer: 5000, *@
+@*             color: "#716add", *@
+@*             background: "#fff url(rich-4897_256.gif)", *@
+@*             backdrop: "rgba(0,0,123,0.4)\n" + *@
+@*                 "    url(\"/rich-4897_256.gif\")\n" + *@
+@*                 "    left top\n" + *@
+@*                 "    no-repeat", *@
+@*             timerProgressBar: true, *@
+@*             didOpen: () => { *@
+@*                 Swal.showLoading(); *@
+@*                 const timer = Swal.getPopup().querySelector("b"); *@
+@*                 timerInterval = setInterval(() => { *@
+@*                     timer.textContent = `${Swal.getTimerLeft()}`; *@
+@*                 }, 100); *@
+@*             }, *@
+@*             willClose: () => { *@
+@*                 clearInterval(timerInterval); *@
+@*             } *@
+@* *@
+@*         }); *@
+@*     }; *@
+@* *@
+@* *@
+@*     window.downloadFile = (base64Data, fileName, contentType) => { *@
+@*         // Convert base64 to blob *@
+@*         const byteCharacters = atob(base64Data); *@
+@*         const byteNumbers = new Array(byteCharacters.length); *@
+@*         for (let i = 0; i < byteCharacters.length; i++) { *@
+@*             byteNumbers[i] = byteCharacters.charCodeAt(i); *@
+@*         } *@
+@*         const byteArray = new Uint8Array(byteNumbers); *@
+@*         const blob = new Blob([byteArray], { type: contentType }); *@
+@* *@
+@*         // Create download link and trigger click *@
+@*         const url = window.URL.createObjectURL(blob); *@
+@*         const a = document.createElement('a'); *@
+@*         a.style.display = 'none'; *@
+@*         a.href = url; *@
+@*         a.download = fileName; *@
+@*         document.body.appendChild(a); *@
+@*         a.click(); *@
+@*         window.URL.revokeObjectURL(url); *@
+@*         document.body.removeChild(a); *@
+@*     }; *@
+@* *@
+@* *@
+@*     window.showLoading = (message) => { *@
+@*         Swal.fire({ *@
+@*             title: message, *@
+@*             allowOutsideClick: false, *@
+@*             didOpen: () => { *@
+@*                 Swal.showLoading(); *@
+@*             } *@
+@*         }); *@
+@*     }; *@
+@* *@
+@*     window.hideLoading = () => { *@
+@*         Swal.close(); *@
+@*     }; *@
+@* *@
+@*     window.showSuccess = (message) => { *@
+@*         Swal.fire({ *@
+@*             icon: 'success', *@
+@*             title: 'Success', *@
+@*             text: message, *@
+@*             timer: 3000 *@
+@*         }); *@
+@*     }; *@
+@* *@
+@*     window.showWarning = (message) => { *@
+@*         Swal.fire({ *@
+@*             icon: 'warning', *@
+@*             title: 'Warning', *@
+@*             text: message *@
+@*         }); *@
+@*     }; *@
+@* *@
+@*     window.showError = (message) => { *@
+@*         Swal.fire({ *@
+@*             icon: 'error', *@
+@*             title: 'Error', *@
+@*             text: message *@
+@*         }); *@
+@*     }; *@
+@* *@
+@* </script> *@
