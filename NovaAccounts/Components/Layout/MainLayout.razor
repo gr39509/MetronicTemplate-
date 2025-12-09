@@ -1,5 +1,5 @@
 ﻿@inherits LayoutComponentBase
-
+@inject  NovaAccounts.Services.NovaAccounts.Services.IAuthenticationService AuthService
 <!-- BEGIN HEAD -->
 <HeadContent>
     
@@ -63,6 +63,10 @@
             <!-- END RESPONSIVE MENU TOGGLER -->
             <!-- BEGIN TOP NAVIGATION MENU -->
             <div class="top-menu d-flex align-items-center justify-content-center">
+                <div class="navbar-date">
+                    <span class="greeting-text text-warning fs-6">@Greeting Morpheus user 🤝,</span>
+                    <span class="datetime-text text-info fs-6">@CurrentDateTime.ToString("dddd, MMMM dd, yyyy - hh:mm:ss tt")</span>
+                </div>
                 <ul class="nav navbar-nav float-end">
                     <!-- BEGIN NOTIFICATION DROPDOWN -->
                     <!-- DOC: Apply "dropdown-dark" class after "dropdown-extended" to change the dropdown styte -->
@@ -73,6 +77,7 @@
                     </li>
                     <!-- END NOTIFICATION DROPDOWN -->
                     <!-- BEGIN INBOX DROPDOWN -->
+
                     <!-- DOC: Apply "dropdown-dark" class after below "dropdown-extended" to change the dropdown styte -->
                     <li class="dropdown dropdown-extended dropdown-inbox" id="header_inbox_bar">
                         <a href="javascript:void(0);" class="dropdown-toggle" data-bs-toggle="dropdown" data-bs-hover="dropdown" data-close-others="true">
@@ -95,30 +100,41 @@
                     </li>
 
 
-
-
                     <!-- END TODO DROPDOWN -->
                     <!-- BEGIN USER LOGIN DROPDOWN -->
                     <!-- DOC: Apply "dropdown-dark" class after below "dropdown-extended" to change the dropdown styte -->
 
                     <!-- END USER LOGIN DROPDOWN -->
-                  
-                   
+
+
                     <!-- BEGIN QUICK SIDEBAR TOGGLER -->
                     <!-- DOC: Apply "dropdown-dark" class after below "dropdown-extended" to change the dropdown styte -->
                     <li class="dropdown dropdown-quick-sidebar-toggler">
                         <a class="font-yellow" style="text-decoration: none;">FEDEM VENTURES</a>
-                       
+
                     </li>
-                   
+
                     <li class="dropdown dropdown-user">
                         <a href="/Manage/Index/" class="dropdown-toggle" data-bs-toggle="dropdown" data-bs-hover="dropdown" data-close-others="true">
-                            <img alt="" class="img-circle" src="/Images/ShowProfileImage/" />
-                            <span class="username username-hide-on-mobile">FullName </span>
+                            <img alt="" class="img-circle" src="/Images/ShowProfileImage/"/>
+                            <span class="username username-hide-on-mobile">
+                                @if (_fullName != null)
+                                {
+                                    @_fullName
+                                }
+                                else if (_username != null)
+                                {
+                                    @_username
+                                }
+                                else
+                                {
+                                    <text>User</text>
+                                }
+                            </span>
                             <i class="fa fa-angle-down"></i>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-default" id="drop">
-                           
+
                             <li class="divider"> </li>
                             <li>
                                 <a href="/Manage/">
@@ -132,15 +148,15 @@
                                 </a>
                             </li>
                             <li>
-                                <a href="javascript:document.getElementById('logoutForm').submit()">
+                                <a href="javascript:document.getElementById('logoutForm').submit()" @onclick="Logout">
                                     <i class="icon-key"></i> Log Out
                                 </a>
                             </li>
                         </ul>
                     </li>
-                  
+
                     <li class="dropdown dropdown-quick-sidebar-toggler">
-                        <a href="javascript:;"   disabled="" class="dropdown-toggle">
+                        <a href="javascript:;" @onclick="Logout" disabled="" class="dropdown-toggle">
                             <i class="icon-logout"></i>
                         </a>
                     </li>
@@ -230,7 +246,7 @@
 
 
 <script>
-    // Enhanced Blazor circuit recovery
+   
     (function () {
         const maxRetries = 3;
         let retryCount = 0;
@@ -242,12 +258,12 @@
                 const originalOnConnectionFailed = Blazor.defaultReconnectionHandler._onConnectionFailed;
 
                 Blazor.defaultReconnectionHandler.onConnectionDown = function () {
-                    console.log('🔴 Blazor circuit disconnected');
+                    console.log('Blazor circuit disconnected');
                     originalOnConnectionDown.call(this);
                 };
 
                 Blazor.defaultReconnectionHandler.onConnectionUp = function () {
-                    console.log('🟢 Blazor circuit reconnected');
+                    console.log('Blazor circuit reconnected');
                     retryCount = 0;
                     originalOnConnectionUp.call(this);
                 };
@@ -262,9 +278,9 @@
                             if (Blazor.reconnect) {
                                 Blazor.reconnect();
                             }
-                        }, 3000 * retryCount); // Exponential backoff
+                        }, 3000 * retryCount);
                     } else {
-                        console.log('❌ Max reconnection attempts reached, reloading page');
+                        console.log('Max reconnection attempts reached, reloading page');
                         window.location.reload();
                     }
                 };
@@ -281,7 +297,7 @@
         // Monitor circuit health
         setInterval(() => {
             if (window.Blazor && Blazor.circuit && Blazor.circuit.connected) {
-                console.log('✅ Circuit healthy');
+                console.log('Circuit healthy');
             }
         }, 30000);
     })();
@@ -306,3 +322,69 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+@code {
+    private string? _username;
+    private string? _fullName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+    }
+
+    private async Task LoadUserData()
+    {
+        _username = await AuthService.GetCurrentUsername();
+        _fullName = await AuthService.GetCurrentFullName();
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.Logout();
+        _username = null;
+        _fullName = null;
+    }
+    
+    /// time and date section 
+    private string Greeting { get; set; } = "";
+    private DateTime CurrentDateTime { get; set; } = DateTime.UtcNow;
+    
+    private Timer? _timer;
+    
+    protected override void OnInitialized()
+    {
+        UpdateGreeting();
+        StartTimer();
+    }
+    
+    private void UpdateGreeting()
+    {
+        var hour = DateTime.UtcNow.Hour;
+        
+        if (hour < 12)
+            Greeting = "Good Morning";
+        else if (hour < 17)
+            Greeting = "Good Afternoon";
+        else
+            Greeting = "Good Evening";
+            
+        CurrentDateTime = DateTime.UtcNow;
+    }
+    
+    private void StartTimer()
+    {
+        _timer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                UpdateGreeting();
+                StateHasChanged();
+            });
+        }, null, 0, 1000); // Update every second
+    }
+    
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}

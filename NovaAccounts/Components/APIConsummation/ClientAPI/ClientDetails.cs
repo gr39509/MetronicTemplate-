@@ -51,7 +51,7 @@ public partial class ClientDetails
     private DateTimeOffset? transactionsStartDate = DateTimeOffset.Now.AddDays(-30);
     private DateTimeOffset? transactionsEndDate = DateTimeOffset.Now;
     private int currentTransactionPage = 1;
-    private int transactionPageSize = 10;
+    private int transactionPageSize = 15;
     
     // Chart Data
     private List<LineChartData> transactionTrendsData = new();
@@ -62,7 +62,7 @@ public partial class ClientDetails
 
     // Color palettes
     private List<string> providerColors = new() { "#3598DC", "#28a745", "#ffc107", "#dc3545", "#6f42c1", "#e83e8c", "#20c997", "#fd7e14" };
-    private List<string> statusColors = new() { "#ffc107", "#28a745", "#dc3545", "#6c757d", "#17a2b8" };
+    private List<string> statusColors = new() { "#dc3545", "#28a745", "#ffc107", "#28a745", "#6c757d", "#17a2b8" };
 
     // Statistics
     private int totalTransactions = 0;
@@ -75,7 +75,6 @@ public partial class ClientDetails
     protected override async Task OnInitializedAsync()
     {
         await LoadClientData();
-        
         
     }
 
@@ -267,19 +266,15 @@ public partial class ClientDetails
             // Generate provider distribution data - count all provider types
             var allProviders = new List<string>();
             
-            // Add email providers
             if (emailConfigurations.Any())
                 allProviders.AddRange(emailConfigurations.Select(e => e.Provider.Name));
             
-            // Add SMS providers
             if (smsConfigurations.Any())
                 allProviders.AddRange(smsConfigurations.Select(s => s.Provider.Name));
             
-            // Add OTP providers
             if (otpConfigurations.Any())
                 allProviders.AddRange(otpConfigurations.Select(o => o.Provider.Name));
             
-            // Add payment providers
             if (paymentConfigurations.Any())
                 allProviders.AddRange(paymentConfigurations.Select(p => p.Provider.Name));
 
@@ -294,7 +289,6 @@ public partial class ClientDetails
                 .Take(8)
                 .ToList();
 
-            // Generate transaction status data
             var statusGroups = transactions
                 .GroupBy(t => string.IsNullOrEmpty(t.Status) ? "Unknown" : t.Status)
                 .Select(g => new DonutChartData

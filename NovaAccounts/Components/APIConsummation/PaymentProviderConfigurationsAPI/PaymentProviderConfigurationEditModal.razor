@@ -210,8 +210,7 @@
     private string formError = string.Empty;
     private string successMessage = string.Empty;
     private Guid currentConfigId;
-
-    // Form fields
+    
     private string description = string.Empty;
     private string fromAccount = string.Empty;
     private string fromAccountName = string.Empty;
@@ -279,8 +278,6 @@
             isLoading = true;
             errorMessage = string.Empty;
             StateHasChanged();
-
-            // Get all clients first to find which client this configuration belongs to
             var clientsResult = await ApiClient.AllAsync();
             if (clientsResult?.Success == true && clientsResult.Data != null)
             {
@@ -376,7 +373,6 @@
             Console.WriteLine($"Updating payment configuration: {configuration.PaymentProviderConfigurationId}");
             Console.WriteLine($"Callback URL: {callbackUrl}");
 
-            // Create credentials list - include ALL credentials, even empty ones for required fields
             var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
             
             foreach (var credType in availableCredentialTypes)
@@ -384,8 +380,6 @@
                 var credentialValue = credentials.ContainsKey(credType.CredentialTypeName) 
                     ? credentials[credType.CredentialTypeName] 
                     : string.Empty;
-
-                // Only add if there's a value (empty values will not update existing credentials)
                 if (!string.IsNullOrWhiteSpace(credentialValue))
                 {
                     clientProviderCredentials.Add(new CreateClientProviderCredentialDto
@@ -396,7 +390,6 @@
                 }
             }
 
-            // Create the update DTO
             var updateCommand = new UpdatePaymentProviderConfigurationDto
             {
                 Description = description.Trim(),
@@ -411,7 +404,6 @@
 
             Console.WriteLine("Calling Update4Async for Payment...");
 
-            // Call the Update4Async method (for Payment)
             var result = await ApiClient.Update4Async(updateCommand);
 
             Console.WriteLine($"API Response Success: {result?.Success}");
@@ -421,14 +413,10 @@
             {
                 successMessage = result.Message ?? "Payment configuration updated successfully!";
                 Console.WriteLine("Payment configuration updated successfully");
-                
-                // Update local configuration with new data
+            
                 configuration = result.Data;
 
-                // Notify parent component
                 await OnPaymentConfigurationUpdated.InvokeAsync(result.Data);
-                
-                // Close modal after a brief delay to show success message
                 await Task.Delay(1500);
                 await paymentConfigEditModal.CloseModal();
             }
@@ -455,8 +443,7 @@
     private bool ValidateForm()
     {
         var isValid = true;
-
-        // Validate Description
+        
         if (string.IsNullOrWhiteSpace(description))
         {
             descriptionError = "Description is required";
@@ -472,7 +459,6 @@
             descriptionError = string.Empty;
         }
 
-        // Validate From Account (optional)
         if (!string.IsNullOrWhiteSpace(fromAccount) && fromAccount.Length > 50)
         {
             fromAccountError = "From Account cannot exceed 50 characters";
@@ -483,7 +469,6 @@
             fromAccountError = string.Empty;
         }
 
-        // Validate From Account Name (optional)
         if (!string.IsNullOrWhiteSpace(fromAccountName) && fromAccountName.Length > 100)
         {
             fromAccountNameError = "From Account Name cannot exceed 100 characters";
@@ -494,7 +479,6 @@
             fromAccountNameError = string.Empty;
         }
 
-        // Validate Callback URL (optional)
         if (!string.IsNullOrWhiteSpace(callbackUrl))
         {
             if (callbackUrl.Length > 500)

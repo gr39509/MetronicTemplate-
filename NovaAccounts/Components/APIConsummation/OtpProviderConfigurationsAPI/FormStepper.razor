@@ -2,6 +2,7 @@
 @page "/otp-configurations/create/{ClientIdentifier}"
 @rendermode InteractiveServer
 
+@using NovaAccounts.Components.Pages
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.FormStepper
 @using NovaAccounts.Components.Shared
@@ -10,7 +11,7 @@
 @inject NavigationManager Navigation
 
 <PageTitle>Create OTP Provider Configuration</PageTitle>
-
+<AuthenticationCheck>
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -85,7 +86,7 @@
         </div>
     </div>
 </div>
-
+</AuthenticationCheck>
 @code {
     [Parameter] public string? ClientIdentifier { get; set; }
 

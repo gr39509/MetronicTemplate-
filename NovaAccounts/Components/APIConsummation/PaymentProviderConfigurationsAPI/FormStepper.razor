@@ -2,6 +2,7 @@
 @page "/payment-configurations/create/{ClientIdentifier}"
 @rendermode InteractiveServer
 
+@using NovaAccounts.Components.Pages
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.FormStepper
 @using NovaAccounts.Components.Shared
@@ -10,7 +11,7 @@
 @inject NavigationManager Navigation
 
 <PageTitle>Create Payment Provider Configuration</PageTitle>
-
+<AuthenticationCheck>
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -85,7 +86,7 @@
         </div>
     </div>
 </div>
-
+</AuthenticationCheck>
 @code {
     [Parameter] public string? ClientIdentifier { get; set; }
 
@@ -270,7 +271,6 @@
                             { "maxlength", "500" },
                             { "placeholder", "https://example.com/api/payments/callback" }
                         }
-                       // Description = "URL to receive payment status notifications (optional)"
                     }
                 }
             },
@@ -359,8 +359,7 @@
                 }
             }
         };
-
-        // Now populate the options
+        
         UpdateClientOptions();
         UpdateProviderOptions();
     }
@@ -372,8 +371,7 @@
 
         var currentStep = wizardSteps[stepIndex];
         var isValid = true;
-
-        // Clear previous validation messages
+        
         foreach (var field in currentStep.Fields)
         {
             field.ValidationMessage = string.Empty;
@@ -417,7 +415,6 @@
                 var fromAccountField = currentStep.Fields.FirstOrDefault(f => f.Name == "FromAccount");
                 var fromAccountNameField = currentStep.Fields.FirstOrDefault(f => f.Name == "FromAccountName");
 
-                // Only validate length if values are provided (no longer required)
                 if (fromAccountField != null && !string.IsNullOrWhiteSpace(fromAccountField.Value?.ToString()))
                 {
                     var fromAccountValue = fromAccountField.Value.ToString();
@@ -439,7 +436,7 @@
                 }
                 break;
 
-            case 2: // Webhook Settings
+            case 2: 
                 var callbackUrlField = currentStep.Fields.FirstOrDefault(f => f.Name == "CallbackURL");
                 
                 if (callbackUrlField != null && !string.IsNullOrWhiteSpace(callbackUrlField.Value?.ToString()))
@@ -466,7 +463,6 @@
                 break;
 
             case 4: // Provider Credentials
-                // Payment credentials are generally optional
                 foreach (var field in currentStep.Fields.Where(f => f.IsRequired))
                 {
                     if (field.Value == null || string.IsNullOrWhiteSpace(field.Value.ToString()))
@@ -506,8 +502,7 @@
         {
             foreach (var credType in availableCredentialTypes)
             {
-                // For payment providers, most credentials are optional
-                var isRequired = false; // Payment credentials are generally optional
+                var isRequired = false; 
                 
                 credentialsStep.Fields.Add(new WizardField
                 {
@@ -731,21 +726,17 @@
             var fromAccount = GetFieldValue("FromAccount");
             var fromAccountName = GetFieldValue("FromAccountName");
             var callbackURL = GetFieldValue("CallbackURL");
-
-            // Only validate required fields - FromAccount, FromAccountName, and CallbackURL are now optional
+            
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(providerId) || string.IsNullOrEmpty(description))
             {
                 return;
             }
 
-            // Get client
             var client = clients.FirstOrDefault(c => c.ClientId.ToString() == clientId);
             if (client == null)
             {
                 return;
             }
-
-            // Create credentials list
             var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
             foreach (var credType in availableCredentialTypes)
             {
@@ -760,7 +751,6 @@
                 }
             }
 
-            // Create the configuration - FromAccount, FromAccountName, and CallbackURL are now optional
             var createCommand = new CreatePaymentProviderConfigurationDto
             {
                 ClientIdentifier = client.Identifier,
@@ -806,7 +796,6 @@
 }
 
 <style>
-    /* Fixed step number styling */
     .wizard-step-number {
         display: inline-block;
         width: 30px;

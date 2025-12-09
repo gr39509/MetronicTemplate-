@@ -4,13 +4,14 @@
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
 @using NovaAccounts.Components.Layout
+@using NovaAccounts.SharedModels.DataFields
 @layout MainLayout
 @inject IJSRuntime JSRuntime
 
 @inject ApiClient ApiClient
 @inject NavigationManager NavigationManager
 
-@* Provider Modals *@
+
 <ProviderCreateModal @ref="providerCreateModal" OnProviderCreated="HandleProviderCreated" />
 <ProviderEditModal @ref="providerEditModal" OnProviderUpdated="HandleProviderUpdated"/>
 
@@ -67,43 +68,43 @@
         </div>
 
         <!-- Provider Type Information Card -->
-        <div class="card mb-4">
-            <div class="card-header leadBold bg-blue-chambray font-white">
-                <h5 class="mb-0"><i class="fa fa-info-circle"></i> Provider Type Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="detail-group">
-                            <label class="detail-label text-muted">Provider Type Name:</label>
-                            <div class="detail-value font-weight-bold">@currentProviderType.ProviderTypeName</div>
-                            
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="detail-group">
-                            <label class="detail-label text-muted">Display Name:</label>
-                            <div class="detail-value font-weight-bold">@currentProviderType.DisplayName</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="detail-group">
-                            <label class="detail-label text-muted">Status:</label>
-                            <div class="detail-value">
-                                @if (currentProviderType.Active)
-                                {
-                                    <span class="badge badge-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-danger">Inactive</span>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @* <div class="card mb-4"> *@
+        @*     <div class="card-header leadBold bg-blue-chambray font-white"> *@
+        @*         <h5 class="mb-0"><i class="fa fa-info-circle"></i> Provider Type Information</h5> *@
+        @*     </div> *@
+        @*     <div class="card-body"> *@
+        @*         <div class="row"> *@
+        @*             <div class="col-md-4"> *@
+        @*                 <div class="detail-group"> *@
+        @*                     <label class="detail-label text-muted">Provider Type Name:</label> *@
+        @*                     <div class="detail-value font-weight-bold">@currentProviderType.ProviderTypeName</div> *@
+        @*                      *@
+        @*                 </div> *@
+        @*             </div> *@
+        @*             <div class="col-md-4"> *@
+        @*                 <div class="detail-group"> *@
+        @*                     <label class="detail-label text-muted">Display Name:</label> *@
+        @*                     <div class="detail-value font-weight-bold">@currentProviderType.DisplayName</div> *@
+        @*                 </div> *@
+        @*             </div> *@
+        @*             <div class="col-md-4"> *@
+        @*                 <div class="detail-group"> *@
+        @*                     <label class="detail-label text-muted">Status:</label> *@
+        @*                     <div class="detail-value"> *@
+        @*                         @if (currentProviderType.Active) *@
+        @*                         { *@
+        @*                             <span class="badge badge-success">Active</span> *@
+        @*                         } *@
+        @*                         else *@
+        @*                         { *@
+        @*                             <span class="badge badge-danger">Inactive</span> *@
+        @*                         } *@
+        @*                     </div> *@
+        @*                 </div> *@
+        @*             </div> *@
+        @*         </div> *@
+        @*     </div> *@
+        @* </div> *@
 
         <!-- Providers Section -->
         <div class="card">
@@ -134,71 +135,71 @@
                 {
                     <div class="table-responsive">
                         <table class="table table-striped table-bordered table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Provider Code</th>
-                                    <th>Provider Name</th>
-                                    <th>Description</th>
-                                    <th>URL</th>
-                                    <th>Status</th>
-                                    <th>Created Date</th>
-                                    <th style="width: 100px;">Actions</th>
-                                </tr>
+                            <thead class="table-info">
+                            <tr>
+                                <th>Provider Code</th>
+                                <th>Provider Name</th>
+                                <th>Description</th>
+                                <th>URL</th>
+                                <th>Status</th>
+                                <th>Created Date</th>
+                                <th style="width: 100px;">Actions</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                @foreach (var provider in providers)
-                                {
-                                    <tr>
-                                        <td>
-                                            <strong>@provider.Code</strong>
-                                        </td>
-                                        <td>
-                                            <strong>@provider.Name</strong>
-                                        </td>
-                                        <td>
-                                            @if (!string.IsNullOrEmpty(provider.Description))
-                                            {
-                                                <div>@provider.Description</div>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">No description</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (!string.IsNullOrEmpty(provider.Url))
-                                            {
-                                                <a href="@provider.Url" target="_blank" class="text-primary" title="@provider.Url">
-                                                    <i class="fa fa-external-link"></i> Link
-                                                </a>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">No URL</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (provider.IsActive)
-                                            {
-                                                <span class="badge badge-success">Active</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge badge-danger">Inactive</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            <small>@provider.CreatedAt.ToString("yyyy-MM-dd HH:mm")</small>
-                                        </td>
-                                        <td>
-                                            <button type="button" class="btn btn-sm btn-primary"
-                                                    @onclick="() => OpenEditProvider(provider.ProviderId)"
-                                                    title="Edit Provider">
-                                                <i class="fa fa-edit"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                }
+                            @foreach (var provider in providers)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@provider.Code</strong>
+                                    </td>
+                                    <td>
+                                        <strong>@provider.Name</strong>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(provider.Description))
+                                        {
+                                            <div>@provider.Description</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No description</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(provider.Url))
+                                        {
+                                            <a href="@provider.Url" target="_blank" class="text-primary" title="@provider.Url">
+                                                <i class="fa fa-external-link"></i> Link
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No URL</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (provider.IsActive)
+                                        {
+                                            <span class="badge badge-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-danger">Inactive</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small>@provider.CreatedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-primary"
+                                                @onclick="() => OpenEditProvider(provider.ProviderId)"
+                                                title="Edit Provider">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
                             </tbody>
                         </table>
                     </div>
@@ -214,8 +215,10 @@
                     </div>
                 }
             </div>
+         
         </div>
     }
+    
 </div>
 
 <style>
@@ -250,7 +253,8 @@
 @code {
     [Parameter]
     public string ProviderTypeName { get; set; } = string.Empty;
-
+    private List<DataTableColumn> providerTypeColumns = new();
+    private DataTableOptions providerTypeOptions = new();
     private ProviderCreateModal providerCreateModal = null!;
     private ProviderEditModal providerEditModal = null!;
     
@@ -265,11 +269,11 @@
         await LoadProviderTypeDetails();
         
     }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        await LoadProviderTypeDetails();
-    }
+    //
+    // protected override async Task OnParametersSetAsync()
+    // {
+    //     await LoadProviderTypeDetails();
+    // }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -377,6 +381,9 @@
             StateHasChanged();
         }
     }
+    
+
+    
 
     // Action methods for providers
     private async Task OpenCreateProvider()

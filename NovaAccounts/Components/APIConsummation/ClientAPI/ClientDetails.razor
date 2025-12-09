@@ -5,6 +5,7 @@
 @using NovaAccounts.Components.APIConsummation.PaymentProviderConfigurationsAPI
 @using NovaAccounts.Components.APIConsummation.SMSProviderConfigurationsAPI
 @using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Pages
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.Charts.DonutChart
@@ -16,6 +17,7 @@
 @inject ApiClient ApiClient
 @layout MainLayout
 
+<AuthenticationCheck>
 <EmailProviderConfigurationCreateModal @ref="emailConfigCreateModal"
                                        OnEmailConfigurationCreated="HandleEmailConfigurationCreated" />
 
@@ -98,18 +100,20 @@
                             <i class="fa fa-building"></i> @clientDetails.Name (@clientDetails.Identifier)
                         </h2>
                         <p class="text-muted mb-0">@clientDetails.Description</p>
+                        
                     </div>
                     <div>
                         <span class="badge badge-success badge-lg">Active</span>
                     </div>
+                    <img alt="" src="rich-4897_256.gif" style="width: 200px; height: 120px;"/>
                 </div>
             </div>
         </div>
         
-         if (totalTransactions != 0)
+        if (totalTransactions != 0)
         {
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-4 animatecard">
                     <DashboardStatCard 
                         IconClass="fa-exchange"
                         Value="@totalTransactions"
@@ -129,7 +133,7 @@
                 @*         ElementId="totalAmount" /> *@
                 @* </div> *@
                 
-                <div class="col-md-4">
+                <div class="col-md-4 animatecard">
                     <DashboardStatCard 
                         IconClass="fa-money"
                         Currency="GH₵"
@@ -139,7 +143,7 @@
                         ColorClass="green"
                         ElementId="totalAmountPaid" />
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4 animatecard">
                     <DashboardStatCard 
                         IconClass="fa-money"
                         Currency="GH₵"
@@ -753,7 +757,8 @@
                                 <th>Phone Number</th>
                                 <th>Provider</th>
                                 <th>Status</th>
-                                <th>Reference</th>
+                                <th>Transaction ID</th>
+                                <th>Provider Reference</th>
                                 <th>Created Date</th>
                                 <th>Processed Date</th>
                             </tr>
@@ -781,6 +786,16 @@
                                         </span>
                                     </td>
                                     <td>
+                                        @if (!string.IsNullOrEmpty(transaction.Reference))
+                                        {
+                                            <small class="text-muted">@transaction.Reference</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                    </td>
+                                    <td>
                                         @if (!string.IsNullOrEmpty(transaction.ProviderReference))
                                         {
                                             <small class="text-muted">@transaction.ProviderReference</small>
@@ -793,18 +808,18 @@
                                     <td>
                                         <small>@transaction.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss tt")</small>
                                     </td>
-                                   @if (transaction.ProcessedAt != null)
-                                   {
-                                       <td>
-                                           <small>@transaction.ProcessedAt?.ToString("yyyy-MM-dd HH:mm:ss tt")</small>
-                                       </td>
-                                   }
-                                   else
-                                   {
-                                       <td>
-                                           <small>Not Processed</small>
-                                       </td>
-                                   }
+                                    @if (transaction.ProcessedAt != null)
+                                    {
+                                        <td>
+                                            <small>@transaction.ProcessedAt?.ToString("yyyy-MM-dd HH:mm:ss tt")</small>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td>
+                                            <small>Not Processed</small>
+                                        </td>
+                                    }
                                 </tr>
                             }
                             </tbody>
@@ -823,8 +838,8 @@
                                 </span>
                             </div>
                             <ReusablePagination CurrentPage="transactions.PageNumber" 
-                                        TotalPages="transactions.TotalPages"
-                                        PageChanged="ChangeTransactionPage" />
+                                                TotalPages="transactions.TotalPages"
+                                                PageChanged="ChangeTransactionPage" />
                         </div>
                     }
                 }
@@ -999,18 +1014,60 @@
         }
     }
 </div>
+</AuthenticationCheck>
 @code{
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await JSRuntime.InvokeVoidAsync("showWelcomeAlert");
+           // await JSRuntime.InvokeVoidAsync("showWelcomeAlert");
         }
     }
 
 }
 <style>
+    .animatecard {
+        -webkit-animation: tracking-in-contract-bck-top 1s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
+        animation: tracking-in-contract-bck-top 1s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
+       
+    }
+
+
+    @@-webkit-keyframes tracking-in-contract-bck-top {
+        0% {
+            letter-spacing: 1em;
+            -webkit-transform: translateZ(400px) translateY(-300px);
+            transform: translateZ(400px) translateY(-300px);
+            opacity: 0;
+        }
+        40% {
+            opacity: 0.6;
+        }
+        100% {
+            -webkit-transform: translateZ(0) translateY(0);
+            transform: translateZ(0) translateY(0);
+            opacity: 1;
+        }
+    }
+    @@keyframes tracking-in-contract-bck-top {
+        0% {
+            letter-spacing: 1em;
+            -webkit-transform: translateZ(400px) translateY(-300px);
+            transform: translateZ(400px) translateY(-300px);
+            opacity: 0;
+        }
+        40% {
+            opacity: 0.6;
+        }
+        100% {
+            -webkit-transform: translateZ(0) translateY(0);
+            transform: translateZ(0) translateY(0);
+            opacity: 1;
+        }
+    }
+    
+
     .detail-group {
         margin-bottom: 1rem;
     }

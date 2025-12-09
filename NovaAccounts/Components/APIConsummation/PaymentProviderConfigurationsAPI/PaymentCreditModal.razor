@@ -1,8 +1,9 @@
+@using NovaAccounts.Components.Pages
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
 @inject ApiClient ApiClient
-
+<AuthenticationCheck>
 <ReusableModal @ref="paymentCreditModal"
                Title="Test Mobile Wallet Credit"
                TriggerButtonText=""
@@ -180,7 +181,7 @@
         }
     </BodyContent>
 </ReusableModal>
-
+</AuthenticationCheck>
 @code {
     private ReusableModal paymentCreditModal = null!;
     

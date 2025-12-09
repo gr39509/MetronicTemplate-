@@ -1,5 +1,7 @@
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @inject ProtectedSessionStorage SessionStorage
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedLocalStorage LocalStorage
 @inject NavigationManager NavigationManager
 
 @if (isAuthenticated)
@@ -35,7 +37,7 @@ else if (isChecking)
     {
         try
         {
-            var result = await SessionStorage.GetAsync<bool>("IsAuthenticated");
+            var result = await LocalStorage.GetAsync<bool>("IsAuthenticated");
             isAuthenticated = result.Success && result.Value;
 
             if (!isAuthenticated)

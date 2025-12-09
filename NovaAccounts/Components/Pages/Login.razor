@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @using NovaAccounts.Components.Layout
 @inject ProtectedSessionStorage SessionStorage
+@inject ProtectedLocalStorage LocalStorage
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @layout AccountLayout
@@ -69,19 +70,80 @@
                 }
             </button>
         </form>
-
-        @* <div class="login-footer"> *@
-        @*     <p class="text-muted mt-3"> *@
-        @*         <small> *@
-        @*             <i class="fa fa-info-circle"></i>  *@
-        @*             Demo Credentials: admin / admin123 *@
-        @*         </small> *@
-        @*     </p> *@
-        @* </div> *@
     </div>
 </div>
 
 <style>
+    .login-container{
+        -webkit-animation: tracking-in-contract-bck-top 1s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
+        animation: tracking-in-contract-bck-top 1s cubic-bezier(0.215, 0.610, 0.355, 1.000) both;
+        /*-webkit-animation: swirl-in-fwd 2s ease-out both;*/
+        /*animation: swirl-in-fwd 2s ease-out both;*/
+    }
+
+ 
+    @@-webkit-keyframes tracking-in-contract-bck-top {
+        0% {
+            letter-spacing: 1em;
+            -webkit-transform: translateZ(400px) translateY(-300px);
+            transform: translateZ(400px) translateY(-300px);
+            opacity: 0;
+        }
+        40% {
+            opacity: 0.6;
+        }
+        100% {
+            -webkit-transform: translateZ(0) translateY(0);
+            transform: translateZ(0) translateY(0);
+            opacity: 1;
+        }
+    }
+    @@keyframes tracking-in-contract-bck-top {
+        0% {
+            letter-spacing: 1em;
+            -webkit-transform: translateZ(400px) translateY(-300px);
+            transform: translateZ(400px) translateY(-300px);
+            opacity: 0;
+        }
+        40% {
+            opacity: 0.6;
+        }
+        100% {
+            -webkit-transform: translateZ(0) translateY(0);
+            transform: translateZ(0) translateY(0);
+            opacity: 1;
+        }
+    }
+
+
+
+
+    @@-webkit-keyframes swirl-in-fwd {
+        0% {
+            -webkit-transform: rotate(-540deg) scale(0);
+            transform: rotate(-540deg) scale(0);
+            opacity: 0;
+        }
+        100% {
+            -webkit-transform: rotate(0) scale(1);
+            transform: rotate(0) scale(1);
+            opacity: 1;
+        }
+    }
+    @@keyframes swirl-in-fwd {
+        0% {
+            -webkit-transform: rotate(-540deg) scale(0);
+            transform: rotate(-540deg) scale(0);
+            opacity: 0;
+        }
+        100% {
+            -webkit-transform: rotate(0) scale(1);
+            transform: rotate(0) scale(1);
+            opacity: 1;
+        }
+    }
+
+
     .login-container {
         min-height: 100vh;
         display: flex;
@@ -214,6 +276,7 @@
 
     private bool hasCheckedAuth = false;
 
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !hasCheckedAuth)
@@ -222,41 +285,37 @@
             
             try
             {
-                // Check if user is already logged in
+               
                 var result = await SessionStorage.GetAsync<bool>("IsAuthenticated");
                 if (result.Success && result.Value)
                 {
+                    Console.WriteLine("User is authenticated");
                     NavigationManager.NavigateTo("/", true);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore errors during auth check
+                // Console.WriteLine( ex.Message);
             }
         }
     }
 
+    
     private async Task HandleLogin()
     {
         isLoading = true;
         errorMessage = "";
         StateHasChanged();
-
-        // Simulate network delay
         await Task.Delay(500);
-
-        // Validate credentials
+    
         if (validUsers.TryGetValue(username.ToLower(), out var validPassword) && 
             password == validPassword)
         {
-            // Store authentication state
-            await SessionStorage.SetAsync("IsAuthenticated", true);
-            await SessionStorage.SetAsync("Username", username);
-
-            // Show success message
+            await LocalStorage.SetAsync("IsAuthenticated", true);
+            await LocalStorage.SetAsync("Username", username);
+        
             await JSRuntime.InvokeVoidAsync("showLoginSuccess", username);
-
-            // Redirect to home page
+        
             await Task.Delay(1000);
             NavigationManager.NavigateTo("/", true);
         }
@@ -265,7 +324,7 @@
             errorMessage = "Invalid username or password. Please try again.";
             await JSRuntime.InvokeVoidAsync("showLoginError");
         }
-
+    
         isLoading = false;
         StateHasChanged();
     }

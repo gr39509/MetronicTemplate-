@@ -416,11 +416,11 @@ else
             // Reload the OTP records from server to get fresh data
             await LoadOtpRecords();
             
-            Console.WriteLine("✅ OTP records refreshed after confirmation");
+            Console.WriteLine("OTP records refreshed after confirmation");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error refreshing OTP records: {ex.Message}");
+            Console.WriteLine($"Error refreshing OTP records: {ex.Message}");
             errorMessage = "OTP was confirmed but couldn't refresh the records. Please refresh the page.";
             StateHasChanged();
         }
@@ -495,7 +495,7 @@ else
             icon: "success",
             width: 600,
             // html: "I will close in some few seconds.",
-            timer: 5000,
+            timer: 2000,
             color: "#716add",
             background: "#fff url(rich-4897_256.gif)",
             backdrop: "rgba(0,0,123,0.4)\n" +

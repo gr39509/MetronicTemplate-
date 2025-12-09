@@ -16,18 +16,20 @@
 
 <PageTitle>Morpheus Clients</PageTitle>
 
-@* The below codes are very important for the modals to open *@
-<AuthenticationCheck>
 
+<AuthenticationCheck>
 <ClientEditModal @ref="clientEditModal" OnClientUpdated="HandleClientUpdated"/>
 <ClientEmailModal @ref="clientEmailModal" />
 <ClientCreateModal @ref="clientCreateModal" OnClientCreated="HandleClientCreated" />
 <ClientDetailsModal @ref="clientDetailsModal" />
 
-<h1 class="page-title">
-    Morpheus Clients Management
-    <small>View Morpheus client information</small>
-</h1>
+<div class="d-flex justify-content-between align-items-center">
+    <h1 class="page-title">
+        Morpheus Clients Management
+        <small>View Morpheus client information</small>
+    </h1>
+    <img alt="" src="rich-4897_256.gif" style="width: 200px; height: 120px;"/>
+</div>
 
 <!-- Loading State -->
 @if (isLoading)
@@ -67,7 +69,7 @@ else
                 </button>
             </div>
         </div>
-        <div class="portlet-body">
+        <div class="portlet-body tbanimate">
             <ReusableDataTable TItem="ClientViewModel"
                                Data="@clients"
                                Columns="@cbsColumns"
@@ -98,7 +100,7 @@ else
             await JSRuntime.InvokeVoidAsync("setDotNetReference", 
                 DotNetObjectReference.Create(this));
           
-            await JSRuntime.InvokeVoidAsync("showWelcomeAlert");
+           // await JSRuntime.InvokeVoidAsync("showWelcomeAlert");
             // Check if modal components are initialized
             if (clientDetailsModal == null)
             {
@@ -372,6 +374,119 @@ else
     
 }
 
+<style>
+    .tbanimate{
+        -webkit-animation: bounce-top 2s both;
+        animation: bounce-top 2s both;
+    }
+
+    
+    @@-webkit-keyframes bounce-top {
+        0% {
+            -webkit-transform: translateY(-45px);
+            transform: translateY(-45px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+            opacity: 1;
+        }
+        24% {
+            opacity: 1;
+        }
+        40% {
+            -webkit-transform: translateY(-24px);
+            transform: translateY(-24px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+        }
+        65% {
+            -webkit-transform: translateY(-12px);
+            transform: translateY(-12px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+        }
+        82% {
+            -webkit-transform: translateY(-6px);
+            transform: translateY(-6px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+        }
+        93% {
+            -webkit-transform: translateY(-4px);
+            transform: translateY(-4px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+        }
+        25%,
+        55%,
+        75%,
+        87% {
+            -webkit-transform: translateY(0px);
+            transform: translateY(0px);
+            -webkit-animation-timing-function: ease-out;
+            animation-timing-function: ease-out;
+        }
+        100% {
+            -webkit-transform: translateY(0px);
+            transform: translateY(0px);
+            -webkit-animation-timing-function: ease-out;
+            animation-timing-function: ease-out;
+            opacity: 1;
+        }
+    }
+    @@keyframes bounce-top {
+        0% {
+            -webkit-transform: translateY(-45px);
+            transform: translateY(-45px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+            opacity: 1;
+        }
+        24% {
+            opacity: 1;
+        }
+        40% {
+            -webkit-transform: translateY(-24px);
+            transform: translateY(-24px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+        }
+        65% {
+            -webkit-transform: translateY(-12px);
+            transform: translateY(-12px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+        }
+        82% {
+            -webkit-transform: translateY(-6px);
+            transform: translateY(-6px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+        }
+        93% {
+            -webkit-transform: translateY(-4px);
+            transform: translateY(-4px);
+            -webkit-animation-timing-function: ease-in;
+            animation-timing-function: ease-in;
+        }
+        25%,
+        55%,
+        75%,
+        87% {
+            -webkit-transform: translateY(0px);
+            transform: translateY(0px);
+            -webkit-animation-timing-function: ease-out;
+            animation-timing-function: ease-out;
+        }
+        100% {
+            -webkit-transform: translateY(0px);
+            transform: translateY(0px);
+            -webkit-animation-timing-function: ease-out;
+            animation-timing-function: ease-out;
+            opacity: 1;
+        }
+    }
+
+</style>
 
 <script>
     // Make the DotNet reference available globally
@@ -437,7 +552,7 @@ else
             icon: "success",
             width: 600,
             // html: "I will close in some few seconds.",
-            timer: 5000000,
+            timer: 3000,
             color: "#716add",
             background: "#fff url(rich-4897_256.gif)",
             backdrop: "rgba(0,0,123,0.4)\n" +
@@ -460,4 +575,3 @@ else
     };
 
 </script>
-
