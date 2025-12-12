@@ -91,7 +91,6 @@ else
     private ClientCreateModal clientCreateModal = null!;
     
     
-    
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -193,8 +192,7 @@ else
             isLoading = true;
             errorMessage = string.Empty;
             StateHasChanged();
-
-            // Call the AllAsync method from ApiClient
+            
             var result = await ApiClient.AllAsync();
 
             if (result?.Success == true && result.Data != null)
@@ -271,7 +269,7 @@ else
                 PropertyName = "",
                 Sortable = false,
                 Searchable = false,
-                Width = 180, // Increased width to accommodate new button
+                Width = 180,
                 CssClass = "text-center",
                 CustomRenderer = (item) => 
                 {
@@ -306,26 +304,21 @@ else
             Responsive = true,
             AdditionalOptions = new Dictionary<string, object>
             {
-                ["order"] = new object[] { new object[] { 3, "desc" } } // Order by CreatedAt descending
+                ["order"] = new object[] { new object[] { 3, "desc" } }
             }
         };
     }
     
-    // THIS METHOD TO HANDLE CLIENT UPDATES
     private async Task HandleClientUpdated(UpdateClientDto updatedClient)
     {
         Console.WriteLine($"Handling client update for ID: {updatedClient.ClientId}");
         
         try
         {
-            // Show loading state briefly
+            
             isLoading = true;
             StateHasChanged();
-            
-            // Small delay to ensure smooth UI transition
             await Task.Delay(300);
-            
-            // Reload the clients from server to get fresh data
             await LoadClients();
             
             Console.WriteLine("Client list refreshed after update");
@@ -345,14 +338,11 @@ else
         
         try
         {
-            // Show loading state briefly
             isLoading = true;
             StateHasChanged();
             
-            // Small delay to ensure smooth UI transition
             await Task.Delay(300);
             
-            // Reload the clients from server to get fresh data including the new client
             await LoadClients();
             
             Console.WriteLine("Client list refreshed after creation");

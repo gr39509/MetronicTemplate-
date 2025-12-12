@@ -1,4 +1,3 @@
-@* ClientDetailsModal.razor - Updated with SMS Configurations *@
 @using NovaAccounts.Components.APIConsummation.EmailProviderConfigurationsAPI
 @using NovaAccounts.Components.APIConsummation.OtpProviderConfigurationsAPI
 @using NovaAccounts.Components.APIConsummation.PaymentProviderConfigurationsAPI
@@ -8,9 +7,7 @@
 @using NovaAccounts.SharedModels.ModalFields
 @inject ApiClient ApiClient
 @inject IConfiguration Configuration
-@* @inject JSRuntime JSRuntime *@
 
-@* Include all Configuration Modals *@
 <EmailProviderConfigurationCreateModal @ref="emailConfigCreateModal"
                                        OnEmailConfigurationCreated="HandleEmailConfigurationCreated" />
 
@@ -551,7 +548,7 @@
         }
         else
         {
-            Console.WriteLine("❌ clientDetailsModal is null");
+            Console.WriteLine("clientDetailsModal is null");
         }
     }
 
@@ -564,16 +561,13 @@
             StateHasChanged();
 
             Console.WriteLine($"🔍 Loading client details for ID: {clientId}");
-
-            // Load client details
+            
             var result = await ApiClient.ClientAsync(clientId);
 
             if (result?.Success == true && result.Data != null)
             {
                 clientDetails = result.Data;
-                Console.WriteLine($"✅ Loaded client: {clientDetails.Name}");
-
-                // Now load all configurations for this client
+                Console.WriteLine($"Loaded client: {clientDetails.Name}");
                 await Task.WhenAll(
                     LoadEmailConfigurations(clientDetails.Identifier),
                     LoadSmsConfigurations(clientDetails.Identifier),
@@ -584,18 +578,18 @@
             else
             {
                 errorMessage = result?.Message ?? "Failed to load client details.";
-                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
             }
         }
         catch (ApiException ex)
         {
             errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
-            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            Console.WriteLine($"API Exception: {ex.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading client details: {ex.Message}";
-            Console.WriteLine($"❌ Error loading client details: {ex.Message}");
+            Console.WriteLine($"Error loading client details: {ex.Message}");
         }
         finally
         {
@@ -611,7 +605,7 @@
             isLoadingEmailConfigs = true;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading email configurations for client: {clientIdentifier}");
+            Console.WriteLine($"Loading email configurations for client: {clientIdentifier}");
 
             var result = await ApiClient.ConfigurationsPerClientAsync(clientIdentifier);
 
@@ -623,22 +617,22 @@
                     .ThenBy(c => c.ProviderName)
                     .ToList();
                 
-                Console.WriteLine($"✅ Loaded {emailConfigurations.Count} email configurations");
+                Console.WriteLine($"Loaded {emailConfigurations.Count} email configurations");
             }
             else
             {
-                Console.WriteLine($"⚠️ No email configurations loaded: {result?.Message}");
+                Console.WriteLine($"No email configurations loaded: {result?.Message}");
                 emailConfigurations = new List<EmailClientProviderConfigurationViewModel>();
             }
         }
         catch (ApiException ex)
         {
-            Console.WriteLine($"⚠️ API Exception loading email configurations: {ex.Message}");
+            Console.WriteLine($"API Exception loading email configurations: {ex.Message}");
             emailConfigurations = new List<EmailClientProviderConfigurationViewModel>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Error loading email configurations: {ex.Message}");
+            Console.WriteLine($"Error loading email configurations: {ex.Message}");
             emailConfigurations = new List<EmailClientProviderConfigurationViewModel>();
         }
         finally
@@ -655,7 +649,7 @@
             isLoadingSmsConfigs = true;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading SMS configurations for client: {clientIdentifier}");
+            Console.WriteLine($"Loading SMS configurations for client: {clientIdentifier}");
 
             var result = await ApiClient.ConfigurationsPerClient4Async(clientIdentifier);
 
@@ -667,22 +661,22 @@
                     .ThenBy(c => c.ProviderName)
                     .ToList();
                 
-                Console.WriteLine($"✅ Loaded {smsConfigurations.Count} SMS configurations");
+                Console.WriteLine($"Loaded {smsConfigurations.Count} SMS configurations");
             }
             else
             {
-                Console.WriteLine($"⚠️ No SMS configurations loaded: {result?.Message}");
+                Console.WriteLine($"No SMS configurations loaded: {result?.Message}");
                 smsConfigurations = new List<SMSClientProviderConfigurationViewModel>();
             }
         }
         catch (ApiException ex)
         {
-            Console.WriteLine($"⚠️ API Exception loading SMS configurations: {ex.Message}");
+            Console.WriteLine($"API Exception loading SMS configurations: {ex.Message}");
             smsConfigurations = new List<SMSClientProviderConfigurationViewModel>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Error loading SMS configurations: {ex.Message}");
+            Console.WriteLine($"Error loading SMS configurations: {ex.Message}");
             smsConfigurations = new List<SMSClientProviderConfigurationViewModel>();
         }
         finally
@@ -699,7 +693,7 @@
             isLoadingOtpConfigs = true;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading OTP configurations for client: {clientIdentifier}");
+            Console.WriteLine($"Loading OTP configurations for client: {clientIdentifier}");
 
             var result = await ApiClient.ConfigurationsPerClient2Async(clientIdentifier);
 
@@ -711,22 +705,22 @@
                     .ThenBy(c => c.ProviderName)
                     .ToList();
                 
-                Console.WriteLine($"✅ Loaded {otpConfigurations.Count} OTP configurations");
+                Console.WriteLine($"Loaded {otpConfigurations.Count} OTP configurations");
             }
             else
             {
-                Console.WriteLine($"⚠️ No OTP configurations loaded: {result?.Message}");
+                Console.WriteLine($"No OTP configurations loaded: {result?.Message}");
                 otpConfigurations = new List<OtpClientProviderConfigurationViewModel>();
             }
         }
         catch (ApiException ex)
         {
-            Console.WriteLine($"⚠️ API Exception loading OTP configurations: {ex.Message}");
+            Console.WriteLine($"API Exception loading OTP configurations: {ex.Message}");
             otpConfigurations = new List<OtpClientProviderConfigurationViewModel>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Error loading OTP configurations: {ex.Message}");
+            Console.WriteLine($"Error loading OTP configurations: {ex.Message}");
             otpConfigurations = new List<OtpClientProviderConfigurationViewModel>();
         }
         finally
@@ -743,7 +737,7 @@
         isLoadingPaymentConfigs = true;
         StateHasChanged();
 
-        Console.WriteLine($"🔍 Loading payment configurations for: {clientIdentifier}");
+        Console.WriteLine($"Loading payment configurations for: {clientIdentifier}");
 
         // First try: Use the generated client directly
         try
@@ -752,26 +746,25 @@
             if (result?.Success == true && result.Data != null)
             {
                 paymentConfigurations = result.Data.ToList();
-                Console.WriteLine($"✅ Generated client worked: {paymentConfigurations.Count} configs");
+                Console.WriteLine($"Generated client worked: {paymentConfigurations.Count} configs");
                 return;
             }
             else
             {
-                Console.WriteLine($"⚠️ Generated client returned no data: {result?.Message}");
+                Console.WriteLine($"Generated client returned no data: {result?.Message}");
             }
         }
         catch (Exception apiEx)
         {
-            Console.WriteLine($"⚠️ Generated client failed: {apiEx.Message}");
+            Console.WriteLine($"Generated client failed: {apiEx.Message}");
         }
 
-        // Second try: Use the ApiClient's HttpClient with manual JSON handling
-        Console.WriteLine("🔄 Falling back to manual JSON handling...");
+        Console.WriteLine("Falling back to manual JSON handling...");
         await LoadPaymentConfigurationsWithApiClientHttpClient(clientIdentifier);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ All payment config loading failed: {ex.Message}");
+        Console.WriteLine($"All payment config loading failed: {ex.Message}");
         paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
     }
     finally
@@ -791,16 +784,16 @@ private async Task LoadPaymentConfigurationsWithApiClientHttpClient(string clien
         
         if (httpClientField?.GetValue(ApiClient) is HttpClient httpClient)
         {
-            Console.WriteLine("✅ Retrieved HttpClient from ApiClient");
+            Console.WriteLine("Retrieved HttpClient from ApiClient");
             
             var url = $"api/PaymentProviderConfiguration/ConfigurationsPerClient?clientCode={Uri.EscapeDataString(clientIdentifier)}";
-            Console.WriteLine($"🔍 Making request to: {url}");
+            Console.WriteLine($"Making request to: {url}");
 
             var response = await httpClient.GetAsync(url);
             var json = await response.Content.ReadAsStringAsync();
             
-            Console.WriteLine($"✅ Response status: {response.StatusCode}");
-            Console.WriteLine($"📄 Response length: {json.Length} chars");
+            Console.WriteLine($"Response status: {response.StatusCode}");
+            Console.WriteLine($"Response length: {json.Length} chars");
 
             if (response.IsSuccessStatusCode)
             {
@@ -808,19 +801,19 @@ private async Task LoadPaymentConfigurationsWithApiClientHttpClient(string clien
             }
             else
             {
-                Console.WriteLine($"❌ HTTP error: {response.StatusCode}");
+                Console.WriteLine($"HTTP error: {response.StatusCode}");
                 paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
             }
         }
         else
         {
-            Console.WriteLine("❌ Could not access ApiClient's HttpClient");
+            Console.WriteLine("Could not access ApiClient's HttpClient");
             paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ Error using ApiClient's HttpClient: {ex.Message}");
+        Console.WriteLine($"Error using ApiClient's HttpClient: {ex.Message}");
         paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
     }
 }
@@ -838,30 +831,28 @@ private async Task ProcessPaymentConfigResponse(string json)
             DateFormatHandling = Newtonsoft.Json.DateFormatHandling.IsoDateFormat,
             FloatParseHandling = Newtonsoft.Json.FloatParseHandling.Decimal
         };
-
-        // First, try to deserialize with relaxed settings
         try
         {
             var result = Newtonsoft.Json.JsonConvert.DeserializeObject<PaymentClientProviderConfigurationViewModelListApiResult>(json, settings);
             if (result?.Success == true && result.Data != null)
             {
                 paymentConfigurations = result.Data.ToList();
-                Console.WriteLine($"✅ Relaxed deserialization worked: {paymentConfigurations.Count} configs");
+                Console.WriteLine($"Relaxed deserialization worked: {paymentConfigurations.Count} configs");
                 return;
             }
         }
         catch (Exception ex1)
         {
-            Console.WriteLine($"⚠️ Relaxed deserialization failed: {ex1.Message}");
+            Console.WriteLine($"Relaxed deserialization failed: {ex1.Message}");
         }
 
         // If that fails, use custom model
-        Console.WriteLine("🔄 Trying custom model deserialization...");
+        Console.WriteLine("Trying custom model deserialization...");
         await ProcessWithCustomModel(json);
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ Error processing payment config response: {ex.Message}");
+        Console.WriteLine($"Error processing payment config response: {ex.Message}");
         paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
     }
 }
@@ -926,17 +917,17 @@ private async Task ProcessWithCustomModel(string json)
                 }).ToList() ?? new List<ClientProviderCredentialViewModel>()
             }).ToList();
 
-            Console.WriteLine($"✅ Custom model loaded {paymentConfigurations.Count} configurations");
+            Console.WriteLine($"Custom model loaded {paymentConfigurations.Count} configurations");
         }
         else
         {
-            Console.WriteLine("❌ Custom model deserialization failed");
+            Console.WriteLine("Custom model deserialization failed");
             paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ Custom model processing failed: {ex.Message}");
+        Console.WriteLine($"Custom model processing failed: {ex.Message}");
         paymentConfigurations = new List<PaymentClientProviderConfigurationViewModel>();
     }
 }
@@ -1017,7 +1008,7 @@ private async Task ProcessWithCustomModel(string json)
     // Event handlers for all configuration types
     private async Task HandleEmailConfigurationCreated(EmailClientProviderConfigurationViewModel createdConfig)
     {
-        Console.WriteLine($"🔄 Email configuration created: {createdConfig.Description}");
+        Console.WriteLine($"Email configuration created: {createdConfig.Description}");
         if (clientDetails != null)
         {
             await LoadEmailConfigurations(clientDetails.Identifier);
@@ -1027,7 +1018,7 @@ private async Task ProcessWithCustomModel(string json)
 
     private async Task HandleEmailConfigurationUpdated(EmailClientProviderConfigurationViewModel updatedConfig)
     {
-        Console.WriteLine($"🔄 Email configuration updated: {updatedConfig.Description}");
+        Console.WriteLine($"Email configuration updated: {updatedConfig.Description}");
         if (clientDetails != null)
         {
             await LoadEmailConfigurations(clientDetails.Identifier);
@@ -1037,7 +1028,7 @@ private async Task ProcessWithCustomModel(string json)
 
     private async Task HandleSmsConfigurationCreated(SMSClientProviderConfigurationViewModel createdConfig)
     {
-        Console.WriteLine($"🔄 SMS configuration created: {createdConfig.Description}");
+        Console.WriteLine($"SMS configuration created: {createdConfig.Description}");
         if (clientDetails != null)
         {
             await LoadSmsConfigurations(clientDetails.Identifier);
@@ -1047,7 +1038,7 @@ private async Task ProcessWithCustomModel(string json)
 
     private async Task HandleSmsConfigurationUpdated(SMSClientProviderConfigurationViewModel updatedConfig)
     {
-        Console.WriteLine($"🔄 SMS configuration updated: {updatedConfig.Description}");
+        Console.WriteLine($"SMS configuration updated: {updatedConfig.Description}");
         if (clientDetails != null)
         {
             await LoadSmsConfigurations(clientDetails.Identifier);
@@ -1057,7 +1048,7 @@ private async Task ProcessWithCustomModel(string json)
 
     private async Task HandleOtpConfigurationCreated(OtpClientProviderConfigurationViewModel createdConfig)
     {
-        Console.WriteLine($"🔄 OTP configuration created: {createdConfig.Description}");
+        Console.WriteLine($"OTP configuration created: {createdConfig.Description}");
         if (clientDetails != null)
         {
             await LoadOtpConfigurations(clientDetails.Identifier);
@@ -1067,7 +1058,7 @@ private async Task ProcessWithCustomModel(string json)
 
     private async Task HandleOtpConfigurationUpdated(OtpClientProviderConfigurationViewModel updatedConfig)
     {
-        Console.WriteLine($"🔄 OTP configuration updated: {updatedConfig.Description}");
+        Console.WriteLine($"OTP configuration updated: {updatedConfig.Description}");
         if (clientDetails != null)
         {
             await LoadOtpConfigurations(clientDetails.Identifier);
@@ -1077,7 +1068,7 @@ private async Task ProcessWithCustomModel(string json)
 
     private async Task HandlePaymentConfigurationCreated(PaymentClientProviderConfigurationViewModel createdConfig)
     {
-        Console.WriteLine($"🔄 Payment configuration created: {createdConfig.Description}");
+        Console.WriteLine($"Payment configuration created: {createdConfig.Description}");
         if (clientDetails != null)
         {
             await LoadPaymentConfigurations(clientDetails.Identifier);
@@ -1087,7 +1078,7 @@ private async Task ProcessWithCustomModel(string json)
 
     private async Task HandlePaymentConfigurationUpdated(PaymentClientProviderConfigurationViewModel updatedConfig)
     {
-        Console.WriteLine($"🔄 Payment configuration updated: {updatedConfig.Description}");
+        Console.WriteLine($"Payment configuration updated: {updatedConfig.Description}");
         if (clientDetails != null)
         {
             await LoadPaymentConfigurations(clientDetails.Identifier);
@@ -1099,7 +1090,7 @@ private async Task ProcessWithCustomModel(string json)
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ ClientDetailsModal component rendered");
+            Console.WriteLine("ClientDetailsModal component rendered");
         }
     }
 }

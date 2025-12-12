@@ -280,12 +280,10 @@
     {
         try
         {
-            // Clear previous messages
             formError = string.Empty;
             successMessage = string.Empty;
             generatedOtp = null;
-
-            // Validate all fields
+            
             var isValid = ValidateForm();
 
             if (!isValid)
@@ -321,11 +319,8 @@
                 successMessage = result.Message ?? "OTP generated successfully!";
                 Console.WriteLine("OTP generated successfully");
 
-                // Notify parent component
                 await OnOtpGenerated.InvokeAsync(generatedOtp);
 
-                // Don't close modal immediately - let user see the OTP details
-                // They can close it manually or we can auto-close after a delay
                 await Task.Delay(5000);
                 await otpGenerateModal.CloseModal();
             }
@@ -358,8 +353,7 @@
     private bool ValidateForm()
     {
         var isValid = true;
-
-        // Validate User ID
+        
         if (string.IsNullOrWhiteSpace(userIdString))
         {
             userIdError = "User ID is required";
@@ -375,7 +369,6 @@
             userIdError = string.Empty;
         }
 
-        // Validate OTP Type
         if (!otpType.HasValue)
         {
             otpTypeError = "OTP Type is required";
@@ -397,7 +390,6 @@
             otpPurposeError = string.Empty;
         }
 
-        // Validate contact methods based on OTP type
         if (otpType.HasValue)
         {
             switch (otpType.Value)

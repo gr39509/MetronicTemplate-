@@ -1,4 +1,3 @@
-@* ClientEditModal.razor *@
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
@@ -118,7 +117,7 @@
         }
         else
         {
-            Console.WriteLine("❌ clientEditModal is null");
+            Console.WriteLine("clientEditModal is null");
         }
     }
 
@@ -130,7 +129,7 @@
             errorMessage = string.Empty;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading client for edit: {clientId}");
+            Console.WriteLine($"Loading client for edit: {clientId}");
 
             // Load client details using the ClientAsync method
             var result = await ApiClient.ClientAsync(clientId);
@@ -145,28 +144,28 @@
                     Description = client.Description ?? string.Empty
                 };
                 
-                Console.WriteLine($"✅ Loaded client for edit: {client.Name}");
+                Console.WriteLine($"Loaded client for edit: {client.Name}");
             }
             else
             {
                 errorMessage = result?.Message ?? "Failed to load client data.";
-                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
             }
         }
         // catch (ApiException<ApiErrorResponse> apiEx)
         // {
         //     errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
-        //     Console.WriteLine($"❌ API Error loading client: {apiEx.Message}");
+        //     Console.WriteLine($"API Error loading client: {apiEx.Message}");
         // }
         catch (ApiException ex)
         {
             errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
-            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            Console.WriteLine($"API Exception: {ex.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading client: {ex.Message}";
-            Console.WriteLine($"❌ Error loading client: {ex.Message}");
+            Console.WriteLine($"Error loading client: {ex.Message}");
         }
         finally
         {
@@ -213,10 +212,8 @@
     {
         try
         {
-            // Clear previous errors
             formError = string.Empty;
             
-            // Validate all fields
             var isValid = ValidateForm();
             
             if (!isValid)
@@ -231,11 +228,10 @@
                 return;
             }
 
-            Console.WriteLine($"📝 Saving changes for client: {clientEditModel.ClientId}");
-            Console.WriteLine($"📝 Name: {clientEditModel.Name}");
-            Console.WriteLine($"📝 Description: {clientEditModel.Description}");
+            Console.WriteLine($"Saving changes for client: {clientEditModel.ClientId}");
+            Console.WriteLine($"Name: {clientEditModel.Name}");
+            Console.WriteLine($"Description: {clientEditModel.Description}");
 
-            // Create the update command with trimmed values
             var updateCommand = new UpdateClientDto
             {
                 ClientId = clientEditModel.ClientId,
@@ -243,41 +239,41 @@
                 Description = clientEditModel.Description?.Trim() ?? string.Empty
             };
 
-            Console.WriteLine("🔄 Calling UpdateAsync...");
+            Console.WriteLine("Calling UpdateAsync...");
 
             // Call the UpdateAsync method
             var result = await ApiClient.UpdateAsync(updateCommand);
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
 
             if (result?.Success == true && result.Data != null)
             {
-                Console.WriteLine("✅ Client updated successfully");
+                Console.WriteLine("Client updated successfully");
                 await clientEditModal.CloseModal();
                 await OnClientUpdated.InvokeAsync(updateCommand);
             }
             else
             {
                 formError = result?.Message ?? "Update failed. Please try again.";
-                Console.WriteLine($"❌ Update failed: {formError}");
+                Console.WriteLine($"Update failed: {formError}");
             }
         }
         // catch (ApiException<ApiErrorResponse> apiEx)
         // {
         //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
-        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
-        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        //     Console.WriteLine($"API Exception Details: {apiEx}");
+        //     Console.WriteLine($"Status Code: {apiEx.StatusCode}");
         // }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error saving client: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -321,7 +317,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ ClientEditModal component rendered");
+            Console.WriteLine("ClientEditModal component rendered");
         }
     }
 }

@@ -182,8 +182,7 @@
             }
 
             Console.WriteLine($"Confirming OTP: {otpId}");
-
-            // Create the confirmation request
+            
             var confirmRequest = new ConfirmOtpRequest
             {
                 OtpId = otpId,
@@ -192,7 +191,6 @@
 
             Console.WriteLine("Calling ConfirmAsync...");
 
-            // Call the ConfirmAsync method
             var result = await ApiClient.ConfirmAsync(confirmRequest);
 
             Console.WriteLine($"API Response Success: {result?.Success}");
@@ -207,7 +205,6 @@
                 // Notify parent component
                 await OnOtpConfirmed.InvokeAsync(confirmationResult);
                 
-                // Don't close modal immediately - let user see the result
                 await Task.Delay(3000);
                 await otpConfirmModal.CloseModal();
             }
@@ -256,8 +253,7 @@
         {
             otpIdError = string.Empty;
         }
-
-        // Validate OTP Code
+        
         if (string.IsNullOrWhiteSpace(otpCode))
         {
             otpCodeError = "OTP Code is required";

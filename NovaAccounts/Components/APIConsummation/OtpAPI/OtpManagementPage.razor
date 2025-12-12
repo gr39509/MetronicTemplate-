@@ -124,7 +124,7 @@ else
     // [JSInvokable]
     // public async Task GenerateNewOtp()
     // {
-    //     Console.WriteLine("🔑 GenerateNewOtp called");
+    //     Console.WriteLine("GenerateNewOtp called");
     //     
     //     if (otpGenerateModal == null)
     //     {
@@ -162,8 +162,6 @@ else
             isLoading = true;
             errorMessage = string.Empty;
             StateHasChanged();
-
-            // Call the All4Async method to get all OTP records
             var result = await ApiClient.All4Async();
 
             if (result?.Success == true && result.Data != null)
@@ -367,7 +365,7 @@ else
             Responsive = true,
             AdditionalOptions = new Dictionary<string, object>
             {
-                ["order"] = new object[] { new object[] { 7, "desc" } } // Order by ExpireAt descending
+                ["order"] = new object[] { new object[] { 7, "desc" } }
             }
         };
     }
@@ -382,11 +380,7 @@ else
            
             isLoading = true;
             StateHasChanged();
-            
-            // Small delay to ensure smooth UI transition
             await Task.Delay(300);
-            
-            // Reload the OTP records from server to get fresh data including the new OTP
             await LoadOtpRecords();
             
             Console.WriteLine("OTP records refreshed after generation");
@@ -406,14 +400,11 @@ else
         
         try
         {
-            // Show loading state briefly
+         
             isLoading = true;
             StateHasChanged();
-            
-            // Small delay to ensure smooth UI transition
             await Task.Delay(300);
             
-            // Reload the OTP records from server to get fresh data
             await LoadOtpRecords();
             
             Console.WriteLine("OTP records refreshed after confirmation");
@@ -477,9 +468,7 @@ else
 
     window.confirmOtpRecord = function (otpId) {
         if (window.dotNetReference) {
-            // This would need to be implemented to open confirm modal with pre-filled OTP ID
             console.log('Confirm OTP Record:', otpId);
-            // You could implement this to open the confirm modal with the OTP ID pre-filled
             alert('Confirm OTP functionality for: ' + otpId);
         } else {
             console.error('DotNet reference not available for confirmOtpRecord');

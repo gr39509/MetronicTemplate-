@@ -148,12 +148,8 @@
             var credentialsTask = LoadCredentialTypes();
 
             await Task.WhenAll(clientsTask, providersTask, credentialsTask);
-
-            // Setup wizard after data is loaded
             SetupWizardConfig();
             SetupWizardSteps();
-
-            // Pre-select client if identifier provided
             if (!string.IsNullOrEmpty(ClientIdentifier))
             {
                 await PreSelectClient();
@@ -729,14 +725,12 @@
                 return;
             }
 
-            // Get client
             var client = clients.FirstOrDefault(c => c.ClientId.ToString() == clientId);
             if (client == null)
             {
                 return;
             }
 
-            // Create credentials list
             var clientProviderCredentials = new List<CreateClientProviderCredentialDto>();
             foreach (var credType in availableCredentialTypes)
             {
@@ -751,7 +745,6 @@
                 }
             }
 
-            // Create the configuration
             var createCommand = new CreateOtpProviderConfigurationDto
             {
                 ClientIdentifier = client.Identifier,
@@ -794,7 +787,6 @@
 }
 
 <style>
-    /* Fixed step number styling */
     .wizard-step-number {
         display: inline-block;
         width: 30px;

@@ -1,4 +1,3 @@
-@* OtpProviderConfigurationCreateModal.razor *@
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
@@ -193,7 +192,6 @@
     private bool isLoadingClients = false;
     private bool isLoadingProviders = false;
 
-    // Define ONLY API_KEY as required for OTP providers - all others are optional
     private readonly HashSet<string> requiredOtpCredentials = new(StringComparer.OrdinalIgnoreCase)
     {
         "API_KEY",
@@ -265,8 +263,6 @@
         {
             isLoadingProviders = true;
             StateHasChanged();
-
-            // Get OTP providers (providerType = "OTP")
             var result = await ApiClient.Provider2Async("OTP");
             if (result?.Success == true && result.Data != null)
             {
@@ -322,8 +318,6 @@
         descriptionError = string.Empty;
         formError = string.Empty;
         successMessage = string.Empty;
-
-        // Load credential types when opening modal
         await LoadCredentialTypes();
 
         if (otpConfigCreateModal != null)
@@ -334,10 +328,7 @@
     
     public async Task OpenModalWithClient(string clientIdentifier)
     {
-        // Reset form first
         await OpenModal();
-    
-        // Find and pre-select the client
         var client = clients.FirstOrDefault(c => c.Identifier == clientIdentifier);
         if (client != null)
         {
@@ -414,8 +405,6 @@
     {
         var value = e.Value?.ToString() ?? string.Empty;
         credentials[credentialTypeName] = value;
-
-        // Validate credential in real-time
         ValidateCredential(credentialTypeName, value);
         
         StateHasChanged();
@@ -442,7 +431,6 @@
 
         if (IsCredentialRequired(credentialTypeName))
         {
-            // Only API_KEY and similar keys are required - validate them strictly
             if (string.IsNullOrWhiteSpace(value))
             {
                 credentialErrors[credentialTypeName] = $"{credentialTypeName} is required";
@@ -462,7 +450,6 @@
         }
         else
         {
-            // All other credentials are optional - only validate if provided
             if (!string.IsNullOrWhiteSpace(value))
             {
                 if (value.Length > 500)
@@ -474,13 +461,12 @@
                     credentialErrors[credentialTypeName] = $"{credentialTypeName} contains invalid characters";
                 }
             }
-            // No validation if optional field is empty
+      
         }
     }
 
     private bool ContainsInvalidCharacters(string value)
     {
-        // Check for potentially dangerous characters in credentials
         var invalidChars = new[] { '<', '>', '&', '\"', '\'' };
         return invalidChars.Any(c => value.Contains(c));
     }
@@ -495,13 +481,12 @@
             var credentialValue = GetCredentialValue(credType.CredentialTypeName);
             ValidateCredential(credType.CredentialTypeName, credentialValue);
 
-            // Only fail validation for required credentials
             if (IsCredentialRequired(credType.CredentialTypeName) && 
                 credentialErrors.ContainsKey(credType.CredentialTypeName))
             {
                 isValid = false;
             }
-            // Optional credentials with errors don't fail the overall validation
+            
         }
 
         return isValid;
@@ -511,11 +496,9 @@
     {
         try
         {
-            // Clear previous messages
             formError = string.Empty;
             successMessage = string.Empty;
             
-            // Validate all fields
             var isFormValid = ValidateForm();
             var areCredentialsValid = ValidateCredentials();
             
@@ -567,14 +550,8 @@
             {
                 successMessage = result.Message ?? "OTP configuration created successfully!";
                 Console.WriteLine("OTP configuration created successfully");
-                
-                // Clear form after successful creation
                 ResetForm();
-                
-                // Notify parent component and wait for it to complete
                 await OnOtpConfigurationCreated.InvokeAsync(result.Data);
-                
-                // Close modal after parent is notified
                 await otpConfigCreateModal.CloseModal();
             }
             else
@@ -612,7 +589,6 @@
             clientError = string.Empty;
         }
 
-        // Validate Provider
         if (!selectedProviderId.HasValue)
         {
             providerError = "Please select an OTP provider";
@@ -622,8 +598,6 @@
         {
             providerError = string.Empty;
         }
-
-        // Validate Description
         if (string.IsNullOrWhiteSpace(description))
         {
             descriptionError = "Description is required";

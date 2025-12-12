@@ -1,4 +1,3 @@
-@* ClientEmailModal.razor *@
 @using NovaAccounts.Components.Shared
 @using NovaAccounts.SharedModels.ApiService
 @using NovaAccounts.SharedModels.ModalFields
@@ -151,7 +150,7 @@
     private string emailSubject = string.Empty;
     private string emailMessage = string.Empty;
     private Guid? selectedConfigId = null;
-    private string selectedConfigIdString = string.Empty; // String binding for dropdown
+    private string selectedConfigIdString = string.Empty;
 
     // Validation errors
     private string emailError = string.Empty;
@@ -193,7 +192,7 @@
         }
         else
         {
-            Console.WriteLine("❌ clientEmailModal is null");
+            Console.WriteLine("clientEmailModal is null");
         }
     }
 
@@ -210,7 +209,7 @@
         catch (Exception ex)
         {
             errorMessage = $"Error loading data: {ex.Message}";
-            Console.WriteLine($"❌ Error loading initial data: {ex.Message}");
+            Console.WriteLine($"Error loading initial data: {ex.Message}");
         }
     }
 
@@ -221,35 +220,35 @@
             isLoadingClient = true;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading client for email: {clientId}");
+            Console.WriteLine($"Loading client for email: {clientId}");
 
             var result = await ApiClient.ClientAsync(clientId);
 
             if (result?.Success == true && result.Data != null)
             {
                 currentClient = result.Data;
-                Console.WriteLine($"✅ Loaded client for email: {currentClient.Name}");
+                Console.WriteLine($"Loaded client for email: {currentClient.Name}");
             }
             else
             {
                 errorMessage = result?.Message ?? "Failed to load client data.";
-                Console.WriteLine($"❌ API returned unsuccessful: {errorMessage}");
+                Console.WriteLine($"API returned unsuccessful: {errorMessage}");
             }
         }
         // catch (ApiException<ApiErrorResponse> apiEx)
         // {
         //     errorMessage = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.StatusCode}";
-        //     Console.WriteLine($"❌ API Error loading client: {apiEx.Message}");
+        //     Console.WriteLine($"API Error loading client: {apiEx.Message}");
         // }
         catch (ApiException ex)
         {
             errorMessage = $"Server error ({ex.StatusCode}). Please try again.";
-            Console.WriteLine($"❌ API Exception: {ex.Message}");
+            Console.WriteLine($"API Exception: {ex.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading client: {ex.Message}";
-            Console.WriteLine($"❌ Error loading client: {ex.Message}");
+            Console.WriteLine($"Error loading client: {ex.Message}");
         }
         finally
         {
@@ -265,14 +264,14 @@
             isLoadingConfigs = true;
             StateHasChanged();
 
-            Console.WriteLine($"🔍 Loading email configurations for client: {clientId}");
+            Console.WriteLine($"Loading email configurations for client: {clientId}");
 
             // First get the client details to get the identifier
             var clientResult = await ApiClient.ClientAsync(clientId);
             if (clientResult?.Success == true && clientResult.Data != null)
             {
                 var clientIdentifier = clientResult.Data.Identifier;
-                Console.WriteLine($"🔍 Client identifier: {clientIdentifier}");
+                Console.WriteLine($"Client identifier: {clientIdentifier}");
 
                 // Use the ConfigurationsPerClientAsync method with client code
                 var result = await ApiClient.ConfigurationsPerClientAsync(clientIdentifier);
@@ -280,10 +279,10 @@
                 if (result?.Success == true && result.Data != null)
                 {
                     emailConfigs = result.Data
-                        .Where(c => c.IsActive) // Only show active configurations
+                        .Where(c => c.IsActive)
                         .ToList();
                     
-                    Console.WriteLine($"✅ Loaded {emailConfigs.Count} email configurations");
+                    Console.WriteLine($"Loaded {emailConfigs.Count} email configurations");
                     
                     // If there's a default configuration, pre-select it
                     var defaultConfig = emailConfigs.FirstOrDefault(c => c.IsDefault);
@@ -291,34 +290,34 @@
                     {
                         selectedConfigId = defaultConfig.EmailProviderConfigurationId;
                         selectedConfigIdString = defaultConfig.EmailProviderConfigurationId.ToString();
-                        Console.WriteLine($"✅ Pre-selected default configuration: {defaultConfig.ProviderName}");
+                        Console.WriteLine($"Pre-selected default configuration: {defaultConfig.ProviderName}");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"⚠️ No email configurations loaded: {result?.Message}");
+                    Console.WriteLine($"No email configurations loaded: {result?.Message}");
                     emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
                 }
             }
             else
             {
-                Console.WriteLine("⚠️ Could not load client details for configurations");
+                Console.WriteLine("Could not load client details for configurations");
                 emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
             }
         }
         // catch (ApiException<ApiErrorResponse> apiEx)
         // {
-        //     Console.WriteLine($"⚠️ API Error loading email configurations: {apiEx.Message}");
+        //     Console.WriteLine($"API Error loading email configurations: {apiEx.Message}");
         //     emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
         // }
         catch (ApiException ex)
         {
-            Console.WriteLine($"⚠️ API Exception loading email configurations: {ex.Message}");
+            Console.WriteLine($"API Exception loading email configurations: {ex.Message}");
             emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Error loading email configurations: {ex.Message}");
+            Console.WriteLine($"Error loading email configurations: {ex.Message}");
             emailConfigs = new List<EmailClientProviderConfigurationViewModel>();
         }
         finally
@@ -432,12 +431,11 @@
                 return;
             }
 
-            Console.WriteLine($"📧 Sending email to client: {currentClient.Name}");
-            Console.WriteLine($"📧 Recipient: {recipientEmail}");
-            Console.WriteLine($"📧 Subject: {emailSubject}");
-            Console.WriteLine($"📧 Using Config: {selectedConfigId}");
-
-            // Create the email request
+            Console.WriteLine($"Sending email to client: {currentClient.Name}");
+            Console.WriteLine($"Recipient: {recipientEmail}");
+            Console.WriteLine($"Subject: {emailSubject}");
+            Console.WriteLine($"Using Config: {selectedConfigId}");
+            
             var emailRequest = new SendEmailRequest
             {
                 Subject = emailSubject.Trim(),
@@ -446,7 +444,7 @@
                 EmailClientProviderConfigurationId = selectedConfigId
             };
 
-            Console.WriteLine("🔄 Calling SendAsync...");
+            Console.WriteLine("Calling SendAsync...");
 
             // Call the SendAsync method with client code
             var result = await ApiClient.SendAsync(
@@ -454,47 +452,45 @@
                 body: emailRequest
             );
 
-            Console.WriteLine($"✅ API Response Success: {result?.Success}");
-            Console.WriteLine($"✅ API Message: {result?.Message}");
-            Console.WriteLine($"✅ API Data: {result?.Data}");
+            Console.WriteLine($"API Response Success: {result?.Success}");
+            Console.WriteLine($"API Message: {result?.Message}");
+            Console.WriteLine($"API Data: {result?.Data}");
 
             if (result?.Success == true)
             {
                 successMessage = result.Message ?? "Email sent successfully!";
-                Console.WriteLine("✅ Email sent successfully");
+                Console.WriteLine("Email sent successfully");
                 
-                // Clear form after successful send
                 recipientEmail = string.Empty;
                 emailSubject = string.Empty;
                 emailMessage = string.Empty;
                 selectedConfigId = null;
                 selectedConfigIdString = string.Empty;
                 
-                // Close modal after 2 seconds
                 await Task.Delay(2000);
                 await clientEmailModal.CloseModal();
             }
             else
             {
                 formError = result?.Message ?? "Failed to send email. Please try again.";
-                Console.WriteLine($"❌ Email sending failed: {formError}");
+                Console.WriteLine($"Email sending failed: {formError}");
             }
         }
         // catch (ApiException<ApiErrorResponse> apiEx)
         // {
         //     formError = apiEx.Result?.ErrorMessage ?? $"API Error: {apiEx.Message}";
-        //     Console.WriteLine($"❌ API Exception Details: {apiEx}");
-        //     Console.WriteLine($"❌ Status Code: {apiEx.StatusCode}");
+        //     Console.WriteLine($"API Exception Details: {apiEx}");
+        //     Console.WriteLine($"Status Code: {apiEx.StatusCode}");
         // }
         catch (ApiException ex)
         {
             formError = $"Server error ({ex.StatusCode}): {ex.Message}";
-            Console.WriteLine($"❌ API Exception: {ex}");
+            Console.WriteLine($"API Exception: {ex}");
         }
         catch (Exception ex)
         {
             formError = $"Error sending email: {ex.Message}";
-            Console.WriteLine($"❌ Exception: {ex}");
+            Console.WriteLine($"Exception: {ex}");
         }
         
         StateHasChanged();
@@ -504,7 +500,6 @@
     {
         var isValid = true;
 
-        // Validate Email
         if (string.IsNullOrWhiteSpace(recipientEmail))
         {
             emailError = "Email address is required";
@@ -520,7 +515,7 @@
             emailError = string.Empty;
         }
 
-        // Validate Subject
+       
         if (string.IsNullOrWhiteSpace(emailSubject))
         {
             subjectError = "Subject is required";
@@ -536,7 +531,6 @@
             subjectError = string.Empty;
         }
 
-        // Validate Message
         if (string.IsNullOrWhiteSpace(emailMessage))
         {
             messageError = "Message body is required";
@@ -551,8 +545,6 @@
         {
             messageError = string.Empty;
         }
-
-        // Email configuration is optional, so no validation needed
 
         return isValid;
     }
@@ -583,7 +575,7 @@
     {
         if (firstRender)
         {
-            Console.WriteLine("✅ ClientEmailModal component rendered");
+            Console.WriteLine("ClientEmailModal component rendered");
         }
     }
 }
