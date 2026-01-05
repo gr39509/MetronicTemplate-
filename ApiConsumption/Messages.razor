@@ -1,0 +1,417 @@
+@page "/"
+
+@using Microsoft.AspNetCore.Components.Web
+@using NovaAccounts.Components.Layout
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.DataFields
+@inject NovaAccounts.Shared.ApiClient ApiClient
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+<h3>Message Management</h3>
+
+<div class="container-fluid mt-4">
+    @if (isLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+    }
+    else
+    {
+
+        <!-- Statistics Cards -->
+        <div class="row">
+            <div class="col-md-4">
+                <DashboardStatCard
+                    IconClass="fa-exchange"
+                    Value="@todayMessages"
+                    DisplayValue="@todayMessages.ToString()"
+                    Description="Today's Messages"
+                    ColorClass="blue"
+                    ElementId="todayMessages"/>
+            </div>
+            <div class="col-md-4">
+                <DashboardStatCard
+                    IconClass="fa-exchange"
+                    Value="@totalMessages"
+                    DisplayValue="@totalMessages.ToString("N0")"
+                    Description="Total Messages"
+                    ColorClass="green"
+                    ElementId="totalMessages"/>
+            </div>
+           
+            <div class="col-md-4">
+                <DashboardStatCard
+                    IconClass="fa-exchange"
+                    Value="@activeSessions"
+                    DisplayValue="@activeSessions.ToString("N0")"
+                    Description="No. of Sessions"
+                    ColorClass="purple"
+                    ElementId="activeSessions"/>
+            </div>
+        </div>
+        
+           <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-header">
+                <h6><i class="filter-icon"></i> Filter Messages</h6>
+            </div>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="phoneNumber">Phone Number</label>
+                    <input type="text" id="phoneNumber" 
+                           @bind="filterPhoneNumber" 
+                           placeholder="233XXXXXXXXX"
+                           class="filter-input" />
+                </div>
+                <div class="filter-group">
+                    <label for="sessionId">Session ID</label>
+                    <input type="text" id="sessionId" 
+                           @bind="filterSessionId" 
+                           placeholder="Session ID"
+                           class="filter-input" />
+                </div>
+                <div class="filter-group">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" 
+                           @bind="startDateInput" 
+                           @bind:format="yyyy-MM-dd"
+                           class="filter-input" />
+                </div>
+                <div class="filter-group">
+                    <label for="endDate">End Date</label>
+                    <input type="date" id="endDate" 
+                           @bind="endDateInput" 
+                           @bind:format="yyyy-MM-dd"
+                           class="filter-input" />
+                </div>
+                <div class="filter-actions">
+                    <button class="btn-primary" @onclick="ApplyFilters">
+                        <i class="search-icon"></i> Search
+                    </button>
+                    <button class="btn-secondary" @onclick="ClearFilters">
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Table -->
+        <ReusableDataTable TItem="MessageViewModel" 
+                           Data="@messages" 
+                           Columns="@messageColumns" 
+                           Options="@messageOptions" />
+    }
+</div>
+
+
+
+@code {
+    private List<MessageViewModel>? messages;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private List<DataTableColumn> messageColumns = new();
+    private DataTableOptions messageOptions = new();
+
+    // Filter properties
+    private string? filterPhoneNumber;
+    private string? filterSessionId;
+    
+    private DateTime? startDateInput = DateTime.Now.AddDays(-30);
+    private DateTime? endDateInput = DateTime.Now;
+
+    // Statistics
+    private int todayMessages = 0;
+    private int totalMessages = 0;
+    private int activeUsers = 0;
+    private int activeSessions = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ConfigureMessageTable();
+        await LoadMessages();
+    }
+
+    private async Task LoadMessages()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+     
+            DateTimeOffset? filterStartDate = startDateInput.HasValue 
+                ? new DateTimeOffset(startDateInput.Value, TimeSpan.Zero) 
+                : null;
+            
+            DateTimeOffset? filterEndDate = endDateInput.HasValue 
+                ? new DateTimeOffset(endDateInput.Value.Date.AddDays(1).AddSeconds(-1), TimeSpan.Zero) // Include entire end date
+                : null;
+
+            var results = await ApiClient.GetAllMessagesAsync(
+                filterPhoneNumber, 
+                filterSessionId,
+                startDate: filterStartDate,
+                endDate: filterEndDate
+            );
+
+            if (results != null && results.Any())
+            {
+                messages = results.Select(r => new MessageViewModel
+                {
+                    SessionId = r.SessionId,
+                    Timestamp = r.Timestamp,
+                    Msisdn = r.Msisdn,
+                    Message = r.Message,
+                    MobileNetwork = r.MobileNetwork,
+                    Channel = r.Channel,
+                    Menu = r.Menu,
+                    Extension = r.Extension,
+                    Data = r.Data,
+                    ResponseMessage = r.ResponseMessage
+                }).ToList();
+
+                // Update statistics
+                totalMessages = messages.Count;
+                todayMessages = messages.Count(m => m.Timestamp.Date == DateTime.Today);
+                activeSessions = messages.Select(m => m.SessionId).Distinct().Count();
+                activeUsers = messages.Select(m => m.Msisdn).Distinct().Count();
+            }
+            else
+            {
+                messages = new List<MessageViewModel>();
+                ResetStatistics();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading messages: {ex.Message}";
+            Console.WriteLine($"Full Error: {ex}");
+            messages = new List<MessageViewModel>();
+            ResetStatistics();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        await LoadMessages();
+    }
+
+    private async Task ClearFilters()
+    {
+        filterPhoneNumber = null;
+        filterSessionId = null;
+        startDateInput = null;
+        endDateInput = null;
+        await LoadMessages();
+    }
+
+    private void ResetStatistics()
+    {
+        totalMessages = 0;
+        todayMessages = 0;
+        activeSessions = 0;
+        activeUsers = 0;
+    }
+
+    private void ConfigureMessageTable()
+    {
+        messageColumns = new List<DataTableColumn>
+        {
+            new() { 
+                Header = "TIMESTAMP", 
+                PropertyName = nameof(MessageViewModel.Timestamp), 
+                DataType = "date",
+                CustomRenderer = (item) => ((MessageViewModel)item).Timestamp.ToString("dd MMM yyyy HH:mm")
+            },
+            new() { 
+                Header = "SESSION ID", 
+                PropertyName = nameof(MessageViewModel.SessionId),
+                CustomRenderer = (item) => $"<code>{((MessageViewModel)item).SessionId}</code>"
+            },
+            new() { 
+                Header = "MSISDN", 
+                PropertyName = nameof(MessageViewModel.Msisdn),
+                CustomRenderer = (item) => $"<strong>{((MessageViewModel)item).Msisdn}</strong>"
+            },
+            new() { 
+                Header = "MESSAGE", 
+                PropertyName = nameof(MessageViewModel.Message),
+                CustomRenderer = (item) => 
+                {
+                    var msg = ((MessageViewModel)item).Message;
+                    return msg?.Length > 50 ? msg.Substring(0, 50) + "..." : msg;
+                }
+            },
+            new() { 
+                Header = "NETWORK", 
+                PropertyName = nameof(MessageViewModel.MobileNetwork)
+            },
+            new() { 
+                Header = "CHANNEL", 
+                PropertyName = nameof(MessageViewModel.Channel),
+                CustomRenderer = (item) => 
+                {
+                    var channel = ((MessageViewModel)item).Channel;
+                    return $"<span class='badge badge-info'>{channel}</span>";
+                }
+            },
+            new() { 
+                Header = "ACTION", 
+                PropertyName = "", 
+                Sortable = false, 
+                Searchable = false,
+                CustomRenderer = (item) => 
+                {
+                    var sessionId = ((MessageViewModel)item).SessionId;
+                    return $"<button class='btn btn-sm btn-outline-secondary' onclick=\"window.location.href='/message/{Uri.EscapeDataString(sessionId)}'\"><i class='fas fa-eye'></i></button>";
+                }
+            }
+        };
+
+        messageOptions = new DataTableOptions
+        {
+            PageLength = 10,
+            LengthMenu = new[] { 10, 25, 50, 100 },
+            LengthMenuLabels = new[] { "10", "25", "50", "100" },
+            SearchPlaceholder = "Search Messages",
+            TableId = "messageTable",
+            HeaderCssClass = "leadBold bg-blue-chambray font-white",
+            RowCssClass = "lead font-blue-ebonyclay",
+            Striped = true,
+            AdditionalOptions = new Dictionary<string, object>
+            {
+                ["select"] = true,
+                ["buttons"] = new[] { "copy", "csv", "excel", "pdf", "print", "colvis" },
+                ["dom"] = "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 text-end'Bf>>" +
+                         "<'row'<'col-sm-12'tr>>" +
+                         "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                ["order"] = new object[] { new object[] { 0, "desc" } }, // Sort by timestamp descending
+                ["language"] = new Dictionary<string, object>
+                {
+                    ["search"] = "Search Messages:",
+                    ["lengthMenu"] = "Show _MENU_ messages per page",
+                    ["info"] = "Showing _START_ to _END_ of _TOTAL_ messages",
+                    ["infoEmpty"] = "No messages found",
+                    ["infoFiltered"] = "(filtered from _MAX_ total messages)",
+                    ["emptyTable"] = "No message data available",
+                    ["zeroRecords"] = "No matching messages found"
+                }
+            }
+        };
+    }
+
+    private class MessageViewModel
+    {
+        public string? SessionId { get; set; }
+        public int Menu { get; set; }
+        public string? Msisdn { get; set; }
+        public string? Message { get; set; }
+        public DateTimeOffset Timestamp { get; set; }
+        public string? MobileNetwork { get; set; }
+        public string? Extension { get; set; }
+        public string? Data { get; set; }
+        public string? Channel { get; set; }
+        public string? ResponseMessage { get; set; }
+    }
+    
+}
+<style>
+    .filter-section {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 24px;
+    }
+
+    .filter-header {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #eaeaea;
+    }
+
+    .filter-header h6 {
+        margin: 0;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        align-items: end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-group label {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+
+    .filter-input {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+    }
+
+    .filter-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-primary, .btn-secondary {
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex: 1;
+    }
+
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2563eb;
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #666;
+        border: 1px solid #ddd;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+</style>

@@ -1,0 +1,806 @@
+@page "/updated-modal-examples"
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ModalFields
+
+<h2>Updated Modal Examples with Font & Color Customization</h2>
+
+<div class="row mb-4">
+    <!-- Example 1: Small Modal with Custom Colors -->
+    <div class="col-md-6">
+        <Select2Component 
+            Label="Department"
+            @bind-SelectedValue="selectedDepartment">
+            <option value="hr">HR</option>
+            <option value="it">IT</option>
+            <option value="finance">Finance</option>
+        </Select2Component>
+        <h4>1. Small Modal with Custom Title</h4>
+        <ReusableModal Title="Quick Action"
+                       TriggerButtonText="Small Modal"
+                       TriggerButtonClass="btn btn-info"
+                       ShowTriggerButton="true"
+                       Size="ModalSize.Small"
+                       TitleFontSize="1.5rem"
+                       TitleColor="#007bff"
+                       BodyFontSize="0.9rem"
+                       BodyColor="#495057"
+                       ButtonFontSize="0.8rem">
+            <BodyContent>
+                <p>This is a small modal with custom styling.</p>
+                <div class="form-group">
+                    <label>Quick Input:</label>
+                    <input type="text" class="form-control" placeholder="Enter value"/>
+                </div>
+            </BodyContent>
+        </ReusableModal>
+    </div>
+
+    <!-- Example 2: Extra Large Modal -->
+    <div class="col-md-6">
+        <h4>2.  Large Modal</h4>
+        <ReusableModal Title="Complete Employee Registration"
+                      TriggerButtonText="Employee form"
+                      TriggerButtonClass="btn btn-success"
+                      ShowTriggerButton="true"
+                      Size="ModalSize.Large"
+                      TitleFontSize="3rem"
+                      HeaderClass="bg-danger text-white"
+                      TitleColor="#ffffff"
+                      BodyFontSize="1.1rem"
+                      ButtonFontSize="1rem">
+            <BodyContent>
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h5>Personal Information</h5>
+                            <div class="form-group">
+                                <label>First Name</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>First Name</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>First Name</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>First Name</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" class="form-control" />
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h5>Employment Details</h5>
+                            <BootstrapSelect 
+                                Label="USER"
+                                LabelClass=""
+                                Name="user_id"
+                                Placeholder="--SELECT USER--"
+                                Options="@userOptions"
+                                LiveSearch="true"
+                                Required="true"
+                                OnValueChanged="@HandleUserChanged" />
+                            @* <div class="form-group"> *@
+                            @*     <label>Department</label> *@
+                            @*     <select class="form-control select2" style="width: 100%;"> *@
+                            @*         <option>HR</option> *@
+                            @*         <option>IT</option> *@
+                            @*         <option>Finance</option> *@
+                            @*     </select> *@
+                            @* </div> *@
+                            <div class="form-group">
+                                <label>Position</label>
+                                <input type="text" class="form-control" />
+                            </div>
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="date" class="form-control" />
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <h5>Additional Information</h5>
+                            <div class="form-group">
+                                <label>Notes</label>
+                                <textarea class="form-control" rows="6"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </BodyContent>
+        </ReusableModal>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Example 3: Full Screen Modal -->
+    <div class="col-md-6">
+        <h4>3. Default Screen Modal</h4>
+        <ReusableModal Title="Default Screen Dashboard"
+                      TriggerButtonText="Full Screen View"
+                      TriggerButtonClass="btn btn-warning"
+                      ShowTriggerButton="true"
+                      Size="ModalSize.FullScreenSmDown"
+                      
+                      HeaderClass="bg-dark text-white"
+                      TitleFontSize="2rem"
+                      TitleColor="#ffffff"
+                      BodyFontSize="1rem"
+                      BodyStyle="padding: 2rem;">
+            <BodyContent>
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <h3>Dashboard Overview</h3>
+                            <p>This modal takes up the entire screen, perfect for detailed forms or dashboards.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Users</h5>
+                                    <p class="card-text display-4">1,234</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Revenue</h5>
+                                    <p class="card-text display-4">₵45K</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Orders</h5>
+                                    <p class="card-text display-4">567</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Products</h5>
+                                    <p class="card-text display-4">89</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h4>Recent Activity</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>User</th>
+                                            <th>Action</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < 10; i++)
+                                        {
+                                            <tr>
+                                                <td>@DateTime.Now.AddMinutes(-i*5).ToString("HH:mm")</td>
+                                                <td>User @(i + 1)</td>
+                                                <td>@(i % 2 == 0 ? "Login" : "Purchase")</td>
+                                                <td>@(i % 2 == 0 ? "Successful login" : $"Bought product {i + 1}")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </BodyContent>
+        </ReusableModal>
+    </div>
+
+    <!-- Example 4: Custom Header Colors -->
+    <div class="col-md-6">
+        <h4>4. Colored Header Modal</h4>
+        <ReusableModal Title="Important Notice"
+                      TriggerButtonText="Show Notice"
+                      TriggerButtonClass="btn btn-danger"
+                      ShowTriggerButton="true"
+                      Size="ModalSize.Default"
+                      HeaderClass="bg-danger text-white"
+                      TitleFontSize="1.3rem"
+                      TitleColor="#ffffff"
+                      BodyFontSize="1rem"
+                      BodyColor="#dc3545"
+                      SaveButtonClass="btn btn-danger"
+                      CancelButtonClass="btn btn-outline-secondary">
+            <BodyContent>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning!</strong> This action cannot be undone.
+                </div>
+                <p>Please read the terms and conditions carefully before proceeding.</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="termsCheck">
+                    <label class="form-check-label" for="termsCheck">
+                        I agree to the terms and conditions
+                    </label>
+                </div>
+            </BodyContent>
+        </ReusableModal>
+    </div>
+</div>
+
+<!-- Example 5: Responsive Fullscreen -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h4>5. Responsive Fullscreen (Fullscreen on mobile only)</h4>
+        <ReusableModal Title="Responsive Form"
+                      TriggerButtonText="Mobile Fullscreen"
+                      TriggerButtonClass="btn btn-info"
+                      ShowTriggerButton="true"
+                      Size="ModalSize.FullScreenMdDown"
+                      TitleFontSize="1.4rem"
+                      TitleColor="#17a2b8"
+                      BodyFontSize="1rem">
+            <BodyContent>
+                <p>This modal will be fullscreen on tablets and mobile devices, but normal size on desktop.</p>
+                
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" class="form-control" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" class="form-control" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea class="form-control" rows="4"></textarea>
+                </div>
+            </BodyContent>
+        </ReusableModal>
+    </div>
+</div>
+
+@code {
+    // Form fields
+    private string? selectedUser;
+    private string cashierId = string.Empty;
+    private decimal transactionLimit = 0;
+    private string? selectedControlAccount;
+    private string? selectedMobileMoney;
+    private bool isEnabled = true;
+    private List<string>? selectedCashierTypes;
+    private string? selectedShift = "morning";
+
+    // Options for selects
+    private List<BootstrapSelect.SelectOption> userOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "1", Text = "John Doe (john.doe@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "2", Text = "Jane Smith (jane.smith@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "3", Text = "Mike Johnson (mike.johnson@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "4", Text = "Sarah Wilson (sarah.wilson@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "5", Text = "David Brown (david.brown@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "6", Text = "Lisa Anderson (lisa.anderson@company.com)" },
+        new BootstrapSelect.SelectOption { Value = "7", Text = "Robert Taylor (robert.taylor@company.com)" }
+    };
+
+    private List<BootstrapSelect.SelectOption> controlAccountOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "1001", Text = "Cash in Hand", Subtext = "1001" },
+        new BootstrapSelect.SelectOption { Value = "1002", Text = "Petty Cash", Subtext = "1002" },
+        new BootstrapSelect.SelectOption { Value = "1003", Text = "Main Cash Account", Subtext = "1003" },
+        new BootstrapSelect.SelectOption { Value = "1004", Text = "Vault Account", Subtext = "1004" },
+        new BootstrapSelect.SelectOption { Value = "1005", Text = "Branch Cash Account", Subtext = "1005" },
+        new BootstrapSelect.SelectOption { Value = "1006", Text = "Teller Cash Account", Subtext = "1006" }
+    };
+
+    private List<BootstrapSelect.SelectOption> mobileMoneyOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "2001", Text = "MTN Mobile Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2002", Text = "Vodafone Cash", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2003", Text = "AirtelTigo Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2004", Text = "General Mobile Money", Icon = "glyphicon-phone" },
+        new BootstrapSelect.SelectOption { Value = "2005", Text = "Bank Mobile Money", Icon = "glyphicon-phone" }
+    };
+
+    private List<BootstrapSelect.SelectOption> cashierTypeOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "cash", Text = "Cash Transactions" },
+        new BootstrapSelect.SelectOption { Value = "mobile", Text = "Mobile Money" },
+        new BootstrapSelect.SelectOption { Value = "transfer", Text = "Bank Transfers" },
+        new BootstrapSelect.SelectOption { Value = "deposit", Text = "Deposits" },
+        new BootstrapSelect.SelectOption { Value = "withdrawal", Text = "Withdrawals" }
+    };
+
+    private List<BootstrapSelect.SelectOption> shiftOptions = new()
+    {
+        new BootstrapSelect.SelectOption { Value = "morning", Text = "Morning Shift (8:00 AM - 4:00 PM)" },
+        new BootstrapSelect.SelectOption { Value = "evening", Text = "Evening Shift (4:00 PM - 12:00 AM)" },
+        new BootstrapSelect.SelectOption { Value = "night", Text = "Night Shift (12:00 AM - 8:00 AM)" },
+        new BootstrapSelect.SelectOption { Value = "full", Text = "Full Day (8:00 AM - 8:00 PM)" }
+    };
+
+    // Event handlers
+    private void HandleUserChanged(string? value)
+    {
+        selectedUser = value;
+    }
+
+    private void HandleControlAccountChanged(string? value)
+    {
+        selectedControlAccount = value;
+    }
+
+    private void HandleMobileMoneyChanged(string? value)
+    {
+        selectedMobileMoney = value;
+    }
+
+    private void HandleCashierTypesChanged(List<string>? values)
+    {
+        selectedCashierTypes = values;
+    }
+
+    private void HandleShiftChanged(string? value)
+    {
+        selectedShift = value;
+    }
+
+    private void CancelForm()
+    {
+        // Reset form
+        selectedUser = null;
+        cashierId = string.Empty;
+        transactionLimit = 0;
+        selectedControlAccount = null;
+        selectedMobileMoney = null;
+        isEnabled = true;
+        selectedCashierTypes = null;
+        selectedShift = "morning";
+    }
+
+    private void SubmitForm()
+    {
+        // Handle form submission
+        Console.WriteLine("Form submitted!");
+    }
+}
+
+
+@code {
+    private string selectedDepartment = "";
+    
+    private List<SelectOption> departmentOptions = new()
+    {
+        new SelectOption { Value = "hr", Text = "Human Resources" },
+        new SelectOption { Value = "it", Text = "Information Technology" },
+        new SelectOption { Value = "finance", Text = "Finance" },
+        new SelectOption { Value = "marketing", Text = "Marketing" },
+        new SelectOption { Value = "sales", Text = "Sales" }
+    };
+}
+
+
+@* @page "/modal-examples" *@
+@* @using System.ComponentModel.DataAnnotations *@
+@* @using Microsoft.AspNetCore.Components.Forms *@
+@* @using NovaAccounts.Components.DataFields *@
+@* @using NovaAccounts.Components.ModalFields *@
+@* @using NovaAccounts.Components.Shared *@
+@* *@
+@* <h2>Reusable Modal Examples</h2> *@
+@* *@
+@* <div class="row mb-4"> *@
+@*     <!-- Example 1: Simple Product Form --> *@
+@*     <div class="col-md-6"> *@
+@*         <h4>1. Product Form Modal</h4> *@
+@*         <ReusableModal Title="Add New Product" *@
+@*                       TriggerButtonText="Add New Product" *@
+@*                       TriggerButtonIcon="icon-plus" *@
+@*                       ShowTriggerButton="true" *@
+@*                       Size="ModalSize.FullScreen" *@
+@*                       OnSave="SaveProduct" *@
+@*                      *@
+@*                       @bind-IsVisible="showProductModal"> *@
+@*             <BodyContent> *@
+@*                 <EditForm Model="@productModel" OnValidSubmit="SaveProduct" @ref="productForm"> *@
+@*                     <DataAnnotationsValidator /> *@
+@*                     <ValidationSummary /> *@
+@*                      *@
+@*                     <div class="form-group"> *@
+@*                         <label for="productName">Product Name</label> *@
+@*                         <InputText id="productName" class="form-control" @bind-Value="productModel.Name" /> *@
+@*                         <ValidationMessage For="@(() => productModel.Name)" /> *@
+@*                     </div> *@
+@*                      *@
+@*                     <div class="form-group"> *@
+@*                         <label for="productPrice">Price</label> *@
+@*                         <InputNumber id="productPrice" class="form-control" @bind-Value="productModel.Price" /> *@
+@*                         <ValidationMessage For="@(() => productModel.Price)" /> *@
+@*                     </div> *@
+@*                      *@
+@*                     <div class="form-group"> *@
+@*                         <label for="productDescription">Description</label> *@
+@*                         <InputTextArea id="productDescription" class="form-control" rows="3" @bind-Value="productModel.Description" /> *@
+@*                     </div> *@
+@*                      *@
+@*                     <div class="form-group"> *@
+@*                         <label for="productCategory">Category</label> *@
+@*                         <InputSelect id="productCategory" class="form-control" @bind-Value="productModel.Category"> *@
+@*                             <option value="">Select Category</option> *@
+@*                             <option value="Electronics">Electronics</option> *@
+@*                             <option value="Clothing">Clothing</option> *@
+@*                             <option value="Books">Books</option> *@
+@*                         </InputSelect> *@
+@*                     </div> *@
+@*                 </EditForm> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* *@
+@*     <!-- Example 2: Large Content Modal --> *@
+@*     <div class="col-md-6"> *@
+@*         <h4>2. Large Content Modal</h4> *@
+@*         <ReusableModal Title="Employee Details" *@
+@*                       TriggerButtonText="View Employee Details" *@
+@*                       TriggerButtonClass="btn btn-info" *@
+@*                       ShowTriggerButton="true" *@
+@*                       Size="ModalSize.FullScreen" *@
+@*                       ShowSaveButton="false" *@
+@*                       CancelButtonText="Close" *@
+@*                       BodyStyle="max-height: 500px; max-width: 1000px; overflow-y: auto;"> *@
+@*             <BodyContent> *@
+@*                 <div class="row"> *@
+@*                     <div class="col-md-6"> *@
+@*                         <h5>Personal Information</h5> *@
+@*                         <DataDisplayTable TItem="object" Items="@employeePersonalInfo" /> *@
+@*                     </div> *@
+@*                     <div class="col-md-6"> *@
+@*                         <h5>Employment Details</h5> *@
+@*                         <DataDisplayTable TItem="object" Items="@employeeWorkInfo" /> *@
+@*                     </div> *@
+@*                 </div> *@
+@*                  *@
+@*                 <hr /> *@
+@*                  *@
+@*                 <h5>Recent Activity</h5> *@
+@*                 <div class="table-responsive"> *@
+@*                     <table class="table table-striped"> *@
+@*                         <thead> *@
+@*                             <tr> *@
+@*                                 <th>Date</th> *@
+@*                                 <th>Action</th> *@
+@*                                 <th>Description</th> *@
+@*                             </tr> *@
+@*                         </thead> *@
+@*                         <tbody> *@
+@*                             @for (int i = 0; i < 10; i++) *@
+@*                             { *@
+@*                                 <tr> *@
+@*                                     <td>@DateTime.Now.AddDays(-i).ToString("dd/MM/yyyy")</td> *@
+@*                                     <td>Login</td> *@
+@*                                     <td>User logged into system</td> *@
+@*                                 </tr> *@
+@*                             } *@
+@*                         </tbody> *@
+@*                     </table> *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* <div class="row mb-4"> *@
+@*     <!-- Example 3: Custom Header & Footer --> *@
+@*     <div class="col-md-6"> *@
+@*         <h4>3. Custom Header & Footer</h4> *@
+@*         <ReusableModal Size="ModalSize.Default" *@
+@*                       TriggerButtonText="Upload Document" *@
+@*                       TriggerButtonIcon="icon-upload" *@
+@*                       TriggerButtonClass="btn btn-success" *@
+@*                       OnSave="UploadDocument" *@
+@*                       @bind-IsVisible="showUploadModal"> *@
+@*             <HeaderContent> *@
+@*                 <div class="d-flex justify-content-between align-items-center w-100"> *@
+@*                     <div> *@
+@*                         <h5 class="modal-title mb-0"> *@
+@*                             <i class="icon-upload mr-2"></i> *@
+@*                             Document Upload *@
+@*                         </h5> *@
+@*                         <small class="text-muted">Select files to upload (Max 10MB each)</small> *@
+@*                     </div> *@
+@*                     <button type="button" class="close" @onclick="CloseUploadModal"> *@
+@*                         <span>&times;</span> *@
+@*                     </button> *@
+@*                 </div> *@
+@*             </HeaderContent> *@
+@*              *@
+@*             <BodyContent> *@
+@*                 <div class="upload-area border-dashed p-4 text-center mb-3" style="border: 2px dashed #ddd; background-color: #f9f9f9;"> *@
+@*                     <i class="icon-cloud-upload" style="font-size: 3em; color: #ccc;"></i> *@
+@*                     <p class="mt-2">Drag and drop files here or click to browse</p> *@
+@*                     <InputFile OnChange="HandleFileSelection" multiple accept=".pdf,.doc,.docx,.jpg,.png" class="form-control-file" /> *@
+@*                 </div> *@
+@*                  *@
+@*                 @if (selectedFiles.Any()) *@
+@*                 { *@
+@*                     <h6>Selected Files:</h6> *@
+@*                     <ul class="list-group"> *@
+@*                         @foreach (var file in selectedFiles) *@
+@*                         { *@
+@*                             <li class="list-group-item d-flex justify-content-between align-items-center"> *@
+@*                                 <span>@file.Name (@((file.Size / 1024).ToString("N0")) KB)</span> *@
+@*                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveFile(file)">Remove</button> *@
+@*                             </li> *@
+@*                         } *@
+@*                     </ul> *@
+@*                 } *@
+@*             </BodyContent> *@
+@*              *@
+@*             <FooterContent> *@
+@*                 <div class="d-flex justify-content-between align-items-center w-100"> *@
+@*                     <div> *@
+@*                         <small class="text-muted">@selectedFiles.Count file(s) selected</small> *@
+@*                     </div> *@
+@*                     <div> *@
+@*                         <button type="button" class="btn btn-secondary mr-2" @onclick="CloseUploadModal">Cancel</button> *@
+@*                         <button type="button" class="btn btn-primary" @onclick="UploadDocument" disabled="@(!selectedFiles.Any())"> *@
+@*                             <i class="icon-upload mr-1"></i> *@
+@*                             Upload Files *@
+@*                         </button> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </FooterContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* *@
+@*     <!-- Example 4: Full Screen Modal --> *@
+@*     <div class="col-md-6"> *@
+@*         <h4>4. Full Screen Data Entry</h4> *@
+@*         <ReusableModal Title="Complete Employee Registration" *@
+@*                       TriggerButtonText="Full Registration Form" *@
+@*                       TriggerButtonClass="btn btn-warning" *@
+@*                       BodyFontSize="0.2rem" *@
+@*                       BodyColor="#F54927" *@
+@*                       Size="ModalSize.FullScreenXlDown" *@
+@*                       SaveButtonText="Register Employee" *@
+@*                       OnSave="RegisterEmployee"> *@
+@*             <BodyContent> *@
+@*                 <div class="container-fluid"> *@
+@*                     <div class="row"> *@
+@*                         <div class="col-md-4"> *@
+@*                             <h5>Basic Information</h5> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>First Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Last Name</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Email</label> *@
+@*                                 <input type="email" class="form-control" /> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                          *@
+@*                         <div class="col-md-4"> *@
+@*                             <h5>Employment Details</h5> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Department</label> *@
+@*                                 <select class="form-control"> *@
+@*                                     <option>HR</option> *@
+@*                                     <option>IT</option> *@
+@*                                     <option>Finance</option> *@
+@*                                 </select> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Position</label> *@
+@*                                 <input type="text" class="form-control" /> *@
+@*                             </div> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Start Date</label> *@
+@*                                 <input type="date" class="form-control" /> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                          *@
+@*                         <div class="col-md-4"> *@
+@*                             <h5>Additional Information</h5> *@
+@*                             <div class="form-group"> *@
+@*                                 <label>Notes</label> *@
+@*                                 <textarea class="form-control" rows="6"></textarea> *@
+@*                             </div> *@
+@*                         </div> *@
+@*                     </div> *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* <!-- Example 5: Programmatic Control --> *@
+@* <div class="row mb-4"> *@
+@*     <div class="col-md-12"> *@
+@*         <h4>5. Programmatic Control (No Trigger Button)</h4> *@
+@*         <button class="btn btn-primary mr-2" @onclick="OpenConfirmModal">Delete Item</button> *@
+@*         <button class="btn btn-success mr-2" @onclick="OpenSuccessModal">Show Success</button> *@
+@*          *@
+@*         <!-- Confirmation Modal --> *@
+@*         <ReusableModal Title="Confirm Delete" *@
+@*                       ShowTriggerButton="false" *@
+@*                       Size="ModalSize.Default" *@
+@*                       SaveButtonText="Delete" *@
+@*                       SaveButtonClass="btn btn-danger" *@
+@*                       CloseOnBackdrop="false" *@
+@*                       @bind-IsVisible="showConfirmModal" *@
+@*                       OnSave="ConfirmDelete"> *@
+@*             <BodyContent> *@
+@*                 <div class="text-center"> *@
+@*                     <i class="icon-warning" style="font-size: 3em; color: #dc3545;"></i> *@
+@*                     <h5 class="mt-3">Are you sure?</h5> *@
+@*                     <p>This action cannot be undone. The item will be permanently deleted.</p> *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*          *@
+@*         <!-- Success Modal --> *@
+@*         <ReusableModal Title="Success!" *@
+@*                       ShowTriggerButton="false" *@
+@*                       Size="ModalSize.Small" *@
+@*                       ShowSaveButton="false" *@
+@*                       CancelButtonText="OK" *@
+@*                       CancelButtonClass="btn btn-success" *@
+@*                       HeaderClass="bg-success text-white" *@
+@*                       @bind-IsVisible="showSuccessModal"> *@
+@*             <BodyContent> *@
+@*                 <div class="text-center"> *@
+@*                     <i class="icon-check-circle" style="font-size: 3em; color: #28a745;"></i> *@
+@*                     <h5 class="mt-3">Operation Completed!</h5> *@
+@*                     <p>Your request has been processed successfully.</p> *@
+@*                 </div> *@
+@*             </BodyContent> *@
+@*         </ReusableModal> *@
+@*     </div> *@
+@* </div> *@
+@* *@
+@* @code { *@
+@*     // Modal visibility states *@
+@*     private bool showProductModal = false; *@
+@*     private bool showUploadModal = false; *@
+@*     private bool showConfirmModal = false; *@
+@*     private bool showSuccessModal = false; *@
+@* *@
+@*     // Product form *@
+@*     private ProductModel productModel = new(); *@
+@*     private EditForm productForm; *@
+@* *@
+@*     // File upload *@
+@*     private List<IBrowserFile> selectedFiles = new(); *@
+@* *@
+@*     // Employee data for display *@
+@*     private List<DataDisplayItem> employeePersonalInfo = new() *@
+@*     { *@
+@*         new DataDisplayItem { Label = "EMPLOYEE ID", Value = "EMP001" }, *@
+@*         new DataDisplayItem { Label = "FULL NAME", Value = "John Doe" }, *@
+@*         new DataDisplayItem { Label = "EMAIL", Value = "john.doe@company.com" }, *@
+@*         new DataDisplayItem { Label = "PHONE", Value = "+233 20 123 4567" } *@
+@*     }; *@
+@* *@
+@*     private List<DataDisplayItem> employeeWorkInfo = new() *@
+@*     { *@
+@*         new DataDisplayItem { Label = "DEPARTMENT", Value = "Engineering" }, *@
+@*         new DataDisplayItem { Label = "POSITION", Value = "Senior Developer" }, *@
+@*         new DataDisplayItem { Label = "SALARY", Value = "₵8,500.00" }, *@
+@*         new DataDisplayItem { Label = "START DATE", Value = "15/01/2022" } *@
+@*     }; *@
+@* *@
+@*     // Event handlers *@
+@*     private async Task SaveProduct() *@
+@*     { *@
+@*         // Simulate API call *@
+@*         await Task.Delay(500); *@
+@*         showProductModal = false; *@
+@*         // Show success message or update UI *@
+@*     } *@
+@* *@
+@*     private async Task UploadDocument() *@
+@*     { *@
+@*         // Handle file upload logic *@
+@*         await Task.Delay(1000); *@
+@*         selectedFiles.Clear(); *@
+@*         showUploadModal = false; *@
+@*     } *@
+@* *@
+@*     private async Task RegisterEmployee() *@
+@*     { *@
+@*         // Handle employee registration *@
+@*         await Task.Delay(800); *@
+@*         // Close modal and show success *@
+@*     } *@
+@* *@
+@*     private void OpenConfirmModal() => showConfirmModal = true; *@
+@*     private void OpenSuccessModal() => showSuccessModal = true; *@
+@*     private void CloseUploadModal() => showUploadModal = false; *@
+@* *@
+@*     private async Task ConfirmDelete() *@
+@*     { *@
+@*         // Handle delete logic *@
+@*         await Task.Delay(300); *@
+@*         showConfirmModal = false; *@
+@*         showSuccessModal = true; *@
+@*     } *@
+@* *@
+@*     private void HandleFileSelection(InputFileChangeEventArgs e) *@
+@*     { *@
+@*         selectedFiles.Clear(); *@
+@*         selectedFiles.AddRange(e.GetMultipleFiles(10)); *@
+@*     } *@
+@* *@
+@*     private void RemoveFile(IBrowserFile file) *@
+@*     { *@
+@*         selectedFiles.Remove(file); *@
+@*     } *@
+@*      *@
+@*      *@
+@*     public class ProductModel *@
+@*     { *@
+@*         [Required] *@
+@*         public string Name { get; set; } = ""; *@
+@*      *@
+@*         [Required] *@
+@*         [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")] *@
+@*         public decimal Price { get; set; } *@
+@*      *@
+@*         public string Description { get; set; } = ""; *@
+@*      *@
+@*         [Required] *@
+@*         public string Category { get; set; } = ""; *@
+@*     } *@
+@* } *@
+
+
+

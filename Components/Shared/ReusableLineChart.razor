@@ -1,0 +1,128 @@
+@using Microsoft.JSInterop
+@using NovaAccounts.SharedModels.Charts.LineChart
+
+@inject IJSRuntime JSRuntime
+
+<div class="morris-chart-container">
+    @if (ShowLoading && IsLoading)
+    {
+        <div class="morris-loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    <div id="@ElementId" class="morris-chart @CssClass"></div>
+</div>
+
+@code {
+    [Parameter] public string ElementId { get; set; } = $"line-chart-{Guid.NewGuid():N}";
+    [Parameter] public List<LineChartData> Data { get; set; } = new();
+    [Parameter] public List<string> YKeys { get; set; } = new() { "a", "b" };
+    [Parameter] public List<string> Labels { get; set; } = new() { "Series A", "Series B" };
+    [Parameter] public List<string> LineColors { get; set; } = new() { "#3598DC", "#555555" };
+    [Parameter] public string XKey { get; set; } = "year";
+    [Parameter] public bool ParseTime { get; set; } = false;
+    [Parameter] public string CssClass { get; set; } = "rld";
+    [Parameter] public bool ShowLoading { get; set; } = true;
+    [Parameter] public EventCallback OnChartRendered { get; set; }
+
+    private bool IsLoading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadChart();
+        }
+    }
+
+    public async Task UpdateChart(List<LineChartData> newData)
+    {
+        IsLoading = true;
+        StateHasChanged();
+        
+        Data = newData;
+        await LoadChart();
+    }
+
+    private async Task LoadChart()
+    {
+        try
+        {
+            var options = new LineChartOptions
+            {
+                ElementId = ElementId,
+                ParseTime = ParseTime,
+                Data = Data,
+                XKey = XKey,
+                YKeys = YKeys,
+                Labels = Labels,
+                LineColors = LineColors
+            };
+
+            await JSRuntime.InvokeVoidAsync("MorrisCharts.createLineChart", options);
+            IsLoading = false;
+            StateHasChanged();
+            
+            await OnChartRendered.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading line chart: {ex.Message}");
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}
+
+<script>
+    window.MorrisCharts = {
+        charts: {},
+
+        createLineChart: function (options) {
+            try {
+                // Destroy existing chart if it exists
+                if (this.charts[options.elementId]) {
+                    this.charts[options.elementId] = null;
+                }
+
+                // Create new chart
+                this.charts[options.elementId] = Morris.Line({
+                    element: options.elementId,
+                    parseTime: options.parseTime,
+                    data: options.data,
+                    xkey: options.xKey,
+                    ykeys: options.yKeys,
+                    labels: options.labels,
+                    lineColors: options.lineColors,
+                    resize: true,
+                    hideHover: 'auto'
+                });
+            } catch (error) {
+                console.error('Error creating line chart:', error);
+            }
+        },
+
+        createDonutChart: function (options) {
+            try {
+                // Destroy existing chart if it exists
+                if (this.charts[options.elementId]) {
+                    this.charts[options.elementId] = null;
+                }
+
+                // Create new chart
+                this.charts[options.elementId] = Morris.Donut({
+                    element: options.elementId,
+                    colors: options.colors,
+                    data: options.data,
+                    resize: true,
+                    hideHover: 'auto'
+                });
+            } catch (error) {
+                console.error('Error creating donut chart:', error);
+            }
+        }
+    };
+
+</script>

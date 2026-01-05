@@ -1,0 +1,55 @@
+﻿@page "/counter"
+@using NovaAccounts.Components.ComponentUsages.Modals
+@using NovaAccounts.Components.ComponentUsages.Statistics
+@using NovaAccounts.Components.ComponentUsages.Table
+@using NovaAccounts.Components.Layout
+@rendermode InteractiveServer
+
+<PageTitle>Home</PageTitle>
+
+
+<!-- BEGIN CONTAINER -->
+<div class="page-container">
+    <SideMenu></SideMenu>
+
+    <!-- BEGIN CONTENT -->
+    <div class="page-content-wrapper">
+        <!-- BEGIN CONTENT BODY -->
+        <div class="page-content">
+            <!-- BEGIN PAGE HEADER-->
+            <!-- BEGIN PAGE BAR -->
+
+            <!-- END PAGE BAR -->
+            <!-- BEGIN PAGE TITLE-->
+            <h1 class="page-title">
+                @*<marquee style="color:red;">***Alert!!! This is a Novalotto test platform***</marquee>*@
+                <small></small>
+            </h1>
+            <!-- END PAGE TITLE-->
+            <!-- END PAGE HEADER-->
+            
+       
+            
+            <StatisticCard></StatisticCard>
+            <DataTable></DataTable>
+            <DetailsTable></DetailsTable>
+            <ModalExample></ModalExample>
+            
+         
+
+
+
+        </div>
+        <!-- END CONTENT BODY -->
+    </div>
+    <!-- END CONTENT -->
+    <!-- BEGIN QUICK SIDEBAR -->
+    <a href="javascript:;" class="page-quick-sidebar-toggler">
+        <i class="icon-login"></i>
+    </a>
+    <div class="page-quick-sidebar-wrapper" data-close-on-body-click="false" id="activities">
+
+    </div>
+    <!-- END QUICK SIDEBAR -->
+</div>
+<!-- END CONTAINER -->

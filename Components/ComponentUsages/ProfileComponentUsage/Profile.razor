@@ -1,0 +1,209 @@
+@page "/user-form-example"
+@using Microsoft.AspNetCore.Components.Forms
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.UserProfile
+@rendermode InteractiveServer
+<h3>User Form Example</h3>
+@* The image uploads have to be handled by the backend otherwise it will cause redirect problems. *@
+<UserFormComponent 
+    FormData="@userModel"
+    Roles="@roles"
+    Fields="@fields"
+    ActionButtons="@actionButtons"
+    ShowRoleCard="true"
+    RoleCardTitle="Role"
+    MainCardTitle="Biometry"
+    MainCardBorderColor="success"
+    ShowImageUpload="true"
+    ImageSource="@imageSource"
+    ImageAlt="User Photo"
+    OnValidSubmit="@HandleFormSubmit"
+    OnFileChange="@HandleFileUpload" />
+
+@code {
+    private UserModel userModel = new();
+    private string imageSource = "/placeholder-image.jpg";
+    private List<RoleItem> roles = new();
+    private List<FormField> fields = new();
+    private List<ActionButton> actionButtons = new();
+
+    protected override void OnInitialized()
+    {
+        // Configure Roles
+        roles = new List<RoleItem>
+        {
+            new RoleItem { Id = "AC_OFFICER_WITH_PAYROLL", Name = "AC OFFICER WITH PAYROLL", Label = "AC OFFICER WITH PAYROLL", IsSelected = false },
+            new RoleItem { Id = "ACCOUNTS_OFFICER", Name = "ACCOUNTS OFFICER", Label = "ACCOUNTS OFFICER", IsSelected = false },
+            new RoleItem { Id = "ACCOUNTS_OFFICER_KSI", Name = "ACCOUNTS OFFICER KSI", Label = "ACCOUNTS OFFICER KSI", IsSelected = false },
+            new RoleItem { Id = "ACCOUNTS_OFFICER_MAIN", Name = "ACCOUNTS OFFICER MAIN", Label = "ACCOUNTS OFFICER MAIN", IsSelected = false },
+            new RoleItem { Id = "ADMINISTRATIVE_OFFICER", Name = "ADMINISTRATIVE OFFICER", Label = "ADMINISTRATIVE OFFICER", IsSelected = false },
+            new RoleItem { Id = "FRONT_DESK", Name = "FRONT DESK", Label = "FRONT DESK", IsSelected = false },
+            new RoleItem { Id = "SUPER_ADMIN", Name = "SUPER ADMIN", Label = "SUPER ADMIN", IsSelected = false, IsDisabled = true } // Example: disabled role
+        };
+
+        // Configure Form Fields
+        fields = new List<FormField>
+        {
+            new FormField
+            {
+                Name = "Region",
+                Label = "Region",
+                FieldType = FormFieldType.Select,
+                Placeholder = "Regions...",
+                IsRequired = true,
+                Order = 1,
+                Options = new List<SelectOption>
+                {
+                    new SelectOption { Value = "1", Text = "ACCRA CENTRAL" },
+                    new SelectOption { Value = "2", Text = "KANESHIE" },
+                    new SelectOption { Value = "3", Text = "MADINA" },
+                    new SelectOption { Value = "5", Text = "KASOA" },
+                    new SelectOption { Value = "6", Text = "TESHIE" },
+                    new SelectOption { Value = "7", Text = "NEW TOWN" },
+                    new SelectOption { Value = "8", Text = "CHORKOR" },
+                    new SelectOption { Value = "9", Text = "AGBOGBLOSHIE" },
+                    new SelectOption { Value = "10", Text = "DANSOMAN" }
+                }
+            },
+            new FormField
+            {
+                Name = "FirstName",
+                Label = "First Name",
+                FieldType = FormFieldType.Text,
+                IsRequired = true,
+                Order = 2
+            },
+            new FormField
+            {
+                Name = "LastName",
+                Label = "Last Name",
+                FieldType = FormFieldType.Text,
+                IsRequired = true,
+                Order = 3
+            },
+            new FormField
+            {
+                Name = "Gender",
+                Label = "Gender",
+                FieldType = FormFieldType.Radio,
+                IsRequired = true,
+                Order = 4,
+                Value = "FEMALE",
+                Options = new List<SelectOption>
+                {
+                    new SelectOption { Value = "MALE", Text = "Male" },
+                    new SelectOption { Value = "FEMALE", Text = "Female" }
+                }
+            },
+            new FormField
+            {
+                Name = "DOB",
+                Label = "DOB",
+                FieldType = FormFieldType.DatePicker,
+                IsRequired = true,
+                Order = 5,
+                Day = 5,
+                Month = 6,
+                Year = 1956
+            }
+        };
+
+        // Configure Action Buttons
+        actionButtons = new List<ActionButton>
+        {
+            new ActionButton
+            {
+                Label = "Save Changes",
+                ButtonType = ButtonType.Submit,
+                ColorClass = "success",
+                Order = 1
+            },
+            new ActionButton
+            {
+                Label = "Reset Password",
+                ButtonType = ButtonType.Link,
+                ColorClass = "danger",
+                Url = "/account/reset-password",
+                Order = 2
+            },
+            new ActionButton
+            {
+                Label = "Cancel",
+                ButtonType = ButtonType.Link,
+                ColorClass = "secondary",
+                Url = "/users",
+                Order = 3
+            }
+        };
+    }
+
+    private async Task HandleFormSubmit(EditContext context)
+    {
+        // Get selected roles
+        var selectedRoles = roles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
+        
+        // Get field values
+        var fieldValues = fields.ToDictionary(f => f.Name, f => f.Value);
+        
+        Console.WriteLine("Form submitted!");
+        Console.WriteLine($"Selected Roles: {string.Join(", ", selectedRoles)}");
+        
+        // Process form data here
+        // await SaveUserData();
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            var buffer = new byte[file.Size];
+            await file.OpenReadStream().ReadAsync(buffer);
+            imageSource = $"data:image/png;base64,{Convert.ToBase64String(buffer)}";
+            StateHasChanged();
+        }
+    }
+    
+    public class UserModel
+    {
+        public string UserId { get; set; }
+        // Add other properties as needed
+    }
+}
+
+
+@* 
+<UserFormComponent 
+    FormData="@userModel"
+    Fields="@simpleFields"
+    ActionButtons="@simpleButtons"
+    ShowRoleCard="false"
+    MainCardTitle="User Information"
+    MainCardBorderColor="primary"
+    ShowImageUpload="false"
+    OnValidSubmit="@HandleFormSubmit" />
+
+@code {
+    private List<FormField> simpleFields = new()
+    {
+        new FormField { Name = "Email", Label = "Email Address", FieldType = FormFieldType.Text, IsRequired = true, Order = 1 },
+        new FormField { Name = "Phone", Label = "Phone Number", FieldType = FormFieldType.Text, IsRequired = true, Order = 2 },
+        new FormField { Name = "Department", Label = "Department", FieldType = FormFieldType.Select, IsRequired = true, Order = 3,
+            Options = new List<SelectOption>
+            {
+                new SelectOption { Value = "IT", Text = "IT" },
+                new SelectOption { Value = "HR", Text = "HR" },
+                new SelectOption { Value = "Finance", Text = "Finance" }
+            }
+        }
+    };
+    
+    private List<ActionButton> simpleButtons = new()
+    {
+        new ActionButton { Label = "Submit", ButtonType = ButtonType.Submit, ColorClass = "primary", Order = 1 },
+        new ActionButton { Label = "Cancel", ButtonType = ButtonType.Button, ColorClass = "secondary", Order = 2, 
+            OnClick = () => { /* Navigate back */ } }
+    };
+}
+*@
+

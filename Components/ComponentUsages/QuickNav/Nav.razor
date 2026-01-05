@@ -1,0 +1,104 @@
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ModalFields
+@using NovaAccounts.SharedModels.QuickNav
+
+<ReusableQuickNav NavItems="@navigationItems" 
+                  NavId="inventoryNav" 
+                  ActiveUrl="@currentUrl" />
+
+<ReusableModal @ref="quickActionModal"
+               Title="Quick Action"
+               TriggerButtonText="Small Modal"
+               TriggerButtonClass="btn btn-info"
+               ShowTriggerButton="false"
+               Size="ModalSize.Small"
+               TitleFontSize="1.5rem"
+               TitleColor="#007bff"
+               BodyFontSize="0.9rem"
+               BodyColor="#495057"
+               ButtonFontSize="0.8rem">
+    <BodyContent>
+        <p>This is a small modal with custom styling.</p>
+        <div class="form-group">
+            <label>Quick Input:</label>
+            <input type="text" class="form-control" placeholder="Enter value"/>
+        </div>
+    </BodyContent>
+</ReusableModal>
+
+@code {
+    private string currentUrl = "/Inventories/AddNewInventoryItem";
+    private ReusableModal quickActionModal = null!;
+    
+    private List<NavItem> navigationItems = new();
+
+    protected override void OnInitialized()
+    {
+        navigationItems = new()
+        {
+            new NavItem
+            {
+                Text = "Add New Item",
+                Url = "/clients",
+                IconClass = "icon-calculator",
+                OnClick = async () => await OpenModal(), // Link to modal
+                PreventNavigation = true // Prevent URL navigation
+            },
+            new NavItem
+            {
+                Text = "View Inventory",
+                Url = "/Inventories/ViewInventory",
+                IconClass = "icon-list"
+            },
+            new NavItem
+            {
+                Text = "Settings",
+                Url = "/Settings",
+                IconClass = "icon-settings"
+            }
+        };
+    }
+
+    private async Task OpenModal()
+    {
+        if (quickActionModal != null)
+        {
+            await quickActionModal.OpenModal();
+        }
+    }
+}
+@* <ReusableQuickNav NavItems="@navigationItems"  *@
+@*          NavId="inventoryNav"  *@
+@*          ActiveUrl="@currentUrl" /> *@
+@* *@
+@* @code { *@
+@*     private string currentUrl = "/Inventories/AddNewInventoryItem"; *@
+@*      *@
+@*     private List<NavItem> navigationItems = new() *@
+@*     { *@
+@*         new NavItem *@
+@*         { *@
+@*             Text = "Add New Item", *@
+@*             Url = "/clients", *@
+@*             IconClass = "icon-calculator" *@
+@*         }, *@
+@*         new NavItem *@
+@*         { *@
+@*             Text = "View Inventory", *@
+@*             Url = "/Inventories/ViewInventory", *@
+@*             IconClass = "icon-list" *@
+@*         }, *@
+@*         new NavItem *@
+@*         { *@
+@*             Text = "Settings", *@
+@*             Url = "/Settings", *@
+@*             IconClass = "icon-settings" *@
+@*         } *@
+@*     }; *@
+@* *@
+@*     protected override void OnInitialized() *@
+@*     { *@
+@*         // You can also get the current URL from NavigationManager *@
+@*         // currentUrl = NavigationManager.Uri; *@
+@*     } *@
+@* } *@

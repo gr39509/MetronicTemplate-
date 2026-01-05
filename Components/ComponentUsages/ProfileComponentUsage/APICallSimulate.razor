@@ -1,0 +1,466 @@
+@page "/profile-with-api"
+@page "/profile-with-api/{UserId}"
+@using Microsoft.AspNetCore.Components.Forms
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.UserProfile
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@* The image uploads have to be handled by the backend otherwise it will cause redirect problems. *@
+<h3>User Form Example</h3>
+
+@if (isLoading)
+{
+    <div class="text-center my-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading user data...</p>
+    </div>
+}
+else if (loadError != null)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Error:</strong> @loadError
+        <button class="btn btn-sm btn-outline-danger ms-3" @onclick="LoadUserData">Retry</button>
+    </div>
+}
+else
+{
+    <UserFormComponent 
+        FormData="@userModel"
+        Roles="@roles"
+        Fields="@fields"
+        ActionButtons="@actionButtons"
+        ShowRoleCard="true"
+        RoleCardTitle="Role"
+        MainCardTitle="Biometry"
+        MainCardBorderColor="success"
+        ShowImageUpload="true"
+        ImageSource="@imageSource"
+        ImageAlt="User Photo"
+        OnValidSubmit="@HandleFormSubmit"
+        OnFileChange="@HandleFileUpload" />
+
+    @if (isSaving)
+    {
+        <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+             style="background-color: rgba(0,0,0,0.5); z-index: 9999;">
+            <div class="bg-white p-4 rounded shadow">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 mb-0">Saving changes...</p>
+            </div>
+        </div>
+    }
+
+    @if (saveMessage != null)
+    {
+        <div class="alert @(saveSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show mt-3" role="alert">
+            @saveMessage
+            <button type="button" class="btn-close" @onclick="@(() => saveMessage = null)"></button>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public string? UserId { get; set; }
+
+    private UserModel userModel = new();
+    private string imageSource = "/placeholder-image.jpg";
+    private List<RoleItem> roles = new();
+    private List<FormField> fields = new();
+    private List<ActionButton> actionButtons = new();
+
+    private bool isLoading = false;
+    private bool isSaving = false;
+    private string? loadError = null;
+    private string? saveMessage = null;
+    private bool saveSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeFormConfiguration();
+        await LoadUserData();
+    }
+
+    private void InitializeFormConfiguration()
+    {
+        // Configure Roles
+        roles = new List<RoleItem>
+        {
+            new RoleItem { Id = "AC_OFFICER_WITH_PAYROLL", Name = "AC OFFICER WITH PAYROLL", Label = "AC OFFICER WITH PAYROLL", IsSelected = false },
+            new RoleItem { Id = "ACCOUNTS_OFFICER", Name = "ACCOUNTS OFFICER", Label = "ACCOUNTS OFFICER", IsSelected = false },
+            new RoleItem { Id = "ACCOUNTS_OFFICER_KSI", Name = "ACCOUNTS OFFICER KSI", Label = "ACCOUNTS OFFICER KSI", IsSelected = false },
+            new RoleItem { Id = "ACCOUNTS_OFFICER_MAIN", Name = "ACCOUNTS OFFICER MAIN", Label = "ACCOUNTS OFFICER MAIN", IsSelected = false },
+            new RoleItem { Id = "ADMINISTRATIVE_OFFICER", Name = "ADMINISTRATIVE OFFICER", Label = "ADMINISTRATIVE OFFICER", IsSelected = false },
+            new RoleItem { Id = "FRONT_DESK", Name = "FRONT DESK", Label = "FRONT DESK", IsSelected = false },
+            new RoleItem { Id = "SUPER_ADMIN", Name = "SUPER ADMIN", Label = "SUPER ADMIN", IsSelected = false }
+        };
+
+        // Configure Form Fields
+        fields = new List<FormField>
+        {
+            new FormField
+            {
+                Name = "Region",
+                Label = "Region",
+                FieldType = FormFieldType.Select,
+                Placeholder = "Regions...",
+                IsRequired = true,
+                Order = 1,
+                Options = new List<SelectOption>
+                {
+                    new SelectOption { Value = "1", Text = "ACCRA CENTRAL" },
+                    new SelectOption { Value = "2", Text = "KANESHIE" },
+                    new SelectOption { Value = "3", Text = "MADINA" },
+                    new SelectOption { Value = "5", Text = "KASOA" },
+                    new SelectOption { Value = "6", Text = "TESHIE" },
+                    new SelectOption { Value = "7", Text = "NEW TOWN" },
+                    new SelectOption { Value = "8", Text = "CHORKOR" },
+                    new SelectOption { Value = "9", Text = "AGBOGBLOSHIE" },
+                    new SelectOption { Value = "10", Text = "DANSOMAN" }
+                }
+            },
+            new FormField
+            {
+                Name = "FirstName",
+                Label = "First Name",
+                FieldType = FormFieldType.Text,
+                Placeholder = "First Name",
+                IsRequired = true,
+                Order = 2
+            },
+            new FormField
+            {
+                Name = "Middle Name",
+                Label = "Middle Name",
+                FieldType = FormFieldType.Text,
+                IsRequired = true,
+                Order = 3
+            },
+            new FormField
+            {
+                Name = "LastName",
+                Label = "Last Name",
+                FieldType = FormFieldType.Text,
+                IsRequired = true,
+                Order = 3
+            },
+            new FormField
+            {
+                Name = "Email",
+                Label = "Email",
+                FieldType = FormFieldType.Email,
+                Placeholder = "email@example.com",
+                IsRequired = true,
+                Order = 2
+            },
+            new FormField
+            {
+                Name = "Gender",
+                Label = "Gender",
+                FieldType = FormFieldType.Radio,
+                IsRequired = true,
+                Order = 4,
+                Options = new List<SelectOption>
+                {
+                    new SelectOption { Value = "MALE", Text = "Male" },
+                    new SelectOption { Value = "FEMALE", Text = "Female" }
+                }
+            },
+            new FormField
+            {
+                Name = "DOB",
+                Label = "DOB",
+                FieldType = FormFieldType.DatePicker,
+                IsRequired = true,
+                Order = 5
+            }
+        };
+
+        // Configure Action Buttons
+        actionButtons = new List<ActionButton>
+        {
+            new ActionButton
+            {
+                Label = "Save Changes",
+                ButtonType = ButtonType.Submit,
+                ColorClass = "success",
+                Order = 1
+            },
+            new ActionButton
+            {
+                Label = "Reset Password",
+                ButtonType = ButtonType.Button,
+                ColorClass = "danger",
+                Order = 2,
+                OnClick = () => HandleResetPassword()
+            },
+            new ActionButton
+            {
+                Label = "Cancel",
+                ButtonType = ButtonType.Button,
+                ColorClass = "secondary",
+                Order = 3,
+                OnClick = () => Navigation.NavigateTo("/Home")
+            }
+        };
+    }
+
+    private async Task LoadUserData()
+    {
+        isLoading = true;
+        loadError = null;
+        StateHasChanged();
+
+        try
+        {
+            // Simulate API call delay
+            await Task.Delay(1000);
+
+            // Simulate API response
+            var userData = await SimulateGetUserFromAPI(UserId);
+
+            if (userData != null)
+            {
+                // Populate user model
+                userModel.UserId = userData.UserId;
+                imageSource = !string.IsNullOrEmpty(userData.ProfilePicture) 
+                    ? userData.ProfilePicture 
+                    : "/placeholder-image.jpg";
+
+                // Populate form fields
+                fields.First(f => f.Name == "Region").Value = userData.RegionId?.ToString();
+                fields.First(f => f.Name == "FirstName").Value = userData.FirstName;
+                fields.First(f => f.Name == "LastName").Value = userData.LastName;
+                fields.First(f => f.Name == "Gender").Value = userData.Gender;
+                
+                var dobField = fields.First(f => f.Name == "DOB");
+                if (userData.DateOfBirth.HasValue)
+                {
+                    dobField.Day = userData.DateOfBirth.Value.Day;
+                    dobField.Month = userData.DateOfBirth.Value.Month;
+                    dobField.Year = userData.DateOfBirth.Value.Year;
+                }
+
+                // Set selected roles
+                foreach (var role in roles)
+                {
+                    role.IsSelected = userData.Roles?.Contains(role.Name) ?? false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Failed to load user data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleFormSubmit(EditContext context)
+    {
+        isSaving = true;
+        saveMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // Collect form data
+            var selectedRoles = roles.Where(r => r.IsSelected).Select(r => r.Name).ToList();
+            
+            var userData = new UserDataDTO
+            {
+                UserId = userModel.UserId ?? Guid.NewGuid().ToString(),
+                RegionId = int.TryParse(fields.First(f => f.Name == "Region").Value, out var regionId) ? regionId : null,
+                FirstName = fields.First(f => f.Name == "FirstName").Value,
+                LastName = fields.First(f => f.Name == "LastName").Value,
+                Gender = fields.First(f => f.Name == "Gender").Value,
+                Roles = selectedRoles,
+                ProfilePicture = imageSource != "/placeholder-image.jpg" ? imageSource : null
+            };
+
+            var dobField = fields.First(f => f.Name == "DOB");
+            if (dobField.Day.HasValue && dobField.Month.HasValue && dobField.Year.HasValue)
+            {
+                userData.DateOfBirth = new DateTime(dobField.Year.Value, dobField.Month.Value, dobField.Day.Value);
+            }
+
+            // Simulate API call
+            await Task.Delay(1500);
+            var result = await SimulateSaveUserToAPI(userData);
+
+            if (result.Success)
+            {
+                saveSuccess = true;
+                saveMessage = "User data saved successfully!";
+                
+                // Optional: Navigate back after success
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/Home");
+            }
+            else
+            {
+                saveSuccess = false;
+                saveMessage = $"Failed to save: {result.ErrorMessage}";
+            }
+        }
+        catch (Exception ex)
+        {
+            saveSuccess = false;
+            saveMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                // Validate file size (5MB max)
+                if (file.Size > 5 * 1024 * 1024)
+                {
+                    saveMessage = "File size must be less than 5MB";
+                    saveSuccess = false;
+                    return;
+                }
+
+                // Validate file type
+                if (!file.ContentType.StartsWith("image/"))
+                {
+                    saveMessage = "Only image files are allowed";
+                    saveSuccess = false;
+                    return;
+                }
+
+                var buffer = new byte[file.Size];
+                await file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).ReadAsync(buffer);
+                imageSource = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+                
+                // Optional: Upload to server immediately
+                // await UploadImageToAPI(imageSource);
+                
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                saveMessage = $"Failed to upload image: {ex.Message}";
+                saveSuccess = false;
+            }
+        }
+    }
+
+    private async Task HandleResetPassword()
+    {
+        if (string.IsNullOrEmpty(userModel.UserId))
+        {
+            saveMessage = "Cannot reset password: User ID not found";
+            saveSuccess = false;
+            return;
+        }
+
+        var confirmed = true; // In real app, use JS interop for confirmation
+        if (confirmed)
+        {
+            try
+            {
+                // Simulate API call
+                await Task.Delay(1000);
+                await SimulateResetPasswordAPI(userModel.UserId);
+                
+                saveMessage = "Password reset email sent successfully!";
+                saveSuccess = true;
+            }
+            catch (Exception ex)
+            {
+                saveMessage = $"Failed to reset password: {ex.Message}";
+                saveSuccess = false;
+            }
+        }
+    }
+
+    // Simulated API Methods
+    private async Task<UserDataDTO?> SimulateGetUserFromAPI(string? userId)
+    {
+        // Simulate API call
+        await Task.Delay(500);
+
+        // Return mock data if userId exists, otherwise return new user template
+        if (!string.IsNullOrEmpty(userId))
+        {
+            return new UserDataDTO
+            {
+                UserId = userId,
+                FirstName = "John",
+                LastName = "Doe",
+                Gender = "MALE",
+                RegionId = 1,
+                DateOfBirth = new DateTime(1990, 5, 15),
+                Roles = new List<string> { "ACCOUNTS OFFICER", "FRONT DESK" },
+                ProfilePicture = null
+            };
+        }
+
+        return new UserDataDTO { UserId = Guid.NewGuid().ToString() };
+    }
+
+    private async Task<SaveResult> SimulateSaveUserToAPI(UserDataDTO userData)
+    {
+        // Simulate API call
+        await Task.Delay(1000);
+
+        // Simulate validation
+        if (string.IsNullOrEmpty(userData.FirstName))
+        {
+            return new SaveResult { Success = false, ErrorMessage = "First name is required" };
+        }
+
+        // Simulate random failure (10% chance)
+        if (new Random().Next(100) < 10)
+        {
+            return new SaveResult { Success = false, ErrorMessage = "Network error occurred" };
+        }
+
+        return new SaveResult { Success = true };
+    }
+
+    private async Task SimulateResetPasswordAPI(string userId)
+    {
+        // Simulate API call
+        await Task.Delay(500);
+        Console.WriteLine($"Password reset initiated for user: {userId}");
+    }
+
+    // DTOs and Models
+    public class UserModel
+    {
+        public string? UserId { get; set; }
+    }
+
+    public class UserDataDTO
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Gender { get; set; }
+        public int? RegionId { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public List<string>? Roles { get; set; }
+        public string? ProfilePicture { get; set; }
+    }
+
+    public class SaveResult
+    {
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+}

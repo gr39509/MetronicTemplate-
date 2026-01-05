@@ -1,0 +1,498 @@
+@page "/message/{sessionId}"
+@using Microsoft.AspNetCore.Components.Routing
+@using NovaAccounts.Shared
+@using NovaAccounts.Shared
+@inject NavigationManager Navigation
+@inject ApiClient ApiClient
+
+<style>
+    .message-details-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    @@media (max-width: 768px) {
+        .message-details-container {
+            padding: 1rem;
+        }
+    }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        color: #374151;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        margin-bottom: 2rem;
+    }
+
+    .back-btn:hover {
+        background: #f9fafb;
+        border-color: #6366f1;
+        color: #6366f1;
+        transform: translateX(-4px);
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+    }
+
+    .session-badge {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+    }
+
+    .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    @@media (max-width: 768px) {
+        .details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .detail-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s ease;
+    }
+
+    .detail-card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .card-header-custom {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .card-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 1.25rem;
+    }
+
+    .icon-blue {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .icon-green {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    .icon-orange {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.875rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .info-label {
+        font-weight: 500;
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .info-value {
+        font-weight: 600;
+        color: #111827;
+        text-align: right;
+    }
+
+    .badge-custom {
+        padding: 0.375rem 0.875rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .badge-info {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .badge-secondary {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .message-box {
+        background: #f9fafb;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-top: 0.5rem;
+        color: #374151;
+        line-height: 1.6;
+        min-height: 80px;
+    }
+
+    .message-box.response {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+        color: #065f46;
+    }
+
+    .message-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .full-width-card {
+        grid-column: 1 / -1;
+    }
+
+    .additional-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .detail-item {
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .detail-item-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .detail-item-value {
+        font-size: 1.1rem;
+        color: #111827;
+        font-weight: 600;
+    }
+
+    .loading-container, .error-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        text-align: center;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #e5e7eb;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .error-container {
+        background: #fef2f2;
+        border: 2px solid #fecaca;
+        border-radius: 16px;
+        padding: 3rem;
+    }
+
+    .error-icon {
+        font-size: 3rem;
+        color: #dc2626;
+        margin-bottom: 1rem;
+    }
+
+    .btn-back {
+        margin-top: 1.5rem;
+        padding: 0.75rem 2rem;
+        background: #6366f1;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-back:hover {
+        background: #4f46e5;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+</style>
+
+<div class="message-details-container">
+    <a href="/" class="back-btn">
+        <i class="fa fa-arrow-left"></i>
+        <span>Back to Messages</span>
+    </a>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p style="margin-top: 1.5rem; color: #6b7280; font-weight: 500;">Loading message details...</p>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h3 style="color: #dc2626; margin-bottom: 0.5rem;">Error Loading Message</h3>
+            <p style="color: #991b1b;">@errorMessage</p>
+            <button class="btn-back" @onclick="GoBack">Go Back</button>
+        </div>
+    }
+    else if (message == null)
+    {
+        <div class="error-container" style="background: #fffbeb; border-color: #fde68a;">
+            <div class="error-icon" style="color: #d97706;">📭</div>
+            <h3 style="color: #92400e; margin-bottom: 0.5rem;">Message Not Found</h3>
+            <p style="color: #78350f;">No message found with session ID: @sessionId</p>
+            <button class="btn-back" @onclick="GoBack">Go Back</button>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <h1 class="page-title">Message Details</h1>
+            <div class="session-badge">
+                Session: @message.SessionId
+            </div>
+        </div>
+
+        <div class="details-grid">
+            <!-- Basic Information Card -->
+            <div class="detail-card">
+                <div class="card-header-custom">
+                    <div class="card-icon icon-blue">
+                        <i class="fa fa-info-circle"></i>
+                    </div>
+                    <h2 class="card-title">Basic Information</h2>
+                </div>
+                <div>
+                    <div class="info-row">
+                        <span class="info-label">Session ID</span>
+                        <span class="info-value">@message.SessionId</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Phone Number</span>
+                        <span class="info-value">@message.Msisdn</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Date & Time</span>
+                        <span class="info-value">@message.Timestamp.ToString("dd MMM yyyy HH:mm:ss")</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Mobile Network</span>
+                        <span class="badge-custom badge-info">@message.MobileNetwork</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Channel</span>
+                        <span class="badge-custom badge-secondary">@message.Channel</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Content Card -->
+            <div class="detail-card">
+                <div class="card-header-custom">
+                    <div class="card-icon icon-green">
+                        <i class="fa fa-comment"></i>
+                    </div>
+                    <h2 class="card-title">Message Content</h2>
+                </div>
+                <div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <div class="message-label">User Message</div>
+                        <div class="message-box">@message.Message</div>
+                    </div>
+                    <div>
+                        <div class="message-label">System Response</div>
+                        <div class="message-box response">@message.ResponseMessage</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Details Card -->
+            <div class="detail-card full-width-card">
+                <div class="card-header-custom">
+                    <div class="card-icon icon-orange">
+                        <i class="fa fa-cogs"></i>
+                    </div>
+                    <h2 class="card-title">Additional Details</h2>
+                </div>
+                <div class="additional-details-grid">
+                    <div class="detail-item">
+                        <div class="detail-item-label">Menu</div>
+                        <div class="detail-item-value">@message.Menu</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-item-label">Extension</div>
+                        <div class="detail-item-value">@message.Extension</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-item-label">Data</div>
+                        <div class="detail-item-value">@message.Data</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string? sessionId { get; set; }
+
+    private MessageViewModel? message;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string? filterPhoneNumber;
+    private string? filterSessionId;
+
+    private DateTime? startDateInput;
+    private DateTime? endDateInput;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            await LoadMessageDetails();
+        }
+    }
+
+    private async Task LoadMessageDetails()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            var results = await ApiClient.GetAllMessagesAsync(
+                filterPhoneNumber, 
+                filterSessionId,
+                startDateInput,
+                endDateInput
+                
+                );
+
+            if (results != null)
+            {
+                var foundMessage = results.FirstOrDefault(m =>
+                    m.SessionId?.Equals(sessionId, StringComparison.OrdinalIgnoreCase) == true);
+
+                if (foundMessage != null)
+                {
+                    message = new MessageViewModel
+                    {
+                        SessionId = foundMessage.SessionId,
+                        Timestamp = foundMessage.Timestamp,
+                        Msisdn = foundMessage.Msisdn,
+                        Message = foundMessage.Message,
+                        MobileNetwork = foundMessage.MobileNetwork,
+                        Channel = foundMessage.Channel,
+                        Menu = foundMessage.Menu,
+                        Extension = foundMessage.Extension,
+                        Data = foundMessage.Data,
+                        ResponseMessage = foundMessage.ResponseMessage
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading message details: {ex.Message}";
+            Console.WriteLine($"Error: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/", forceLoad:true);
+    }
+
+    private class MessageViewModel
+    {
+        public string? SessionId { get; set; }
+        public int Menu { get; set; }
+        public string? Msisdn { get; set; }
+        public string? Message { get; set; }
+        public DateTimeOffset Timestamp { get; set; }
+        public string? MobileNetwork { get; set; }
+        public string? Extension { get; set; }
+        public string? Data { get; set; }
+        public string? Channel { get; set; }
+        public string? ResponseMessage { get; set; }
+    }
+}

@@ -1,0 +1,469 @@
+@page "/search-examples"
+@using NovaAccounts.Components.Shared
+
+
+<h2>ReusableSearchBox - Search Anything Examples</h2>
+
+<Validation 
+    ButtonText="Process Invoice"
+    IconClass="icon-wallet"
+    ValidationUrl="/invoices/validate"
+    RedirectUrl="/invoices/process"
+    DialogTitle="Invoice Number"
+    ParameterName="InvoiceNumber" />
+
+<!-- Example 1: Search a List (Client-Side) -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Example 1: Search Products (Client-Side Filtering)</h4>
+    </div>
+    <div class="card-body">
+        <ReusableSearchBox SearchValue="@productSearch"
+                           SearchValueChanged="@(value => productSearch = value)"
+                           OnSearchChanged="@SearchProducts"
+                           Placeholder="Search products by name or category..."
+                           MaxWidth="500px" />
+        
+        <div class="mt-3">
+            <strong>Found @filteredProducts.Count products</strong>
+            <div class="row mt-2">
+                @foreach (var product in filteredProducts)
+                {
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5>@product.Name</h5>
+                                <p class="text-muted">@product.Category</p>
+                                <p>Price: @product.Price.ToString("C")</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Example 2: Search with API Call -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Example 2: Search Users (Simulated API Call)</h4>
+    </div>
+    <div class="card-body">
+        <ReusableSearchBox SearchValue="@userSearch"
+                           SearchValueChanged="@(value => userSearch = value)"
+                           OnSearchSubmit="@SearchUsersAPI"
+                           Placeholder="Search users (click search button)..."
+                           MaxWidth="500px"
+                           BorderColor="#28a745"
+                           FocusColor="#28a745" />
+        
+        @if (isSearching)
+        {
+            <div class="mt-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Searching...</span>
+                </div>
+            </div>
+        }
+        else if (searchedUsers.Any())
+        {
+            <div class="mt-3">
+                <ul class="list-group">
+                    @foreach (var user in searchedUsers)
+                    {
+                        <li class="list-group-item">
+                            <strong>@user.Name</strong> - @user.Email
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(userSearch))
+        {
+            <div class="alert alert-info mt-3">No users found for "@userSearch"</div>
+        }
+    </div>
+</div>
+
+<!-- Example 3: Filter Cards/Items in Real-Time -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Example 3: Filter Blog Posts (Real-Time)</h4>
+    </div>
+    <div class="card-body">
+        <ReusableSearchBox SearchValue="@blogSearch"
+                           SearchValueChanged="@(value => blogSearch = value)"
+                           OnSearchChanged="@FilterBlogs"
+                           Placeholder="Search blog posts..."
+                           MaxWidth="600px"
+                           BorderColor="#6f42c1"
+                           FocusColor="#6f42c1" />
+        
+        <div class="mt-3">
+            @foreach (var post in filteredBlogs)
+            {
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <h5>@post.Title</h5>
+                        <p class="text-muted">@post.Author | @post.Date.ToShortDateString()</p>
+                        <p>@post.Summary</p>
+                        <span class="badge bg-primary">@post.Category</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Example 4: Search with Autocomplete/Suggestions -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Example 4: Search with Suggestions</h4>
+    </div>
+    <div class="card-body">
+        <div style="position: relative;">
+            <ReusableSearchBox SearchValue="@locationSearch"
+                               SearchValueChanged="@(value => locationSearch = value)"
+                               OnSearchChanged="@ShowSuggestions"
+                               Placeholder="Search locations..."
+                               MaxWidth="500px" />
+            
+            @if (suggestions.Any())
+            {
+                <div class="list-group position-absolute" style="z-index: 1000; width: 500px; max-width: 100%;">
+                    @foreach (var suggestion in suggestions)
+                    {
+                        <button type="button" 
+                                class="list-group-item list-group-item-action"
+                                @onclick="() => SelectSuggestion(suggestion)">
+                            @suggestion
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+        
+        @if (!string.IsNullOrEmpty(selectedLocation))
+        {
+            <div class="alert alert-success mt-3">
+                Selected: <strong>@selectedLocation</strong>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Example 5: Search and Highlight Results -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Example 5: Search with Highlighting</h4>
+    </div>
+    <div class="card-body">
+        <ReusableSearchBox SearchValue="@textSearch"
+                           SearchValueChanged="@(value => textSearch = value)"
+                           OnSearchChanged="@SearchText"
+                           Placeholder="Search in text..."
+                           MaxWidth="500px" />
+        
+        <div class="mt-3 p-3 border rounded">
+            @((MarkupString)highlightedText)
+        </div>
+    </div>
+</div>
+
+<!-- Example 6: Multi-Field Search -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Example 6: Advanced Multi-Field Search</h4>
+    </div>
+    <div class="card-body">
+        <ReusableSearchBox SearchValue="@employeeSearch"
+                           SearchValueChanged="@(value => employeeSearch = value)"
+                           OnSearchChanged="@SearchEmployees"
+                           Placeholder="Search employees (name, email, department, or salary)..."
+                           MaxWidth="600px" />
+        
+        <div class="mt-3">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Salary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var emp in filteredEmployees)
+                    {
+                        <tr>
+                            <td>@emp.FullName</td>
+                            <td>@emp.Email</td>
+                            <td>@emp.Department</td>
+                            <td>@emp.Salary.ToString("C")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (!filteredEmployees.Any() && !string.IsNullOrEmpty(employeeSearch))
+            {
+                <div class="alert alert-warning">No employees match your search.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    // Example 1: Product Search
+    private string productSearch = string.Empty;
+    private List<Product> products = new();
+    private List<Product> filteredProducts = new();
+
+    // Example 2: User API Search
+    private string userSearch = string.Empty;
+    private List<User> searchedUsers = new();
+    private bool isSearching = false;
+
+    // Example 3: Blog Posts
+    private string blogSearch = string.Empty;
+    private List<BlogPost> blogs = new();
+    private List<BlogPost> filteredBlogs = new();
+
+    // Example 4: Location Suggestions
+    private string locationSearch = string.Empty;
+    private List<string> suggestions = new();
+    private string selectedLocation = string.Empty;
+    private List<string> locations = new();
+
+    // Example 5: Text Highlighting
+    private string textSearch = string.Empty;
+    private string originalText = string.Empty;
+    private string highlightedText = string.Empty;
+
+    // Example 6: Employee Search
+    private string employeeSearch = string.Empty;
+    private List<Employee> employees = new();
+    private List<Employee> filteredEmployees = new();
+
+    protected override void OnInitialized()
+    {
+        LoadProducts();
+        LoadBlogs();
+        LoadLocations();
+        LoadOriginalText();
+        LoadEmployees();
+    }
+
+    // Example 1: Product Search Implementation
+    private void LoadProducts()
+    {
+        products = new List<Product>
+        {
+            new() { Name = "Laptop", Category = "Electronics", Price = 999.99m },
+            new() { Name = "Mouse", Category = "Electronics", Price = 29.99m },
+            new() { Name = "Keyboard", Category = "Electronics", Price = 79.99m },
+            new() { Name = "Office Chair", Category = "Furniture", Price = 299.99m },
+            new() { Name = "Desk Lamp", Category = "Furniture", Price = 49.99m },
+            new() { Name = "Notebook", Category = "Stationery", Price = 5.99m },
+            new() { Name = "Pen Set", Category = "Stationery", Price = 12.99m },
+            new() { Name = "Monitor", Category = "Electronics", Price = 399.99m }
+        };
+        filteredProducts = products;
+    }
+
+    private void SearchProducts(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredProducts = products;
+        }
+        else
+        {
+            filteredProducts = products.Where(p => 
+                p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                p.Category.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                p.Price.ToString().Contains(searchTerm)
+            ).ToList();
+        }
+    }
+
+    // Example 2: API Search Implementation
+    private async Task SearchUsersAPI(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchedUsers.Clear();
+            return;
+        }
+
+        isSearching = true;
+        StateHasChanged();
+
+        // Simulate API call delay
+        await Task.Delay(1000);
+
+        // Simulate API response
+        var allUsers = new List<User>
+        {
+            new() { Name = "John Doe", Email = "john@example.com" },
+            new() { Name = "Jane Smith", Email = "jane@example.com" },
+            new() { Name = "Bob Johnson", Email = "bob@example.com" },
+            new() { Name = "Alice Williams", Email = "alice@example.com" }
+        };
+
+        searchedUsers = allUsers.Where(u => 
+            u.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+
+        isSearching = false;
+    }
+
+    // Example 3: Blog Posts Implementation
+    private void LoadBlogs()
+    {
+        blogs = new List<BlogPost>
+        {
+            new() { Title = "Getting Started with Blazor", Author = "John Doe", Category = "Tutorial", Date = DateTime.Now.AddDays(-5), Summary = "Learn the basics of Blazor development." },
+            new() { Title = "Advanced C# Techniques", Author = "Jane Smith", Category = "Advanced", Date = DateTime.Now.AddDays(-10), Summary = "Deep dive into advanced C# programming." },
+            new() { Title = "Web API Best Practices", Author = "Bob Johnson", Category = "Tutorial", Date = DateTime.Now.AddDays(-15), Summary = "Build better APIs with these tips." },
+            new() { Title = "Database Optimization", Author = "Alice Williams", Category = "Performance", Date = DateTime.Now.AddDays(-20), Summary = "Speed up your database queries." }
+        };
+        filteredBlogs = blogs;
+    }
+
+    private void FilterBlogs(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredBlogs = blogs;
+        }
+        else
+        {
+            filteredBlogs = blogs.Where(b => 
+                b.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                b.Author.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                b.Category.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                b.Summary.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+    }
+
+    // Example 4: Location Suggestions Implementation
+    private void LoadLocations()
+    {
+        locations = new List<string>
+        {
+            "New York, USA", "London, UK", "Paris, France", "Tokyo, Japan",
+            "Sydney, Australia", "Toronto, Canada", "Berlin, Germany", "Rome, Italy"
+        };
+    }
+
+    private void ShowSuggestions(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            suggestions.Clear();
+        }
+        else
+        {
+            suggestions = locations.Where(l => 
+                l.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            ).Take(5).ToList();
+        }
+    }
+
+    private void SelectSuggestion(string location)
+    {
+        locationSearch = location;
+        selectedLocation = location;
+        suggestions.Clear();
+    }
+
+    // Example 5: Text Highlighting Implementation
+    private void LoadOriginalText()
+    {
+        originalText = "Blazor is a free and open-source web framework that enables developers to create web apps using C# and HTML. " +
+                      "It allows you to build interactive web UIs using C# instead of JavaScript. " +
+                      "Blazor apps are composed of reusable web UI components implemented using C#, HTML, and CSS.";
+        highlightedText = originalText;
+    }
+
+    private void SearchText(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            highlightedText = originalText;
+        }
+        else
+        {
+            highlightedText = System.Text.RegularExpressions.Regex.Replace(
+                originalText,
+                searchTerm,
+                match => $"<mark style='background-color: yellow; font-weight: bold;'>{match.Value}</mark>",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            );
+        }
+    }
+
+    // Example 6: Employee Multi-Field Search
+    private void LoadEmployees()
+    {
+        employees = new List<Employee>
+        {
+            new() { FullName = "John Doe", Email = "john@company.com", Department = "IT", Salary = 75000 },
+            new() { FullName = "Jane Smith", Email = "jane@company.com", Department = "HR", Salary = 65000 },
+            new() { FullName = "Bob Johnson", Email = "bob@company.com", Department = "Finance", Salary = 80000 },
+            new() { FullName = "Alice Brown", Email = "alice@company.com", Department = "Marketing", Salary = 70000 }
+        };
+        filteredEmployees = employees;
+    }
+
+    private void SearchEmployees(string searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredEmployees = employees;
+        }
+        else
+        {
+            filteredEmployees = employees.Where(e => 
+                e.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                e.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                e.Department.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                e.Salary.ToString().Contains(searchTerm)
+            ).ToList();
+        }
+    }
+
+    // Model Classes
+    public class Product
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+    }
+
+    public class User
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class BlogPost
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Author { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public string Summary { get; set; } = string.Empty;
+    }
+
+    public class Employee
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;
+        public decimal Salary { get; set; }
+    }
+}

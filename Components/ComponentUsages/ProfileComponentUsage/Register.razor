@@ -1,0 +1,151 @@
+@page "/register-user"
+@using System.ComponentModel.DataAnnotations
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.UserProfile
+@rendermode InteractiveServer
+@* The image uploads have to be handled by the backend otherwise it will cause redirect problems. *@
+
+<UserFormComponent 
+    FormData="@model"
+    Fields="@fields"
+    ActionButtons="@buttons"
+    ShowRoleCard="false"
+    ShowImageUpload="false"
+    MainCardTitle="Create Account"
+    MainCardBorderColor="primary"
+    OnValidSubmit="@HandleRegistration" />
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@code {
+    private RegisterModel model = new();
+    private List<FormField> fields = new();
+    private List<ActionButton> buttons = new();
+    private string errorMessage = "";
+
+    protected override void OnInitialized()
+    {
+        // Initialize form fields
+        fields = new List<FormField>
+        {
+            new FormField
+            {
+                Name = "Username",
+                Label = "Username",
+                FieldType = FormFieldType.Text,
+                Value = model.Username,
+                IsRequired = true,
+                Order = 1
+            },
+            new FormField
+            {
+                Name = "Email",
+                Label = "Email",
+                FieldType = FormFieldType.Text,
+                Value = model.Email,
+                IsRequired = true,
+                Order = 2
+            },
+            new FormField
+            {
+                Name = "Password",
+                Label = "Password",
+                FieldType = FormFieldType.Password,
+                Value = model.Password,
+                Placeholder = "Enter password",
+                IsRequired = true,
+                Order = 3
+            },
+            new FormField
+            {
+                Name = "ConfirmPassword",
+                Label = "Confirm Password",
+                FieldType = FormFieldType.Password,
+                Value = model.ConfirmPassword,
+                Placeholder = "Re-enter password",
+                IsRequired = true,
+                Order = 4
+            }
+        };
+
+        // Initialize action buttons
+        buttons = new List<ActionButton>
+        {
+            new ActionButton
+            {
+                Label = "Register",
+                ButtonType = ButtonType.Submit,
+                ColorClass = "primary",
+                Order = 1
+            },
+            new ActionButton
+            {
+                Label = "Cancel",
+                ButtonType = ButtonType.Link,
+                ColorClass = "secondary",
+                Url = "/login",
+                Order = 2
+            }
+        };
+    }
+
+    private async Task HandleRegistration(EditContext context)
+    {
+        errorMessage = "";
+
+        // Update model from fields
+        model.Username = fields.First(f => f.Name == "Username").Value;
+        model.Email = fields.First(f => f.Name == "Email").Value;
+        model.Password = fields.First(f => f.Name == "Password").Value;
+        model.ConfirmPassword = fields.First(f => f.Name == "ConfirmPassword").Value;
+
+        // Validate passwords match
+        if (model.Password != model.ConfirmPassword)
+        {
+            errorMessage = "Passwords do not match.";
+            return;
+        }
+
+        // Validate password strength (example)
+        if (model.Password.Length < 8)
+        {
+            errorMessage = "Password must be at least 8 characters long.";
+            return;
+        }
+
+        // Process registration
+        try
+        {
+            // Your registration logic here
+            // await UserService.RegisterAsync(model);
+            
+            // Navigate to success page or login
+            // NavigationManager.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Registration failed: {ex.Message}";
+        }
+    }
+
+    public class RegisterModel
+    {
+        [Required]
+        public string Username { get; set; }
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [MinLength(8)]
+        public string Password { get; set; }
+
+        [Required]
+        [Compare(nameof(Password))]
+        public string ConfirmPassword { get; set; }
+    }
+}

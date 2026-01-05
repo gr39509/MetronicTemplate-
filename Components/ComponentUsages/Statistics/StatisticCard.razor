@@ -1,0 +1,25 @@
+@using NovaAccounts.Components.Shared
+
+   
+    <DashboardStatCard 
+        IconClass="fa-comments"
+        Currency="GH₵"
+        Value="1250"
+        Description="Total income"
+        ColorClass="blue"
+        ElementId="totalStakes" />
+    
+
+    @code {
+        private decimal totalRevenue = 15750.50m;
+        private int userCount = 1024;
+        private int orderCount = 156;
+    
+        private void NavigateToUsers()
+        {
+            // Navigation logic here
+            Console.WriteLine("Navigating to users page...");
+        }
+    }
+
+<div class="clearfix"></div>
