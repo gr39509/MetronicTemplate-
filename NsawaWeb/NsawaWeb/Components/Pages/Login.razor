@@ -1,0 +1,82 @@
+@page "/"
+@using NsawaWeb.Components.Layout
+@using NsawaWeb.Services.Services
+@rendermode InteractiveServer
+@layout AccountLayout
+
+<link rel="stylesheet" href="css/login.css"/>
+<div class="main-container">
+    <div class="content-wrapper">
+        <div class="image-section"></div>
+        <div class="form-section">
+            <div class="logo">
+                <span class="logo-nova">NOVA</span><span class="logo-nsawa">NSAWA</span>
+            </div>
+            <h2>Login</h2>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @errorMessage
+                </div>
+            }
+            
+            @if (!string.IsNullOrEmpty(infoMessage))
+            {
+                <div class="alert alert-info" role="alert">
+                    @infoMessage
+                </div>
+            }
+            
+            <EditForm Model="request" OnValidSubmit="HandleLogin" FormName="loginForm">
+                <DataAnnotationsValidator />
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="tel" 
+                        class="form-control" 
+                        placeholder="Phone number" 
+                        @bind-Value="request.PhoneNumber"
+                        @oninput="ClearError"
+                        maxlength="10" />
+                    <ValidationMessage For="@(() => request.PhoneNumber)" />
+                </div>
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="password" 
+                        class="@GetPasswordClass()" 
+                        placeholder="Password" 
+                        @bind-Value="request.Password"
+                        @oninput="ClearError" />
+                    <ValidationMessage For="@(() => request.Password)" />
+                </div>
+                
+                <button type="submit" class="btn-login" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Logging in...</span>
+                    }
+                    else
+                    {
+                        <span>Login ↗</span>
+                    }
+                </button>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rememberMe">
+                    <label class="form-check-label" for="rememberMe">
+                        Remember me
+                    </label>
+                </div>
+                
+                <div class="signup-link">
+                    Don't have an account? <NavLink href="/register">Sign Up</NavLink>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+

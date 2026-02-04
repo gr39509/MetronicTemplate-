@@ -1,0 +1,154 @@
+@page "/home"
+@using NsawaWeb.Services.Services
+@rendermode InteractiveServer
+@inject ApiClient ApiClient
+
+<div class="content-header">
+    <h1 class="page-title">Dashboard</h1>
+</div>
+<div class="stats-grid">
+    <div class="stats-card stats-card-green">
+        <div class="stats-card-icon">
+            <img src="icons/Group 1912.svg" alt="Total Donations">
+        </div>
+        <div class="stats-label">Total Donations</div>
+        <div class="stats-value">GHS @totalDonations.ToString("N2")</div>
+    </div>
+    <div class="stats-card stats-card-teal">
+        <div class="stats-card-icon">
+            <img src="icons/Layer 93.svg" alt="Active Events">
+        </div>
+        <div class="stats-label">Active Events</div>
+        <div class="stats-value">@activeEventsCount.ToString("D2")</div>
+    </div>
+    <div class="stats-card stats-card-pink">
+        <div class="stats-card-icon">
+            <img src="icons/wallet.svg" alt="Total Donations Withdrawn">
+        </div>
+        <div class="stats-label">Total Donations Withdrawn</div>
+        <div class="stats-value">GHS @totalWithdrawals.ToString("N2")</div>
+    </div>
+</div>
+
+<div class="table-card">
+    @if (isLoading)
+    {
+        <div class="text-center p-4">
+            <span class="spinner-grow text-secondary" role="status"></span>
+            <p>Loading events...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+    }
+    else if (events == null || !events.Any())
+    {
+        <div class="text-center p-4">
+            <p>No events found.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>DATE</th>
+                        <th>EVENT</th>
+                        <th>TOTAL DONATIONS (GHS)</th>
+                        <th>TOTAL WITHDRAWALS (GHS)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var evt in events)
+                    {
+                        <tr>
+                            <td>@evt.CreatedAt.ToString("MM/dd/yy")</td>
+                            <td>
+                                <div class="event-cell">
+                                    @if (!string.IsNullOrEmpty(evt.Banner))
+                                    {
+                                        <img src='@($"/api/imageproxy/getimage/{evt.Banner}")'  alt="@evt.Title" class="event-image">
+                                    }
+                                    else
+                                    {
+                                        <img src="https://via.placeholder.com/100" alt="Default" class="event-image">
+                                    }
+                                    <span>@evt.Title.ToLower().Humanize().Transform(To.TitleCase)</span>
+                                </div>
+                            </td>
+                            <td>@(evt.TotalDonations > 0?  "+": "") @evt.TotalDonations.ToString("N2")</td>
+                            <td>@(evt.TotalWithdrawals > 0?  "-": "") @evt.TotalWithdrawals.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private List<EventViewModel> events = new();
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    
+    private double totalDonations = 0;
+    private double totalWithdrawals = 0;
+    private int activeEventsCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+        await base.OnInitializedAsync();
+    }
+
+    private async Task LoadEvents()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            
+            var result = await ApiClient.MyEventsAsync();
+            
+            if (result.Success && result.Data != null)
+            {
+                events = result.Data.ToList();
+                
+                // Calculate statistics
+                totalDonations = events.Sum(e => e.TotalDonations);
+                totalWithdrawals = events.Sum(e => e.TotalWithdrawals);
+                activeEventsCount = events.Count(e => e.Active);
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to load events.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                401 => "You are not authorized. Please log in again.",
+                404 => "Events endpoint not found.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while loading events. (Error code: {apiEx.StatusCode})"
+            };
+            
+           // Console.WriteLine($"API Error: {apiEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred while loading events.";
+            //Console.WriteLine($"Error loading events: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}

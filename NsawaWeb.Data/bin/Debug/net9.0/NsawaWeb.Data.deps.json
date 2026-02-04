@@ -1,0 +1,230 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "NsawaWeb.Data/1.0.0": {
+        "dependencies": {
+          "NsawaWeb.Services": "1.0.0"
+        },
+        "runtime": {
+          "NsawaWeb.Data.dll": {}
+        }
+      },
+      "Humanizer.Core/3.0.1": {
+        "runtime": {
+          "lib/net8.0/Humanizer.dll": {
+            "assemblyVersion": "3.0.0.0",
+            "fileVersion": "3.0.1.28244"
+          }
+        }
+      },
+      "Microsoft.AspNetCore.Authorization/9.0.8": {
+        "dependencies": {
+          "Microsoft.AspNetCore.Metadata": "9.0.8",
+          "Microsoft.Extensions.Logging.Abstractions": "9.0.8",
+          "Microsoft.Extensions.Options": "9.0.8"
+        },
+        "runtime": {
+          "lib/net9.0/Microsoft.AspNetCore.Authorization.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36808"
+          }
+        }
+      },
+      "Microsoft.AspNetCore.Components/9.0.8": {
+        "dependencies": {
+          "Microsoft.AspNetCore.Authorization": "9.0.8"
+        },
+        "runtime": {
+          "lib/net9.0/Microsoft.AspNetCore.Components.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36808"
+          }
+        }
+      },
+      "Microsoft.AspNetCore.Components.Authorization/9.0.8": {
+        "dependencies": {
+          "Microsoft.AspNetCore.Authorization": "9.0.8",
+          "Microsoft.AspNetCore.Components": "9.0.8"
+        },
+        "runtime": {
+          "lib/net9.0/Microsoft.AspNetCore.Components.Authorization.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36808"
+          }
+        }
+      },
+      "Microsoft.AspNetCore.Metadata/9.0.8": {
+        "runtime": {
+          "lib/net9.0/Microsoft.AspNetCore.Metadata.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36808"
+          }
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions/9.0.8": {
+        "runtime": {
+          "lib/net9.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36511"
+          }
+        }
+      },
+      "Microsoft.Extensions.Logging.Abstractions/9.0.8": {
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.8"
+        },
+        "runtime": {
+          "lib/net9.0/Microsoft.Extensions.Logging.Abstractions.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36511"
+          }
+        }
+      },
+      "Microsoft.Extensions.Options/9.0.8": {
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.8",
+          "Microsoft.Extensions.Primitives": "9.0.8"
+        },
+        "runtime": {
+          "lib/net9.0/Microsoft.Extensions.Options.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36511"
+          }
+        }
+      },
+      "Microsoft.Extensions.Primitives/9.0.8": {
+        "runtime": {
+          "lib/net9.0/Microsoft.Extensions.Primitives.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36511"
+          }
+        }
+      },
+      "Microsoft.JSInterop/9.0.8": {
+        "runtime": {
+          "lib/net9.0/Microsoft.JSInterop.dll": {
+            "assemblyVersion": "9.0.0.0",
+            "fileVersion": "9.0.825.36808"
+          }
+        }
+      },
+      "Newtonsoft.Json/13.0.4": {
+        "runtime": {
+          "lib/net6.0/Newtonsoft.Json.dll": {
+            "assemblyVersion": "13.0.0.0",
+            "fileVersion": "13.0.4.30916"
+          }
+        }
+      },
+      "NsawaWeb.Services/1.0.0": {
+        "dependencies": {
+          "Humanizer.Core": "3.0.1",
+          "Microsoft.AspNetCore.Components": "9.0.8",
+          "Microsoft.AspNetCore.Components.Authorization": "9.0.8",
+          "Microsoft.JSInterop": "9.0.8",
+          "Newtonsoft.Json": "13.0.4"
+        },
+        "runtime": {
+          "NsawaWeb.Services.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "NsawaWeb.Data/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Humanizer.Core/3.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-scB3+KcxNmEjZK5V8rKCW2gIiL8m8KH91w14FuuExyhi9xTyAJ+jr+DDxGdy12mHmioe2uvjxTfMgM7WmSUFlw==",
+      "path": "humanizer.core/3.0.1",
+      "hashPath": "humanizer.core.3.0.1.nupkg.sha512"
+    },
+    "Microsoft.AspNetCore.Authorization/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-1M8ncVJtsRBEfbDc9QCa2zuwMjh/YWLu/WnRXWHG5q+KE5FDvPEsV3cJag3qy6NWL2b0H+pdushFsN9d3geemA==",
+      "path": "microsoft.aspnetcore.authorization/9.0.8",
+      "hashPath": "microsoft.aspnetcore.authorization.9.0.8.nupkg.sha512"
+    },
+    "Microsoft.AspNetCore.Components/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-+s+r/l2iBoU1mnG8ft9HS/xzqjd0cGbqnsVC9PgjNa5VGm/pVbPEMUJDea58iOaVETi7VGQCDoHLG83ObmlK2A==",
+      "path": "microsoft.aspnetcore.components/9.0.8",
+      "hashPath": "microsoft.aspnetcore.components.9.0.8.nupkg.sha512"
+    },
+    "Microsoft.AspNetCore.Components.Authorization/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-tfXXMpTb8gqTRA1IEQ+Fb/xZHNIw/ZFkuGpRTgYfD2jf8xF45h3mRxfIthMIWkxCGvVPF3D/BckucAtVG6ylAQ==",
+      "path": "microsoft.aspnetcore.components.authorization/9.0.8",
+      "hashPath": "microsoft.aspnetcore.components.authorization.9.0.8.nupkg.sha512"
+    },
+    "Microsoft.AspNetCore.Metadata/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-sju8zleT9mRQWeEe4hu4Vh4uep6WppxULZEkirEgU/pRl6uIQQsd526EBa8u52j+LuA3J8gS8twRmTpsr3xGtA==",
+      "path": "microsoft.aspnetcore.metadata/9.0.8",
+      "hashPath": "microsoft.aspnetcore.metadata.9.0.8.nupkg.sha512"
+    },
+    "Microsoft.Extensions.DependencyInjection.Abstractions/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-xY3lTjj4+ZYmiKIkyWitddrp1uL5uYiweQjqo4BKBw01ZC4HhcfgLghDpPZcUlppgWAFqFy9SgkiYWOMx365pw==",
+      "path": "microsoft.extensions.dependencyinjection.abstractions/9.0.8",
+      "hashPath": "microsoft.extensions.dependencyinjection.abstractions.9.0.8.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Logging.Abstractions/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-pYnAffJL7ARD/HCnnPvnFKSIHnTSmWz84WIlT9tPeQ4lHNiu0Az7N/8itihWvcF8sT+VVD5lq8V+ckMzu4SbOw==",
+      "path": "microsoft.extensions.logging.abstractions/9.0.8",
+      "hashPath": "microsoft.extensions.logging.abstractions.9.0.8.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Options/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-OmTaQ0v4gxGQkehpwWIqPoEiwsPuG/u4HUsbOFoWGx4DKET2AXzopnFe/fE608FIhzc/kcg2p8JdyMRCCUzitQ==",
+      "path": "microsoft.extensions.options/9.0.8",
+      "hashPath": "microsoft.extensions.options.9.0.8.nupkg.sha512"
+    },
+    "Microsoft.Extensions.Primitives/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-tizSIOEsIgSNSSh+hKeUVPK7xmTIjR8s+mJWOu1KXV3htvNQiPMFRMO17OdI1y/4ZApdBVk49u/08QGC9yvLug==",
+      "path": "microsoft.extensions.primitives/9.0.8",
+      "hashPath": "microsoft.extensions.primitives.9.0.8.nupkg.sha512"
+    },
+    "Microsoft.JSInterop/9.0.8": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-arGqasYOND4vG0s1RywqHAKq1NIyFrco/srpM9QDlVGnFrYdtkWZUEuiVcD5GZswfmYOGVD5CLIHVVb8S86ylQ==",
+      "path": "microsoft.jsinterop/9.0.8",
+      "hashPath": "microsoft.jsinterop.9.0.8.nupkg.sha512"
+    },
+    "Newtonsoft.Json/13.0.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-pdgNNMai3zv51W5aq268sujXUyx7SNdE2bj1wZcWjAQrKMFZV260lbqYop1d2GM67JI1huLRwxo9ZqnfF/lC6A==",
+      "path": "newtonsoft.json/13.0.4",
+      "hashPath": "newtonsoft.json.13.0.4.nupkg.sha512"
+    },
+    "NsawaWeb.Services/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

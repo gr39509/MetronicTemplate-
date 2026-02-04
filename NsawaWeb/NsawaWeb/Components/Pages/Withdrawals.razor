@@ -1,0 +1,765 @@
+@page "/events/{EventId:guid}/withdraw"
+@using NsawaWeb.Services.Services
+@inject ApiClient ApiClient
+@inject NavigationManager Navigation
+
+<div class="withdraw-container">
+    <div class="withdraw-card">
+        <button class="back-btn" @onclick="GoBack">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back
+        </button>
+
+        <h1 class="page-title">Withdraw Funds</h1>
+        <p class="page-subtitle">Withdraw donations from your event to your mobile money account</p>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-error">
+                @errorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">
+                @successMessage
+            </div>
+        }
+
+        @if (eventDetails != null)
+        {
+            <div class="event-info-card">
+                <div class="event-info-header">
+                    <h3>@eventDetails.Title</h3>
+                    <span class="event-code">@eventDetails.EventCode</span>
+                </div>
+                <div class="balance-info">
+                    <div class="balance-item">
+                        <span class="balance-label">Total Donations</span>
+                        <span class="balance-value balance-positive">GH₵ @eventDetails.TotalDonations.ToString("N2")</span>
+                    </div>
+                    <div class="balance-item">
+                        <span class="balance-label">Total Withdrawn</span>
+                        <span class="balance-value balance-negative">GH₵ @eventDetails.TotalWithdrawals.ToString("N2")</span>
+                    </div>
+                    <div class="balance-item balance-available">
+                        <span class="balance-label">Available Balance</span>
+                        <span class="balance-value">GH₵ @availableBalance.ToString("N2")</span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="form-section">
+            <div class="form-group">
+                <label class="form-label">Mobile Money Network</label>
+                <div class="network-grid">
+                    @foreach (var network in networks)
+                    {
+                        <div class="network-option @(selectedNetwork == network ? "selected" : "")" 
+                             @onclick="() => SelectNetwork(network)">
+                            <div class="network-radio">
+                                @if (selectedNetwork == network)
+                                {
+                                    <div class="radio-dot"></div>
+                                }
+                            </div>
+                            <span class="network-name">@network</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Phone Number (Without the 0)</label>
+                <div class="input-group">
+                    <span class="input-prefix">+233</span>
+                    <input type="tel" 
+                           class="form-input" 
+                           placeholder="XX XXX XXXX"
+                           maxlength="9"
+                           @bind="phoneNumber"
+                           @oninput="OnPhoneNumberInput"
+                           disabled="@isVerifying" />
+                    <button class="verify-btn" 
+                            @onclick="VerifyPhoneNumber" 
+                            disabled="@(isVerifying || string.IsNullOrWhiteSpace(phoneNumber) || phoneNumber.Length != 9 || string.IsNullOrWhiteSpace(selectedNetwork))">
+                        @if (isVerifying)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                            <span>Verifying...</span>
+                        }
+                        else
+                        {
+                            <span>Verify</span>
+                        }
+                    </button>
+                </div>
+                @if (isPhoneVerified && verificationResult != null)
+                {
+                    <div class="verification-success">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <span>Verified: @verificationResult.AccountName</span>
+                    </div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Withdrawal Amount (GH₵)</label>
+                <input type="number" 
+                       class="form-input" 
+                       placeholder="0.00"
+                       step="0.01"
+                       min="1"
+                       max="@availableBalance"
+                       @bind="amount"
+                       disabled="@(!isPhoneVerified)" />
+                @if (amount > 0 && amount > availableBalance)
+                {
+                    <div class="input-error">
+                        Amount exceeds available balance
+                    </div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Remarks</label>
+                <textarea class="form-textarea" 
+                          rows="3"
+                          placeholder="Enter reason for withdrawal (optional)"
+                          @bind="remarks"
+                          disabled="@(!isPhoneVerified)"></textarea>
+            </div>
+
+            <button class="submit-btn" 
+                    @onclick="SubmitWithdrawal"
+                    disabled="@(!CanSubmit())">
+                @if (isSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                    <span>Processing Withdrawal...</span>
+                }
+                else
+                {
+                    <span>Withdraw Funds</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid EventId { get; set; }
+
+    private EventViewModel eventDetails;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    
+    private List<string> networks = new() { "MTN", "Vodafone", "AirtelTigo" };
+    private string selectedNetwork = string.Empty;
+    private string phoneNumber = string.Empty;
+    private double amount = 0;
+    private string remarks = string.Empty;
+    
+    private bool isVerifying = false;
+    private bool isPhoneVerified = false;
+    private bool isSubmitting = false;
+    private bool isLoadingEvent = true;
+    
+    private MoMoNumberVerificationResponse verificationResult;
+    private double availableBalance => (eventDetails?.TotalDonations ?? 0) - (eventDetails?.TotalWithdrawals ?? 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEventDetails();
+    }
+
+    private async Task LoadEventDetails()
+    {
+        try
+        {
+            isLoadingEvent = true;
+            errorMessage = string.Empty;
+
+            var result = await ApiClient.EventAsync(EventId);
+
+            if (result.Success && result.Data != null)
+            {
+                eventDetails = result.Data;
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to load event details.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                401 => "You are not authorized. Please log in again.",
+                404 => "Event not found.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while loading event. (Error code: {apiEx.StatusCode})"
+            };
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred while loading event.";
+        }
+        finally
+        {
+            isLoadingEvent = false;
+        }
+    }
+
+    private void SelectNetwork(string network)
+    {
+        selectedNetwork = network;
+        isPhoneVerified = false;
+        verificationResult = null;
+        errorMessage = string.Empty;
+    }
+
+    private void OnPhoneNumberInput(ChangeEventArgs e)
+    {
+        isPhoneVerified = false;
+        verificationResult = null;
+        errorMessage = string.Empty;
+    }
+
+    private async Task VerifyPhoneNumber()
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber) || phoneNumber.Length != 9)
+        {
+            errorMessage = "Please enter a valid 9-digit phone number.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(selectedNetwork))
+        {
+            errorMessage = "Please select a mobile money network.";
+            return;
+        }
+
+        try
+        {
+            isVerifying = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            var fullPhoneNumber = $"233{phoneNumber}";
+            var result = await ApiClient.VerifyCustomerAsync(selectedNetwork, fullPhoneNumber);
+
+            if (result.Success && result.Data != null)
+            {
+                if (result.Data.IsRegistered)
+                {
+                    verificationResult = result.Data;
+                    isPhoneVerified = true;
+                    successMessage = "Phone number verified successfully!";
+                }
+                else
+                {
+                    errorMessage = "This phone number is not registered for mobile money with the selected network.";
+                    isPhoneVerified = false;
+                }
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to verify phone number.";
+                isPhoneVerified = false;
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                400 => "Invalid phone number or network.",
+                404 => "Verification service not available.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred during verification. (Error code: {apiEx.StatusCode})"
+            };
+            isPhoneVerified = false;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred during verification.";
+            isPhoneVerified = false;
+        }
+        finally
+        {
+            isVerifying = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool CanSubmit()
+    {
+        return isPhoneVerified 
+               && !isSubmitting 
+               && amount > 0 
+               && amount <= availableBalance
+               && !string.IsNullOrWhiteSpace(selectedNetwork);
+    }
+
+    private async Task SubmitWithdrawal()
+    {
+        if (!CanSubmit()) return;
+
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            var withdrawDto = new WithdrawFundsDto
+            {
+                EventId = EventId,
+                PhoneNumber = $"233{phoneNumber}",
+                Network = selectedNetwork,
+                Amount = amount,
+                Remarks = string.IsNullOrWhiteSpace(remarks) ? "Withdrawal" : remarks
+            };
+
+            var result = await ApiClient.WithdrawFundsAsync(withdrawDto);
+
+            if (result != null && result.Success)
+            {
+                successMessage = "Withdrawal initiated successfully! You will receive a prompt on your phone to complete the transaction.";
+                
+                // Reset form
+                phoneNumber = string.Empty;
+                amount = 0;
+                remarks = string.Empty;
+                isPhoneVerified = false;
+                verificationResult = null;
+                selectedNetwork = string.Empty;
+                
+                // Reload event details to update balance
+                await Task.Delay(2000);
+                await LoadEventDetails();
+                
+                // Navigate back after delay
+                await Task.Delay(3000);
+                Navigation.NavigateTo($"/events/{EventId}/withdrawals");
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "Failed to process withdrawal. Please try again.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                400 => "Invalid withdrawal request. Please check your details.",
+                401 => "You are not authorized to withdraw from this event.",
+                404 => "Event not found.",
+                409 => "Insufficient balance or withdrawal limit exceeded.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while processing withdrawal. (Error code: {apiEx.StatusCode})"
+            };
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred while processing withdrawal.";
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo($"/my-events");
+    }
+}
+
+<style>
+    .withdraw-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .withdraw-card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .back-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f0f0f0;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-bottom: 20px;
+    }
+
+    .back-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .back-btn:hover {
+        background: #e0e0e0;
+    }
+
+    .page-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 8px;
+        color: #000;
+    }
+
+    .page-subtitle {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 30px;
+    }
+
+    .alert {
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .alert-error {
+        background: #fee;
+        border: 1px solid #fcc;
+        color: #c33;
+    }
+
+    .alert-success {
+        background: #efe;
+        border: 1px solid #cfc;
+        color: #3c3;
+    }
+
+    .event-info-card {
+        background: linear-gradient(135deg, #1e7a6d 0%, #2a9d8f 100%);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        color: white;
+    }
+
+    .event-info-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .event-info-header h3 {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .event-code {
+        background: rgba(255,255,255,0.2);
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .balance-info {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    .balance-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .balance-label {
+        font-size: 12px;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    .balance-value {
+        font-size: 20px;
+        font-weight: 700;
+    }
+
+    .balance-positive {
+        color: #e1f098;
+    }
+
+    .balance-negative {
+        color: #FFE6E6;
+    }
+
+    .balance-available {
+        padding: 15px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 10px;
+    }
+
+    .form-section {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-label {
+        font-size: 14px;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .network-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+
+    .network-option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .network-option:hover {
+        border-color: #1e7a6d;
+        background: #f8f9fa;
+    }
+
+    .network-option.selected {
+        border-color: #1e7a6d;
+        background: #e8f5f3;
+    }
+
+    .network-radio {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #ccc;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .network-option.selected .network-radio {
+        border-color: #1e7a6d;
+    }
+
+    .radio-dot {
+        width: 10px;
+        height: 10px;
+        background: #1e7a6d;
+        border-radius: 50%;
+    }
+
+    .network-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .input-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .input-prefix {
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        background: #f0f0f0;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .form-input {
+        flex: 1;
+        padding: 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #1e7a6d;
+        box-shadow: 0 0 0 3px rgba(30, 122, 109, 0.1);
+    }
+
+    .form-input:disabled {
+        background: #f8f9fa;
+        cursor: not-allowed;
+    }
+
+    .form-textarea {
+        padding: 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: inherit;
+        resize: vertical;
+        transition: all 0.2s;
+    }
+
+    .form-textarea:focus {
+        outline: none;
+        border-color: #1e7a6d;
+        box-shadow: 0 0 0 3px rgba(30, 122, 109, 0.1);
+    }
+
+    .form-textarea:disabled {
+        background: #f8f9fa;
+        cursor: not-allowed;
+    }
+
+    .verify-btn {
+        background: #1e7a6d;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+
+    .verify-btn:hover:not(:disabled) {
+        background: #165e54;
+        transform: translateY(-1px);
+    }
+
+    .verify-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .verification-success {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 15px;
+        background: #e8f5e9;
+        border: 1px solid #4caf50;
+        border-radius: 8px;
+        color: #2e7d32;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .verification-success svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+
+    .input-error {
+        color: #dc3545;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .submit-btn {
+        background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+        border: none;
+        padding: 16px 40px;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
+    }
+
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    @@media (max-width: 768px) {
+        .withdraw-card {
+            padding: 25px 20px;
+        }
+
+        .page-title {
+            font-size: 24px;
+        }
+
+        .balance-info {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .network-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .input-group {
+            flex-direction: column;
+        }
+
+        .verify-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>

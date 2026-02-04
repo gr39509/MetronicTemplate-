@@ -1,0 +1,135 @@
+* {
+    box-sizing: border-box;
+}
+body {
+    background-color: #f5f5f5;
+    font-family: 'Work Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+.main-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.content-wrapper {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 0 30px rgba(0,0,0,0.05);
+}
+.image-section {
+    flex: 1;
+    background: url('https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=800') center/cover;
+    min-height: 500px;
+}
+.form-section {
+    flex: 1;
+    padding: 60px 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 30px;
+}
+.logo-nova {
+    background-color: #d4d4d4;
+    color: #333;
+    padding: 0.5px 30px;
+    font-weight: 600;
+    font-size: 30px;
+}
+.logo-nsawa {
+    background-color: #2d3748;
+    color: white;
+    padding: 0.5px 30px;
+    font-weight: 600;
+    font-size: 30px;
+}
+.form-section h2 {
+    font-size: clamp(36px, 6vw, 48px);
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 40px;
+}
+.form-control {
+    border: 2px solid #e5e5e5;
+    border-radius: 50px;
+    padding: 15px 25px;
+    font-size: 15px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+.form-control:focus {
+    border-color: #ffd700;
+    box-shadow: none;
+}
+.btn-login {
+    background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+    border: none;
+    border-radius: 50px;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #000;
+    width: 100%;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.btn-login:hover {
+    transform: translateY(-2px);
+}
+.form-check {
+    margin: 20px 0;
+}
+.form-check-input:checked {
+    background-color: #ffd700;
+    border-color: #ffd700;
+}
+.signup-link {
+    text-align: center;
+    margin-top: 20px;
+    color: #666;
+    font-size: 15px;
+}
+.signup-link a {
+    color: #000;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .content-wrapper {
+        flex-direction: column;
+    }
+    .image-section {
+        min-height: 250px;
+        order: -1;
+    }
+    .form-section {
+        padding: 40px 30px;
+    }
+}
+
+@media (max-width: 576px) {
+    .main-container {
+        padding: 10px;
+    }
+    .form-section {
+        padding: 30px 20px;
+    }
+    .form-section h2 {
+        margin-bottom: 30px;
+    }
+}

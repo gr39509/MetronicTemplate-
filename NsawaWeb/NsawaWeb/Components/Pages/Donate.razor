@@ -1,0 +1,759 @@
+@page "/events/{eventId:guid}/donate"
+@using System.ComponentModel.DataAnnotations
+@using NsawaWeb.Services.Services
+@using System.Net.Http
+@using System.Net.Http.Json
+@inject ApiClient ApiClient
+@inject NavigationManager Navigation
+
+<div class="donate-page">
+    <div class="donate-container">
+        <!-- Header -->
+        <div class="donate-header">
+            <button class="btn-back" @onclick="GoBack">← Back</button>
+            <h1 class="page-title">Make a Donation</h1>
+            <p class="page-subtitle">Support this event with your generous contribution</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-alert">
+                <strong>Error:</strong> @errorMessage
+            </div>
+        }
+
+        @if (isSubmitting)
+        {
+            <div class="loading-card">
+                <div class="spinner-grow text-secondary" role="status">
+                    <span class="visually-hidden">Processing...</span>
+                </div>
+                <p class="mt-3">Processing your donation...</p>
+            </div>
+        }
+        else
+        {
+            <div class="donate-card">
+                <form @onsubmit="SubmitDonation" @onsubmit:preventDefault>
+                    <!-- Payment Type Section -->
+                    <div class="form-section">
+                        <h3 class="section-title">Payment Information</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label required">Payment Type</label>
+                            <select class="form-input" @bind="Form.PaymentMode" required>
+                                <option value="0">Select Payment Type</option>
+                                @if (paymentTypes != null)
+                                {
+                                    @foreach (var paymentType in paymentTypes)
+                                    {
+                                        <option value="@paymentType.Id">@paymentType.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        @if (selectedPaymentType?.IsMoMo == true)
+                        {
+                            <div class="form-group">
+                                <label class="form-label required">Mobile Network</label>
+                                <select class="form-input" @bind="Form.Network" required>
+                                    <option value="">Select Network</option>
+                                    @if (networkTypes != null)
+                                    {
+                                        @foreach (var network in networkTypes)
+                                        {
+                                            <option value="@network.Id">@network.Name</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        <div class="form-group">
+                            <label class="form-label required">Amount (GH₵)</label>
+                            <input type="number" 
+                                   class="form-input amount-input" 
+                                   placeholder="Enter amount" 
+                                   min="1" 
+                                   step="0.01" 
+                                   @bind="Form.Amount" 
+                                   required />
+                            <div class="quick-amounts">
+                                <button type="button" class="quick-amount-btn" @onclick="() => SetAmount(10)">GH₵ 10</button>
+                                <button type="button" class="quick-amount-btn" @onclick="() => SetAmount(50)">GH₵ 50</button>
+                                <button type="button" class="quick-amount-btn" @onclick="() => SetAmount(100)">GH₵ 100</button>
+                                <button type="button" class="quick-amount-btn" @onclick="() => SetAmount(500)">GH₵ 500</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Donor Information Section -->
+                    <div class="form-section">
+                        <h3 class="section-title">Donor Information</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label required">Phone Number</label>
+                            <input type="tel" 
+                                   class="form-input" 
+                                   placeholder="e.g., 0241234567" 
+                                   @bind="Form.PhoneNumber" 
+                                   required />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" 
+                                   class="form-input" 
+                                   placeholder="Enter your name (optional)" 
+                                   @bind="Form.DonorName" 
+                                    />
+                        </div>
+
+                        @* <div class="form-group checkbox-group"> *@
+                        @*     <label class="checkbox-label"> *@
+                        @*         <input type="checkbox" checked="@Form.BeneficiaryName" /> *@
+                        @*         <span class="checkbox-text"> *@
+                        @*             <strong>Make this donation anonymous</strong> *@
+                        @*             <small>Your name will not be displayed publicly</small> *@
+                        @*         </span> *@
+                        @*     </label> *@
+                        @* </div> *@
+                    </div>
+
+                    <!-- Group Selection Section -->
+                    @if (eventGroups != null && eventGroups.Any())
+                    {
+                        <div class="form-section">
+                            <h3 class="section-title">Group</h3>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Assign to Group</label>
+                                <select class="form-input" @bind="Form.GroupId">
+                                    <option value="">No Group</option>
+                                    @foreach (var group in eventGroups.Where(g => g.IsActive))
+                                    {
+                                        <option value="@group.Id">@group.GroupName</option>
+                                    }
+                                </select>
+                                <small class="form-hint">Select a group to categorize this donation</small>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Additional Details Section -->
+                    <div class="form-section">
+                        <h3 class="section-title">Additional Details</h3>
+
+                        @if (selectedPaymentType?.IsCheque == true)
+                        {
+                            <div class="form-group">
+                                <label class="form-label">Cheque Number</label>
+                                <input type="text" 
+                                       class="form-input" 
+                                       placeholder="Enter cheque number" 
+                                       @bind="Form.ChequeNumber" />
+                            </div>
+                        }
+
+                        @if (selectedPaymentType?.IsCash == true)
+                        {
+                            <div class="form-group">
+                                <label class="form-label">Transaction ID</label>
+                                <input type="text" 
+                                       class="form-input" 
+                                       placeholder="Enter transaction ID (optional)" 
+                                       @bind="Form.TransactionId" />
+                            </div>
+                        }
+
+                        <div class="form-group">
+                            <label class="form-label">Message</label>
+                            <textarea class="form-input" 
+                                      rows="4" 
+                                      placeholder="Add a message with your donation (optional)" 
+                                      @bind="Form.Message"
+                                      maxlength="500"></textarea>
+                            <small class="form-hint">@((Form.Message?.Length ?? 0))/500 characters</small>
+                        </div>
+                    </div>
+
+                    <!-- Summary Section -->
+                    @if (Form.Amount > 0)
+                    {
+                        <div class="donation-summary">
+                            <div class="summary-row">
+                                <span>Donation Amount:</span>
+                                <span class="summary-amount">GH₵ @Form.Amount.ToString("N2")</span>
+                            </div>
+                            @if (Form.GroupId.HasValue && selectedGroup != null)
+                            {
+                                <div class="summary-row">
+                                    <span>Group:</span>
+                                    <span class="summary-group">@selectedGroup.GroupName</span>
+                                </div>
+                            }
+                            <div class="summary-row total">
+                                <span>Total:</span>
+                                <span class="summary-total">GH₵ @Form.Amount.ToString("N2")</span>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Action Buttons -->
+                    <div class="form-actions">
+                        <button type="button" class="btn-cancel" @onclick="GoBack">Cancel</button>
+                        <button type="submit" class="btn-donate">
+                            <span class="btn-icon"></span>
+                            Donate Now
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid EventId { get; set; }
+
+    // private DonationViaPOSDto donation = new();
+    private List<PaymentTypeViewModel> paymentTypes = new();
+    private List<NetworkType> networkTypes = new();
+    private List<EventGroupViewModel> eventGroups = new();
+    DonateFormModel Form { get; set; } = new();
+    
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+
+    private PaymentTypeViewModel selectedPaymentType => 
+        paymentTypes?.FirstOrDefault(pt => pt.Id == Form.PaymentMode);
+
+    private EventGroupViewModel selectedGroup =>
+        eventGroups?.FirstOrDefault(g => g.Id == Form.GroupId);
+    
+    public class DonateFormModel
+    {
+        [Required] public int? PaymentMode { get; set; }
+        [Required] public string PhoneNumber { get; set; } = string.Empty;
+        [Required] public double Amount { get; set; }
+        public string DonorName { get; set; } = string.Empty; 
+        public string Message { get; set; } = string.Empty;    
+        public Guid EventId { get; set; }
+        public string Network { get; set; } = string.Empty;
+        public bool Anonymous { get; set; } = false;
+        public string ChequeNumber { get; set; } = string.Empty;
+        public string TransactionId { get; set; } = Guid.NewGuid().ToString();
+        public Guid? GroupId { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeDonation();
+        await LoadPaymentTypes();
+        await LoadNetworkTypes();
+        await LoadEventGroups();
+    }
+
+    private void InitializeDonation()
+    {
+        Form = new DonateFormModel()
+        {
+            EventId = Form.EventId,
+            Amount = 0,
+            Anonymous = false,
+            PaymentMode = 0,
+            GroupId = null
+        };
+    }
+
+    private async Task LoadPaymentTypes()
+    {
+        try
+        {
+            var result = await ApiClient.All3Async();
+
+            if (result.Success && result.Data != null)
+            {
+                paymentTypes = result.Data.ToList();
+            }
+            else
+            {
+                errorMessage = "Failed to load payment types.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading payment types: {ex.Message}";
+        }
+    }
+
+    private async Task LoadNetworkTypes()
+    {
+        try
+        {
+            var result = await ApiClient.All2Async();
+
+            if (result.Success && result.Data != null)
+            {
+                networkTypes = result.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load network types: {ex.Message}");
+        }
+    }
+
+    private async Task LoadEventGroups()
+    {
+        try
+        {
+            var result = await ApiClient.PerEventAsync(EventId);
+
+            if (result.Success && result.Data != null)
+            {
+                eventGroups = result.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load event groups: {ex.Message}");
+        }
+    }
+
+    private void SetAmount(double amount)
+    {
+        Form.Amount = amount;
+        StateHasChanged();
+    }
+
+    private async Task SubmitDonation()
+    {
+        errorMessage = string.Empty;
+
+        // Validation
+        if (Form.PaymentMode == 0)
+        {
+            errorMessage = "Please select a payment type.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Form.PhoneNumber))
+        {
+            errorMessage = "Please enter a phone number.";
+            return;
+        }
+
+        if (Form.Amount <= 0)
+        {
+            errorMessage = "Please enter a valid amount greater than 0.";
+            return;
+        }
+
+        if (selectedPaymentType?.IsMoMo == true && string.IsNullOrWhiteSpace(Form.Network))
+        {
+            errorMessage = "Please select a mobile network.";
+            return;
+        }
+
+        try
+        {
+            isSubmitting = true;
+            StateHasChanged();
+            
+
+            var result = await ApiClient.DonateViaPOSAsync(new()
+            {
+                PaymentTypeId = Form.PaymentMode ?? 0,
+                EventId = EventId,
+                PhoneNumber = Form.PhoneNumber,
+                FullName = Form.DonorName,         
+                Amount = Form.Amount,
+                Network = Form.Network,
+                Message = Form.Message,            
+                Anonymous = Form.Anonymous,
+                ChequeNumber = Form.ChequeNumber,
+                TransactionId = Form.TransactionId,
+                GroupId = Form.GroupId
+            });
+
+            if (result.Success && result.Data != null)
+            {
+                if (!string.IsNullOrEmpty(result.Data.PayUrl))
+                {
+                    Navigation.NavigateTo(result.Data.PayUrl, true);
+                }
+                else
+                {
+                    await Task.Delay(3000);
+                    Navigation.NavigateTo($"/events/{EventId}/donations");
+                }
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to process donation. Please try again.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                400 => "Invalid donation details. Please check your information.",
+                401 => "You are not authorized. Please log in again.",
+                404 => "Event not found.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while processing your donation. (Error code: {apiEx.Message})"
+            };
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred. Please try again.";
+            Console.WriteLine($"Donation error: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo($"/events/{EventId}/donations");
+    }
+}
+
+<style>
+    .donate-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+        padding: 40px 20px;
+    }
+
+    .donate-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .donate-header {
+        text-align: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
+
+    .btn-back {
+        position: absolute;
+        left: 0;
+        top: 0;
+        background: white;
+        border: 1px solid #e0e0e0;
+        padding: 10px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-back:hover {
+        background: #f5f5f5;
+        transform: translateX(-3px);
+    }
+
+    .page-title {
+        font-size: 36px;
+        font-weight: 800;
+        margin: 0 0 10px 0;
+        color: #1e7a6d;
+    }
+
+    .page-subtitle {
+        font-size: 16px;
+        color: #666;
+        margin: 0;
+    }
+
+    .donate-card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+
+    .form-section {
+        margin-bottom: 35px;
+        padding-bottom: 35px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .form-section:last-of-type {
+        border-bottom: none;
+    }
+
+    .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-title::before {
+        content: '';
+        width: 4px;
+        height: 24px;
+        background: linear-gradient(135deg, #1e7a6d 0%, #166258 100%);
+        border-radius: 2px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 8px;
+    }
+
+    .form-label.required::after {
+        content: ' *';
+        color: #e74c3c;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 15px;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #1e7a6d;
+    }
+
+    .form-input:disabled {
+        background: #f5f5f5;
+        cursor: not-allowed;
+    }
+
+    .amount-input {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e7a6d;
+        text-align: center;
+    }
+
+    .quick-amounts {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .quick-amount-btn {
+        background: #f8f9fa;
+        border: 2px solid #e0e0e0;
+        padding: 10px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .quick-amount-btn:hover {
+        background: #1e7a6d;
+        color: white;
+        border-color: #1e7a6d;
+        transform: translateY(-2px);
+    }
+
+    .checkbox-group {
+        margin-top: 15px;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        cursor: pointer;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        transition: all 0.2s;
+    }
+
+    .checkbox-label:hover {
+        background: #e9ecef;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        margin-top: 2px;
+    }
+
+    .checkbox-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .checkbox-text small {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .form-hint {
+        display: block;
+        margin-top: 6px;
+        font-size: 12px;
+        color: #999;
+    }
+
+    .donation-summary {
+        background: linear-gradient(135deg, #e1f098 0%, #d4e889 100%);
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        font-size: 16px;
+    }
+
+    .summary-row.total {
+        border-top: 2px solid rgba(0, 0, 0, 0.1);
+        margin-top: 10px;
+        padding-top: 15px;
+        font-weight: 700;
+        font-size: 18px;
+    }
+
+    .summary-amount, .summary-group {
+        font-weight: 600;
+        color: #1e7a6d;
+    }
+
+    .summary-total {
+        font-size: 28px;
+        font-weight: 800;
+        color: #1e7a6d;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .btn-cancel {
+        flex: 1;
+        background: #f0f0f0;
+        border: none;
+        padding: 16px 30px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-cancel:hover {
+        background: #e0e0e0;
+    }
+
+    .btn-donate {
+        flex: 2;
+        background: linear-gradient(135deg, #1e7a6d 0%, #166258 100%);
+        color: white;
+        border: none;
+        padding: 16px 30px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s;
+        /*box-shadow: 0 4px 15px rgba(30, 122, 109, 0.3);*/
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .btn-donate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(30, 122, 109, 0.4);
+    }
+
+    .btn-icon {
+        font-size: 20px;
+    }
+
+    .loading-card {
+        background: white;
+        border-radius: 20px;
+        padding: 60px 40px;
+        text-align: center;
+        /*box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);*/
+    }
+
+    .error-alert {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .donate-page {
+            padding: 20px 15px;
+        }
+
+        .donate-card {
+            padding: 25px 20px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-top: 50px;
+        }
+
+        .btn-back {
+            position: static;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .quick-amounts {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn-cancel,
+        .btn-donate {
+            width: 100%;
+        }
+    }
+</style>

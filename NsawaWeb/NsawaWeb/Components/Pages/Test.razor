@@ -1,0 +1,796 @@
+@page "/events/{EventId:guid}/"
+@using NsawaWeb.Data.Models
+@using NsawaWeb.Services.Services
+@inject ApiClient ApiClient
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<style>
+    .edit-event-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    .page-title {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0;
+    }
+    .btn-cancel {
+        background: #f0f0f0;
+        border: none;
+        border-radius: 50px;
+        padding: 12px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-cancel:hover {
+        background: #e0e0e0;
+    }
+    .form-card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+        margin-bottom: 25px;
+    }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: #dc3545;
+    }
+    .form-control {
+        padding: 12px 16px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        font-size: 15px;
+        transition: border-color 0.2s;
+    }
+    .form-control:focus {
+        outline: none;
+        border-color: #1e7a6d;
+    }
+    .form-control.is-invalid {
+        border-color: #dc3545;
+    }
+    .invalid-feedback {
+        color: #dc3545;
+        font-size: 13px;
+        margin-top: 4px;
+    }
+    textarea.form-control {
+        resize: vertical;
+        min-height: 120px;
+    }
+    .image-upload-section {
+        grid-column: 1 / -1;
+        padding: 25px;
+        background: #f8f9fa;
+        border-radius: 15px;
+        margin-top: 15px;
+    }
+    .image-upload-header {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    .image-upload-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    .current-image-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .current-image {
+        width: 100%;
+        max-width: 400px;
+        border-radius: 15px;
+        object-fit: cover;
+    }
+    .image-caption {
+        margin-top: 10px;
+        font-size: 13px;
+        color: #666;
+    }
+    .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+        max-width: 400px;
+    }
+    .file-input {
+        display: none;
+    }
+    .file-input-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 20px;
+        background: #f8f9fa;
+        border: 2px dashed #ddd;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+        color: #666;
+    }
+    .file-input-label:hover {
+        border-color: #1e7a6d;
+        background: #f0fdf4;
+    }
+    .btn-upload-banner {
+        background: #1e7a6d;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 25px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        max-width: 200px;
+    }
+    .btn-upload-banner:hover {
+        background: #165c52;
+    }
+    .btn-upload-banner:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    .toggle-label {
+        font-weight: 600;
+        color: #333;
+    }
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 26px;
+    }
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: #1e7a6d;
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(24px);
+    }
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: flex-end;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid #f0f0f0;
+    }
+    .btn-submit {
+        background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+        border: none;
+        border-radius: 50px;
+        padding: 14px 40px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #000;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .btn-submit:hover {
+        transform: translateY(-2px);
+    }
+    .btn-submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .loading-container {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    .alert {
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .alert-danger {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    .alert-success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    .alert-info {
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+    }
+
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .form-card {
+            padding: 25px;
+        }
+        .form-actions {
+            flex-direction: column;
+        }
+        .btn-submit, .btn-cancel {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="edit-event-container">
+    <div class="page-header">
+        <h1 class="page-title">Edit Event</h1>
+        <button class="btn-cancel" @onclick="Cancel">Cancel</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">
+            @successMessage
+        </div>
+    }
+
+    @if (isLoadingEvent)
+    {
+        <div class="loading-container">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading event details...</p>
+        </div>
+    }
+    else if (eventData != null)
+    {
+        <div class="form-card">
+            <EditForm Model="eventData" OnValidSubmit="HandleSubmitEventDetails">
+                <DataAnnotationsValidator />
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">Event Title</label>
+                        <InputText class="form-control" @bind-Value="eventData.Title" placeholder="Enter event title" />
+                        <ValidationMessage For="@(() => eventData.Title)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">Event Type</label>
+                        <InputSelect class="form-control" @bind-Value="eventData.EventTypeId">
+                            <option value="0">Select event type...</option>
+                            @foreach (var type in eventTypes)
+                            {
+                                <option value="@type.Id">@type.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => eventData.EventTypeId)" />
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label required">Description</label>
+                        <InputTextArea class="form-control" @bind-Value="eventData.Description" 
+                                       placeholder="Enter event description" />
+                        <ValidationMessage For="@(() => eventData.Description)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">Location</label>
+                        <InputText class="form-control" @bind-Value="eventData.Location" 
+                                   placeholder="Enter event location" />
+                        <ValidationMessage For="@(() => eventData.Location)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">RSVP Contact</label>
+                        <InputText class="form-control" @bind-Value="eventData.Rsvp" 
+                                   placeholder="Enter RSVP contact" />
+                        <ValidationMessage For="@(() => eventData.Rsvp)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">Start Date</label>
+                        <InputDate class="form-control" @bind-Value="startDate" />
+                        <ValidationMessage For="@(() => eventData.StartDate)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required">End Date</label>
+                        <InputDate class="form-control" @bind-Value="endDate" />
+                        <ValidationMessage For="@(() => eventData.EndDate)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Expiry Date</label>
+                        <InputDate class="form-control" @bind-Value="expiryDate" />
+                    </div>
+
+                    <div class="form-group full-width">
+                        <div class="toggle-container">
+                            <span class="toggle-label">Notify Organizer</span>
+                            <label class="toggle-switch">
+                                <InputCheckbox @bind-Value="eventData.NotifyOrganizer" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <div class="toggle-container">
+                            <span class="toggle-label">Notify Affiliate Organizers</span>
+                            <label class="toggle-switch">
+                                <InputCheckbox @bind-Value="eventData.NotifyAffiliateOrganizers" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" @onclick="Cancel">Cancel</button>
+                    <button type="submit" class="btn-submit" disabled="@isSubmittingDetails">
+                        @if (isSubmittingDetails)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Updating...</span>
+                        }
+                        else
+                        {
+                            <span>Update Event Details ↗</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+
+            <!-- Separate Banner Upload Section -->
+            <div class="image-upload-section">
+                <div class="image-upload-header">Event Banner</div>
+                
+                <div class="image-upload-container">
+                    @if (!string.IsNullOrEmpty(eventData.Banner))
+                    {
+                        <div class="current-image-wrapper">
+                            <img src="@($"/api/imageproxy/getimage/{eventData.Banner}")" class="current-image" alt="Current banner" />
+                            <div class="image-caption">Current Banner</div>
+                        </div>
+                    }
+                    
+                    @if (selectedBannerFile != null)
+                    {
+                        <div class="alert alert-info" style="font-size: 14px;">
+                            <strong>New image selected:</strong> @selectedFileName
+                        </div>
+                    }
+
+                    <div class="file-input-wrapper">
+                        <InputFile OnChange="HandleBannerUpload" class="file-input" id="bannerInput" accept="image/*" />
+                        <label for="bannerInput" class="file-input-label">
+                            <span>@(selectedBannerFile != null ? "Change Selection" : (string.IsNullOrEmpty(eventData.Banner) ? "Upload Banner" : "Replace Banner"))</span>
+                        </label>
+                    </div>
+
+                    @if (selectedBannerFile != null)
+                    {
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" class="btn-upload-banner" disabled="@isUploadingBanner">
+                                @if (isUploadingBanner)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Uploading...</span>
+                                }
+                                else
+                                {
+                                    <span>Upload Banner</span>
+                                }
+                            </button>
+                            <button type="button" class="btn-cancel" @onclick="ClearBannerSelection" style="padding: 10px 25px; font-size: 14px;">
+                                Cancel
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid EventId { get; set; }
+
+    private EventViewModel eventData;
+    private List<EventTypeViewModel> eventTypes = new();
+    
+    private DateTime startDate;
+    private DateTime endDate;
+    private DateTime? expiryDate;
+    
+    private IBrowserFile selectedBannerFile;
+    private string selectedFileName;
+    
+    private bool isLoadingEvent = true;
+    private bool isSubmittingDetails = false;
+    private bool isUploadingBanner = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    
+    private string originalBannerUrl;
+    
+    bool _success;
+    string[] _errors = [];
+    bool IsLoading { get; set; } = false;
+    
+    [Parameter] public EditEventDto EditEventDto { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEventTypes();
+        await LoadEvent();
+    }
+
+    private async Task LoadEventTypes()
+    {
+        try
+        {
+            var result = await ApiClient.AllAsync();
+            if (result.Success && result.Data != null)
+            {
+                eventTypes = result.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading event types: {ex.Message}");
+            errorMessage = "Failed to load event types.";
+        }
+    }
+
+    private async Task LoadEvent()
+    {
+        try
+        {
+            isLoadingEvent = true;
+            errorMessage = string.Empty;
+
+            var result = await ApiClient.EventAsync(EventId);
+
+            if (result.Success && result.Data != null)
+            {
+                eventData = result.Data;
+                startDate = eventData.StartDate.DateTime;
+                endDate = eventData.EndDate.DateTime;
+                expiryDate = eventData.ExpiryDate?.DateTime;
+                originalBannerUrl = eventData.Banner;
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to load event.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                401 => "You are not authorized. Please log in again.",
+                404 => "Event not found.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while loading the event. (Error code: {apiEx.StatusCode})"
+            };
+            Console.WriteLine($"API Error: {apiEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred while loading the event.";
+            Console.WriteLine($"Error loading event: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingEvent = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ClearBannerSelection()
+    {
+        selectedBannerFile = null;
+        selectedFileName = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleBannerUpload(InputFileChangeEventArgs e)
+    {
+        selectedBannerFile = e.File;
+        selectedFileName = e.File.Name;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        StateHasChanged();
+    }
+    
+    public async Task HandleSubmitEventDetails()
+    {
+        try
+        {
+           
+            
+                var result = await ApiClient.UpdateEventAsync(
+                    EditEventDto.Id,
+                    EditEventDto.Title,
+                    EditEventDto.Description,
+                    EditEventDto.EventTypeId,
+                    EditEventDto.Location,
+                    EditEventDto.Longitude,
+                    EditEventDto.Latitude,
+                    EditEventDto.Banner,
+                    EditEventDto.StartDate,
+                    EditEventDto.EndDate,
+                    EditEventDto.Rsvp,
+                    EditEventDto.NotifyOrganizer,
+                    EditEventDto.NotifyAffiliateOrganizers,
+                    null
+                );
+               
+                if (result != null && result.Success)
+                {
+                    successMessage = "Event details updated successfully!";
+                
+                    // Update the local data
+                    if (result.Data != null)
+                    {
+                        eventData = result.Data;
+                    }
+                
+                    StateHasChanged();
+                }
+                else if (result != null)
+                {
+                    errorMessage = result.Message ?? "Failed to update event details.";
+                }
+        }
+        catch (Exception e)
+        {
+            Console.Write(e.Message);
+        }
+
+        IsLoading = false;
+    }
+
+    private async Task HandleSubmitEventDetail()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        // Validation
+        if (string.IsNullOrWhiteSpace(eventData.Title))
+        {
+            errorMessage = "Event title is required.";
+            return;
+        }
+
+        if (eventData.EventTypeId <= 0)
+        {
+            errorMessage = "Please select an event type.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(eventData.Description))
+        {
+            errorMessage = "Event description is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(eventData.Location))
+        {
+            errorMessage = "Event location is required.";
+            return;
+        }
+
+        if (endDate < startDate)
+        {
+            errorMessage = "End date must be after start date.";
+            return;
+        }
+
+        try
+        {
+            isSubmittingDetails = true;
+            StateHasChanged();
+
+            var expiryDateValue = expiryDate ?? endDate.AddYears(1);
+
+            // Call API method that updates only event details (not banner)
+            // You'll need to create this method in your ApiClient
+            var result = await ApiClient.UpdateEventAsync(
+                eventId: EventId,
+                title: eventData.Title,
+                description: eventData.Description,
+                eventTypeId: eventData.EventTypeId,
+                location: eventData.Location,
+                longitude: eventData.Longitude,
+                latitude: eventData.Latitude,
+                banner: null,
+                startDate: new DateTimeOffset(startDate, TimeSpan.Zero),
+                endDate: new DateTimeOffset(endDate, TimeSpan.Zero),
+                rSVP: eventData.Rsvp ?? string.Empty,
+                notifyOrganizer: eventData.NotifyOrganizer,
+                notifyAffiliateOrganizers: eventData.NotifyAffiliateOrganizers,
+                expiryDate: new DateTimeOffset(expiryDateValue, TimeSpan.Zero)
+            );
+
+            if (result != null && result.Success)
+            {
+                successMessage = "Event details updated successfully!";
+                
+                // Update the local data
+                if (result.Data != null)
+                {
+                    eventData = result.Data;
+                }
+                
+                StateHasChanged();
+            }
+            else if (result != null)
+            {
+                errorMessage = result.Message ?? "Failed to update event details.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = $"API Error: {apiEx.Message}";
+            Console.WriteLine($"API Error: {apiEx.StatusCode} - {apiEx.Message}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An unexpected error occurred: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isSubmittingDetails = false;
+            StateHasChanged();
+        }
+    }
+
+  
+    // private async Task HandleUploadBanner()
+    // {
+    //     if (selectedBannerFile == null)
+    //     {
+    //         errorMessage = "Please select a banner image first.";
+    //         return;
+    //     }
+    //
+    //     errorMessage = string.Empty;
+    //     successMessage = string.Empty;
+    //
+    //     try
+    //     {
+    //         isUploadingBanner = true;
+    //         StateHasChanged();
+    //
+    //         var stream = selectedBannerFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+    //         var bannerParam = new FileParameter(stream, selectedBannerFile.Name, selectedBannerFile.ContentType);
+    //
+    //         // Call API method that updates only the banner
+    //         // You'll need to create this method in your ApiClient
+    //         var result = await ApiClient.UpdateEventBannerAsync(EventId, bannerParam);
+    //
+    //         if (result != null && result.Success)
+    //         {
+    //             successMessage = "Banner updated successfully!";
+    //             
+    //             // Update the local data
+    //             if (result.Data != null)
+    //             {
+    //                 eventData.Banner = result.Data.Banner;
+    //                 originalBannerUrl = result.Data.Banner;
+    //             }
+    //             
+    //             // Clear selection
+    //             ClearBannerSelection();
+    //             
+    //             StateHasChanged();
+    //         }
+    //         else if (result != null)
+    //         {
+    //             errorMessage = result.Message ?? "Failed to update banner.";
+    //         }
+    //     }
+    //     catch (ApiException apiEx)
+    //     {
+    //         errorMessage = $"API Error: {apiEx.Message}";
+    //         Console.WriteLine($"API Error: {apiEx.StatusCode} - {apiEx.Message}");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errorMessage = $"An unexpected error occurred: {ex.Message}";
+    //         Console.WriteLine($"Error: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         isUploadingBanner = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/my-events");
+    }
+}

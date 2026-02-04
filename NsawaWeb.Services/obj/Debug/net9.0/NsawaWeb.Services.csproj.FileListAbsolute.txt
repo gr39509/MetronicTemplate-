@@ -1,0 +1,12 @@
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/bin/Debug/net9.0/NsawaWeb.Services.deps.json
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/bin/Debug/net9.0/NsawaWeb.Services.dll
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/bin/Debug/net9.0/NsawaWeb.Services.pdb
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/NsawaWeb.Services.csproj.AssemblyReference.cache
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/NsawaWeb.Services.GeneratedMSBuildEditorConfig.editorconfig
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/NsawaWeb.Services.AssemblyInfoInputs.cache
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/NsawaWeb.Services.AssemblyInfo.cs
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/NsawaWeb.Services.csproj.CoreCompileInputs.cache
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/NsawaWeb.Services.dll
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/refint/NsawaWeb.Services.dll
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/NsawaWeb.Services.pdb
+/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb.Services/obj/Debug/net9.0/ref/NsawaWeb.Services.dll

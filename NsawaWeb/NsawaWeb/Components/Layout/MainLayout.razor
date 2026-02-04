@@ -1,0 +1,759 @@
+﻿@using System.Runtime.InteropServices.JavaScript
+@using NsawaWeb.Services.Services
+@using Microsoft.JSInterop
+@inherits LayoutComponentBase
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<style>
+    .logout-btn {
+        transition: color 0.3s ease;
+    }
+
+    .logout-btn:hover {
+        color: #dc3545;
+        text-decoration: underline;
+    }
+
+    /* Dropdown menu styles */
+    .dropdown-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-trigger {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+    }
+
+    .dropdown-trigger:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 8px;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        min-width: 200px;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s ease;
+    }
+
+    .dropdown-menu.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .dropdown-item {
+        display: block;
+        padding: 12px 16px;
+        text-decoration: none;
+        color: #374151;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f9fafb;
+        color: #111827;
+    }
+
+    .dropdown-item.logout {
+        color: #dc3545;
+        font-weight: 500;
+    }
+
+    .dropdown-item.logout:hover {
+        background-color: #fef2f2;
+    }
+
+    .user-info {
+        padding: 12px 16px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .arrow {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid #6b7280;
+        transition: transform 0.3s ease;
+    }
+
+    .arrow.up {
+        transform: rotate(180deg);
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .modal-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .modal-content {
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        transform: translateY(-20px);
+        transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.show .modal-content {
+        transform: translateY(0);
+    }
+
+    .modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 4px;
+        line-height: 1;
+        transition: color 0.3s ease;
+    }
+
+    .modal-close:hover {
+        color: #374151;
+    }
+
+    .modal-body {
+        padding: 24px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+        color: #374151;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-control.is-invalid {
+        border-color: #dc3545;
+    }
+
+    .invalid-feedback {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.875rem;
+        color: #dc3545;
+    }
+
+    .modal-footer {
+        padding: 20px 24px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        font-size: 1rem;
+    }
+
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #2563eb;
+    }
+
+    .btn-primary:disabled {
+        background-color: #93c5fd;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background-color: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #4b5563;
+    }
+
+    .alert {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    .alert-success {
+        background-color: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .alert-danger {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
+    /* Mobile responsive styles */
+    @@media (min-width: 768px) {
+        .user-name {
+            display: inline;
+            font-weight: 500;
+            color: #374151;
+        }
+    }
+
+    /* Mobile header specific dropdown */
+    .mobile-header .dropdown-container {
+        display: flex;
+        align-items: center;
+    }
+
+    .mobile-header .dropdown-menu {
+        right: 0;
+        left: auto;
+    }
+
+    /* Overlay for mobile dropdown */
+    .dropdown-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .dropdown-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* Mobile specific dropdown */
+    @@media (max-width: 767px) {
+        .top-bar .dropdown-menu {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            margin: 0;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            min-width: auto;
+        }
+
+        .top-bar .dropdown-item {
+            padding: 16px;
+        }
+
+        .user-info {
+            padding: 16px;
+        }
+
+        .modal-content {
+            width: 95%;
+            margin: 20px;
+        }
+    }
+</style>
+
+<div class="mobile-header">
+    <button class="hamburger" @onclick="ToggleSidebar">☰</button>
+    <div class="logo">
+        <img src="icons/Logo.jpg" alt="Nova Nsawa">
+    </div>
+    <div class="dropdown-container">
+        <div class="dropdown-trigger" @onclick="@(() => ToggleDropdown("mobile"))">
+            <img src="https://i.pravatar.cc/150?img=12" alt="User" class="user-avatar">
+            <span class="arrow @(mobileDropdownOpen ? "up" : "down")"></span>
+        </div>
+        <div class="dropdown-menu @(mobileDropdownOpen ? "show" : "")">
+            @* <div class="user-info">@userName</div> *@
+            <div class="dropdown-item" @onclick="OpenChangePasswordModal">
+                <span>Change Password</span>
+            </div>
+            <div class="dropdown-item logout" @onclick="HandleLogout">
+                @if (isLoggingOut)
+                {
+                    <span>Logging out...</span>
+                }
+                else
+                {
+                    <span>Logout</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (mobileDropdownOpen)
+{
+    <div class="dropdown-overlay show" @onclick="CloseDropdowns"></div>
+}
+
+<div class="overlay" id="overlay" @onclick="ToggleSidebar"></div>
+<CustomMenu></CustomMenu>
+
+<div class="main-wrapper">
+    <div class="top-bar">
+        <div class="search-bar">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" placeholder="Search">
+        </div>
+        <div class="dropdown-container">
+            <div class="dropdown-trigger" @onclick="@(() => ToggleDropdown("desktop"))">
+                <img src="https://i.pravatar.cc/150?img=12" alt="User" class="user-avatar">
+                <span class="user-name">
+                    @userName
+                    <span class="arrow @(desktopDropdownOpen ? "up" : "down")"></span>
+                </span>
+            </div>
+            <div class="dropdown-menu @(desktopDropdownOpen ? "show" : "")">
+                @* <div class="user-info">@userName</div> *@
+                <div class="dropdown-item" @onclick="OpenChangePasswordModal">
+                    <span>Change Password</span>
+                </div>
+                <div class="dropdown-item logout" @onclick="HandleLogout">
+                    @if (isLoggingOut)
+                    {
+                        <span>Logging out...</span>
+                    }
+                    else
+                    {
+                        <span>Logout</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+   
+    <div class="main-content">
+        @Body
+
+        <div class="footer">
+            © @DateTime.Now.Year F & F ICT Solutions
+        </div>
+    </div>
+</div>
+
+@if (showChangePasswordModal)
+{
+    <div class="modal-overlay show">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Change Password</h3>
+                <button class="modal-close" @onclick="CloseChangePasswordModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        @successMessage
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        @errorMessage
+                    </div>
+                }
+                
+                <form @onsubmit="HandleChangePasswordSubmit">
+                    <div class="form-group">
+                        <label class="form-label" for="currentPassword">Current Password</label>
+                        <input type="password" 
+                               class="form-control @(validationErrors.ContainsKey("currentPassword") ? "is-invalid" : "")" 
+                               id="currentPassword" 
+                               @bind="changePasswordDto.CurrentPassword" 
+                               @bind:event="oninput"
+                               disabled="@isChangingPassword" />
+                        @if (validationErrors.ContainsKey("currentPassword"))
+                        {
+                            <div class="invalid-feedback">@validationErrors["currentPassword"]</div>
+                        }
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="newPassword">New Password</label>
+                        <input type="password" 
+                               class="form-control @(validationErrors.ContainsKey("password") ? "is-invalid" : "")" 
+                               id="newPassword" 
+                               @bind="changePasswordDto.Password" 
+                               @bind:event="oninput"
+                               disabled="@isChangingPassword" />
+                        @if (validationErrors.ContainsKey("password"))
+                        {
+                            <div class="invalid-feedback">@validationErrors["password"]</div>
+                        }
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirm New Password</label>
+                        <input type="password" 
+                               class="form-control @(validationErrors.ContainsKey("confirmPassword") ? "is-invalid" : "")" 
+                               id="confirmPassword" 
+                               @bind="changePasswordDto.ConfirmPassword" 
+                               @bind:event="oninput"
+                               disabled="@isChangingPassword" />
+                        @if (validationErrors.ContainsKey("confirmPassword"))
+                        {
+                            <div class="invalid-feedback">@validationErrors["confirmPassword"]</div>
+                        }
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseChangePasswordModal" disabled="@isChangingPassword">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" disabled="@isChangingPassword">
+                            @if (isChangingPassword)
+                            {
+                                <span>Changing Password...</span>
+                            }
+                            else
+                            {
+                                <span>Change Password</span>
+                            }
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] private ApiClient? ApiClient { get; set; }
+    
+    private string userName = "User";
+    private bool isLoggingOut = false;
+    private bool isChangingPassword = false;
+    private bool desktopDropdownOpen = false;
+    private bool mobileDropdownOpen = false;
+    private bool showChangePasswordModal = false;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private Dictionary<string, string> validationErrors = new Dictionary<string, string>();
+    
+    private ChangePasswordDto changePasswordDto = new ChangePasswordDto
+    {
+        CurrentPassword = string.Empty,
+        Password = string.Empty,
+        ConfirmPassword = string.Empty
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserInfo();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                window.addEventListener('click', function(e) {
+                    if (!e.target.closest('.dropdown-container')) {
+                        const dropdowns = document.querySelectorAll('.dropdown-menu.show');
+                        dropdowns.forEach(dropdown => {
+                            dropdown.classList.remove('show');
+                        });
+                        const overlays = document.querySelectorAll('.dropdown-overlay.show');
+                        overlays.forEach(overlay => {
+                            overlay.classList.remove('show');
+                        });
+                    }
+                });
+            ");
+        }
+    }
+
+    private async Task LoadUserInfo()
+    {
+        try
+        {
+            var user = await AuthService.GetUserAsync();
+            if (user != null)
+            {
+                // Try to get name from claims
+                var nameClaim = user.FindFirst(System.Security.Claims.ClaimTypes.Name);
+                if (nameClaim != null)
+                {
+                    userName = nameClaim.Value;
+                }
+                else
+                {
+                    // Fallback to stored username
+                    userName = await AuthService.GetStoredUserName() ?? "User";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading user info: {ex.Message}");
+        }
+    }
+
+    private void ToggleDropdown(string type)
+    {
+        if (type == "mobile")
+        {
+            mobileDropdownOpen = !mobileDropdownOpen;
+            desktopDropdownOpen = false;
+        }
+        else
+        {
+            desktopDropdownOpen = !desktopDropdownOpen;
+            mobileDropdownOpen = false;
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleSidebar()
+    {
+        _ = JSRuntime.InvokeVoidAsync("toggleSidebar");
+    }
+
+    private void CloseDropdowns()
+    {
+        desktopDropdownOpen = false;
+        mobileDropdownOpen = false;
+        StateHasChanged();
+    }
+
+    private void OpenChangePasswordModal()
+    {
+        CloseDropdowns();
+        showChangePasswordModal = true;
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+        validationErrors.Clear();
+        changePasswordDto = new ChangePasswordDto
+        {
+            CurrentPassword = string.Empty,
+            Password = string.Empty,
+            ConfirmPassword = string.Empty
+        };
+        StateHasChanged();
+    }
+
+    private void CloseChangePasswordModal()
+    {
+        showChangePasswordModal = false;
+        isChangingPassword = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleChangePasswordSubmit()
+    {
+        if (isChangingPassword) return;
+        
+        // Clear previous messages and errors
+        successMessage = string.Empty;
+        errorMessage = string.Empty;
+        validationErrors.Clear();
+        
+        // Validate form
+        if (string.IsNullOrWhiteSpace(changePasswordDto.CurrentPassword))
+        {
+            validationErrors["currentPassword"] = "Current password is required.";
+        }
+        
+        if (string.IsNullOrWhiteSpace(changePasswordDto.Password))
+        {
+            validationErrors["password"] = "New password is required.";
+        }
+        else if (changePasswordDto.Password.Length < 6)
+        {
+            validationErrors["password"] = "Password must be at least 6 characters long.";
+        }
+        
+        if (string.IsNullOrWhiteSpace(changePasswordDto.ConfirmPassword))
+        {
+            validationErrors["confirmPassword"] = "Please confirm your new password.";
+        }
+        else if (changePasswordDto.Password != changePasswordDto.ConfirmPassword)
+        {
+            validationErrors["confirmPassword"] = "Passwords do not match.";
+        }
+        
+        if (validationErrors.Count > 0)
+        {
+            StateHasChanged();
+            return;
+        }
+        
+        isChangingPassword = true;
+        StateHasChanged();
+        
+        try
+        {
+            if (ApiClient != null)
+            {
+                var result = await ApiClient.ChangePasswordAsync(changePasswordDto);
+                
+                if (result != null && result.Success)
+                {
+                    successMessage = "Password changed successfully!";
+                    errorMessage = string.Empty;
+                    
+                    // Clear form after success
+                    changePasswordDto = new ChangePasswordDto
+                    {
+                        CurrentPassword = string.Empty,
+                        Password = string.Empty,
+                        ConfirmPassword = string.Empty
+                    };
+                    
+                    // Auto-close modal after 2 seconds
+                    await Task.Delay(2000);
+                    CloseChangePasswordModal();
+                }
+                else
+                {
+                    errorMessage = result?.Message ?? "Failed to change password. Please try again.";
+                }
+            }
+            else
+            {
+                errorMessage = "API client is not available.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            Console.WriteLine($"Error changing password: {ex.Message}");
+        }
+        finally
+        {
+            isChangingPassword = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        if (isLoggingOut) return;
+        
+        isLoggingOut = true;
+        CloseDropdowns();
+        StateHasChanged();
+
+        try
+        {
+            await AuthService.LogoutAsync(ApiClient);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during logout: {ex.Message}");
+            NavigationManager.NavigateTo("/login", true);
+        }
+        finally
+        {
+            isLoggingOut = false;
+        }
+    }
+}

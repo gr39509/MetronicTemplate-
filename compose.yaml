@@ -1,0 +1,13 @@
+﻿services:
+  nsawaweb:
+    image: nsawaweb
+    build:
+      context: .
+      dockerfile: NsawaWeb/NsawaWeb/Dockerfile
+
+  nsawaweb.client:
+    image: nsawaweb.client
+    build:
+      context: .
+      dockerfile: NsawaWeb/NsawaWeb.Client/Dockerfile
+

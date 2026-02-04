@@ -1,0 +1,528 @@
+@using NsawaWeb.Services.Services
+@inject ApiClient ApiClient
+
+<style>
+    .affiliate-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        overflow-y: auto;
+        padding: 20px;
+    }
+    .affiliate-modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .affiliate-modal-content {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        max-width: 900px;
+        width: 100%;
+        position: relative;
+    }
+    .affiliate-close-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: #f0f0f0;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+        cursor: pointer;
+        color: #333;
+    }
+    .affiliate-close-btn:hover {
+        background: #e0e0e0;
+    }
+    .affiliate-modal-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0 0 25px 0;
+    }
+    .affiliate-form-group {
+        margin-bottom: 20px;
+    }
+    .affiliate-label {
+        display: block;
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    .affiliate-label.required::after {
+        content: " *";
+        color: #dc3545;
+    }
+    .affiliate-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        font-size: 15px;
+        transition: border-color 0.2s;
+    }
+    .affiliate-input:focus {
+        outline: none;
+        border-color: #1e7a6d;
+    }
+    .affiliate-input.is-invalid {
+        border-color: #dc3545;
+    }
+    .affiliate-invalid-feedback {
+        color: #dc3545;
+        font-size: 13px;
+        margin-top: 4px;
+    }
+    .affiliate-roles-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    .affiliate-role-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .affiliate-role-checkbox:hover {
+        background: #f0fdf4;
+    }
+    .affiliate-role-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    .affiliate-role-label {
+        flex: 1;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    .affiliate-toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+    }
+    .affiliate-toggle-label {
+        font-weight: 600;
+        color: #333;
+    }
+    .affiliate-toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+    .affiliate-toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .affiliate-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 26px;
+    }
+    .affiliate-toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    .affiliate-toggle-switch input:checked + .affiliate-toggle-slider {
+        background-color: #1e7a6d;
+    }
+    .affiliate-toggle-switch input:checked + .affiliate-toggle-slider:before {
+        transform: translateX(24px);
+    }
+    .affiliate-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: flex-end;
+        margin-top: 30px;
+        padding-top: 25px;
+        border-top: 1px solid #f0f0f0;
+    }
+    .affiliate-btn-cancel {
+        background: #f0f0f0;
+        border: none;
+        border-radius: 50px;
+        padding: 12px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        cursor: pointer;
+    }
+    .affiliate-btn-submit {
+        background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+        border: none;
+        border-radius: 50px;
+        padding: 12px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #000;
+        cursor: pointer;
+    }
+    .affiliate-btn-submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .affiliate-alert {
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+    .affiliate-alert-danger {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    .affiliate-alert-success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+
+    @@media (max-width: 576px) {
+        .affiliate-modal-content {
+            padding: 25px;
+        }
+        .affiliate-actions {
+            flex-direction: column;
+        }
+        .affiliate-btn-cancel,
+        .affiliate-btn-submit {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="affiliate-modal @(ShowModal ? "show" : "")">
+    <div class="affiliate-modal-content">
+        <button class="affiliate-close-btn" @onclick="Close">×</button>
+        
+        <h2 class="affiliate-modal-title">Add Event Affiliate</h2>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="affiliate-alert affiliate-alert-danger">
+                @errorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="affiliate-alert affiliate-alert-success">
+                @successMessage
+            </div>
+        }
+
+        <EditForm Model="affiliateModel" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+
+            <div class="affiliate-form-group">
+                <label class="affiliate-label required">Full Name</label>
+                <InputText class="affiliate-input" @bind-Value="affiliateModel.FullName" 
+                          placeholder="Enter affiliate's full name" />
+                <ValidationMessage For="@(() => affiliateModel.FullName)" class="affiliate-invalid-feedback" />
+            </div>
+
+            <div class="affiliate-form-group">
+                <label class="affiliate-label required">Phone Number</label>
+                <InputText class="affiliate-input" @bind-Value="affiliateModel.PhoneNumber" 
+                          placeholder="Enter 10-digit phone number" maxlength="10" />
+                <ValidationMessage For="@(() => affiliateModel.PhoneNumber)" class="affiliate-invalid-feedback" />
+            </div>
+
+            <div class="affiliate-form-group">
+                <label class="affiliate-label">Address</label>
+                <InputText class="affiliate-input" @bind-Value="affiliateModel.Address" 
+                          placeholder="Enter address (optional)" />
+            </div>
+
+            <div class="affiliate-form-group">
+                <label class="affiliate-label">Organization Name</label>
+                <InputText class="affiliate-input" @bind-Value="affiliateModel.OrganizationName" 
+                          placeholder="Enter organization name (optional)" />
+            </div>
+
+            <div class="affiliate-form-group">
+                <label class="affiliate-label required">Roles</label>
+                <div class="affiliate-roles-container">
+                    @foreach (var role in availableRoles)
+                    {
+                        <label class="affiliate-role-checkbox">
+                            <input type="checkbox" 
+                                   checked="@IsRoleSelected(role.Id)" 
+                                   @onchange="@(e => ToggleRole(role.Id, (bool)e.Value))" />
+                            <span class="affiliate-role-label">@role.Name</span>
+                        </label>
+                    }
+                </div>
+                @if (selectedRoles.Count == 0 && showRoleError)
+                {
+                    <div class="affiliate-invalid-feedback">Please select at least one role.</div>
+                }
+            </div>
+
+            <div class="affiliate-form-group">
+                <div class="affiliate-toggle-container">
+                    <span class="affiliate-toggle-label">Email Notification on Donation</span>
+                    <label class="affiliate-toggle-switch">
+                        <InputCheckbox @bind-Value="affiliateModel.NotifyDonation" />
+                        <span class="affiliate-toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="affiliate-form-group">
+                <div class="affiliate-toggle-container">
+                    <span class="affiliate-toggle-label">Push Notification on Donation</span>
+                    <label class="affiliate-toggle-switch">
+                        <InputCheckbox @bind-Value="affiliateModel.PushNotifyDonation" />
+                        <span class="affiliate-toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="affiliate-actions">
+                <button type="button" class="affiliate-btn-cancel" @onclick="Close">Cancel</button>
+                <button type="submit" class="affiliate-btn-submit" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Adding...</span>
+                    }
+                    else
+                    {
+                        <span>Add Affiliate ↗</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid EventId { get; set; }
+
+    [Parameter]
+    public bool ShowModal { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnSuccess { get; set; }
+
+    private CreateEventAffiliateModel affiliateModel = new();
+    private List<RoleViewModel> availableRoles = new();
+    private HashSet<string> selectedRoles = new();
+    
+    private bool isSubmitting = false;
+    private bool showRoleError = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+        ResetForm();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (ShowModal)
+        {
+            ResetForm();
+        }
+    }
+
+    private async Task LoadRoles()
+    {
+        try
+        {
+            var result = await ApiClient.All4Async();
+            if (result.Success && result.Data != null)
+            {
+                availableRoles = result.Data.ToList();
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading roles: {ex.Message}");
+        }
+    }
+
+    private void ResetForm()
+    {
+        affiliateModel = new CreateEventAffiliateModel();
+        selectedRoles.Clear();
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        showRoleError = false;
+    }
+
+    private bool IsRoleSelected(string roleId)
+    {
+        return selectedRoles.Contains(roleId);
+    }
+
+    private void ToggleRole(string roleId, bool isChecked)
+    {
+        if (isChecked)
+        {
+            selectedRoles.Add(roleId);
+        }
+        else
+        {
+            selectedRoles.Remove(roleId);
+        }
+        showRoleError = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        showRoleError = false;
+
+        // Validation
+        if (string.IsNullOrWhiteSpace(affiliateModel.FullName))
+        {
+            errorMessage = "Full name is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(affiliateModel.PhoneNumber))
+        {
+            errorMessage = "Phone number is required.";
+            return;
+        }
+
+        if (affiliateModel.PhoneNumber.Length != 10)
+        {
+            errorMessage = "Phone number must be exactly 10 digits.";
+            return;
+        }
+
+        if (selectedRoles.Count == 0)
+        {
+            showRoleError = true;
+            errorMessage = "Please select at least one role.";
+            return;
+        }
+
+        try
+        {
+            isSubmitting = true;
+            StateHasChanged();
+
+            var dto = new CreateEventAffiliateDto
+            {
+                EventId = EventId,
+                FullName = affiliateModel.FullName,
+                PhoneNumber = affiliateModel.PhoneNumber,
+                Address = affiliateModel.Address,
+                OrganizationName = affiliateModel.OrganizationName,
+                RoleIds = selectedRoles.ToList(),
+                NotifyDonation = affiliateModel.NotifyDonation,
+                PushNotifyDonation = affiliateModel.PushNotifyDonation
+            };
+
+            var result = await ApiClient.CreateAsync(dto);
+
+            if (result != null && result.Success)
+            {
+                successMessage = result.Message ?? "Affiliate added successfully!";
+                StateHasChanged();
+
+                await Task.Delay(1000);
+                
+                // Trigger success callback
+                await OnSuccess.InvokeAsync();
+                
+                // Close modal
+                await Close();
+            }
+            else
+            {
+                errorMessage = result?.Message ?? "Failed to add affiliate. Please try again.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+           
+            errorMessage = apiEx.StatusCode switch
+            {
+                400 => "Invalid input. Please check all fields.",
+                401 => "You are not authorized. Please log in again.",
+                404 => "Event not found.",
+                409 => "This person is already an affiliate for this event.",
+                422 => "Validation failed. Please check all fields.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while adding affiliate. (Error code: {apiEx.StatusCode})"
+            };
+        }
+        catch (Exception ex)
+        {
+
+            errorMessage = $"An unexpected error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Close()
+    {
+        ResetForm();
+        await OnClose.InvokeAsync();
+    }
+
+    // Model classes
+    public class CreateEventAffiliateModel
+    {
+        public string FullName { get; set; }
+        public string PhoneNumber { get; set; }
+        public string Address { get; set; }
+        public string OrganizationName { get; set; }
+        public bool NotifyDonation { get; set; } = true;
+        public bool PushNotifyDonation { get; set; } = false;
+    }
+    
+}

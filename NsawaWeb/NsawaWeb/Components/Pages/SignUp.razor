@@ -1,0 +1,289 @@
+@page "/register"
+@using NsawaWeb.Components.Layout
+@using NsawaWeb.Services.Services
+@rendermode InteractiveServer
+@layout AccountLayout
+<link rel="stylesheet" href="css/register.css"/>
+<div class="main-container">
+    <div class="content-wrapper">
+        <div class="image-section"></div>
+        <div class="form-section">
+            <div class="logo">
+                <span class="logo-nova">NOVA</span><span class="logo-nsawa">NSAWA</span>
+            </div>
+            <h2>Signup</h2>
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @errorMessage
+                </div>
+            }
+            
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success" role="alert">
+                    @successMessage
+                </div>
+            }
+            
+            <EditForm Model="request" OnValidSubmit="HandleSignup" FormName="signupForm">
+                <DataAnnotationsValidator />
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="text" 
+                        class="form-control" 
+                        placeholder="Full name" 
+                        @bind-Value="request.FullName"
+                        @oninput="ClearError" />
+                    <ValidationMessage For="@(() => request.FullName)" />
+                </div>
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="email" 
+                        class="form-control" 
+                        placeholder="Email address (optional)" 
+                        @bind-Value="request.Email"
+                        @oninput="ClearError" />
+                    <ValidationMessage For="@(() => request.Email)" />
+                </div>
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="tel" 
+                        class="form-control" 
+                        placeholder="Phone number" 
+                        @bind-Value="request.PhoneNumber"
+                        @oninput="ClearError"
+                        maxlength="10" />
+                    <ValidationMessage For="@(() => request.PhoneNumber)" />
+                </div>
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="text" 
+                        class="form-control" 
+                        placeholder="Address (optional)" 
+                        @bind-Value="request.Address"
+                        @oninput="ClearError" />
+                    <ValidationMessage For="@(() => request.Address)" />
+                </div>
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="text" 
+                        class="form-control" 
+                        placeholder="Organization name (optional)" 
+                        @bind-Value="request.OrganizationName"
+                        @oninput="ClearError" />
+                    <ValidationMessage For="@(() => request.OrganizationName)" />
+                </div>
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="password" 
+                        class="form-control" 
+                        placeholder="Password" 
+                        @bind-Value="request.Password"
+                        @oninput="ClearError" />
+                    <ValidationMessage For="@(() => request.Password)" />
+                </div>
+                
+                <div class="mb-3">
+                    <InputText 
+                        type="password" 
+                        class="@GetConfirmPasswordClass()" 
+                        placeholder="Confirm password" 
+                        @bind-Value="request.ConfirmPassword"
+                        @oninput="ClearError" />
+                    <ValidationMessage For="@(() => request.ConfirmPassword)" />
+                    @if (showPasswordMismatch)
+                    {
+                        <div class="invalid-feedback d-block">
+                            Passwords do not match.
+                        </div>
+                    }
+                </div>
+                
+                <button type="submit" class="btn-signup" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Creating account...</span>
+                    }
+                    else
+                    {
+                        <span>Signup ↗</span>
+                    }
+                </button>
+                
+                <div class="login-link mt-3 text-center">
+                    Already have an account? <NavLink href="/">Login</NavLink>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private ApiClient ApiClient { get; set; } = default!;
+    [Inject] private AuthService AuthService { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private SignupDto request { get; set; } = new SignupDto();
+
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isLoading = false;
+    private bool showPasswordMismatch = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await AuthService.IsAuthenticatedAsync())
+        {
+            NavigationManager.NavigateTo("/", true);
+        }
+    }
+
+    private string GetConfirmPasswordClass()
+    {
+        return showPasswordMismatch ? "form-control is-invalid" : "form-control";
+    }
+
+    private async Task HandleSignup()
+    {
+        // Reset errors
+        showPasswordMismatch = false;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            errorMessage = "Full name is required.";
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(request.PhoneNumber))
+        {
+            errorMessage = "Phone number is required.";
+            return;
+        }
+
+        if (request.PhoneNumber.Length != 10)
+        {
+            errorMessage = "Phone number must be exactly 10 digits.";
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            errorMessage = "Password is required.";
+            return;
+        }
+
+        if (request.Password.Length < 6)
+        {
+            errorMessage = "Password must be at least 6 characters long.";
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+        {
+            errorMessage = "Please confirm your password.";
+            return;
+        }
+
+        if (request.Password != request.ConfirmPassword)
+        {
+            showPasswordMismatch = true;
+            errorMessage = "Passwords do not match.";
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            if (!IsValidEmail(request.Email))
+            {
+                errorMessage = "Please enter a valid email address.";
+                return;
+            }
+        }
+
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ApiClient.SignupAsync(body: request);
+            
+            if (result.Success)
+            {
+                successMessage = result.Message ?? "Account created successfully! Redirecting to login...";
+                StateHasChanged();
+                
+                await Task.Delay(2000);
+                NavigationManager.NavigateTo("/login", true);
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Signup failed. Please try again.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                200 => "Invalid input. Please check your information and try again.",
+                409 => "An account with this phone number already exists.",
+                422 => "Validation failed. Please check all fields.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred during signup. Please try again. (Error code: {apiEx.StatusCode})"
+            };
+            
+            if (!string.IsNullOrEmpty(apiEx.Response))
+            {
+                try
+                {
+                    Console.WriteLine($"API Error Response: {apiEx.Response}");
+                }
+                catch { }
+            }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = "Unable to connect to the server. Please check your internet connection.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred. Please try again.";
+            Console.WriteLine($"Signup error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ClearError()
+    {
+        errorMessage = string.Empty;
+        showPasswordMismatch = false;
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}

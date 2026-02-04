@@ -1,0 +1,1277 @@
+@page "/my-events"
+@using NsawaWeb.Services.Services
+@using QRCoder
+@inject ApiClient ApiClient
+@inject NavigationManager Navigation
+
+<h1 class="page-title">Events</h1>
+
+<button class="btn-create" @onclick="CreateNewEvent">Create New Event ↗</button>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+<div class="error-alert">
+    @errorMessage
+</div>
+}
+
+@if (isLoading)
+{
+<div class="loading-container">
+    <div class="spinner-grow text-secondary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3">Loading your events...</p>
+</div>
+}
+else if (events == null || !events.Any())
+{
+<div class="no-events">
+    <h3>No Events Found</h3>
+    <p>You haven't created any events yet. Click "Create New Event" to get started!</p>
+</div>
+}
+else
+{
+<div class="table-card">
+    <table class="table">
+        <thead>
+        <tr>
+            <th>DATE</th>
+            <th>EVENT</th>
+            <th>TOTAL DONATIONS</th>
+            <th>TOTAL WITHDRAWALS</th>
+            <th>ACTIONS</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var evt in events)
+        {
+        <tr>
+            <td>@evt.CreatedAt.ToString("MM/dd/yy")</td>
+            <td>
+                <div class="event-cell">
+                    @if (!string.IsNullOrEmpty(evt.Banner))
+                    {
+                    <img src="@($"/api/imageproxy/getimage/{evt.Banner}")" alt="@evt.Title" class="event-image">
+                    }
+                    else
+                    {
+                    <img src="https://via.placeholder.com/60" alt="Event" class="event-image">
+                    }
+                    <span>@evt.Title</span>
+                </div>
+            </td>
+            <td>@(evt.TotalDonations >0 ? "+" : "")  @evt.TotalDonations.ToString("N2")</td>
+            <td>@(evt.TotalWithdrawals > 0 ? "-" : "") @evt.TotalWithdrawals.ToString("N2")</td>
+            <td>
+                <div class="action-menu">
+                    <button class="action-btn" @onclick="() => ToggleMenu(evt.Id)">⋮</button>
+                    @if (activeMenuId == evt.Id)
+                    {
+                        <div class="dropdown-menu-custom show">
+                            <div class="dropdown-item-custom" @onclick="() => ViewEventDetails(evt.Id)">View Details</div>
+                            <div class="dropdown-item-custom" @onclick="() => ViewDonations(evt.Id)">Donations</div>
+                            <div class="dropdown-item-custom" @onclick="() => ViewWithdrawals(evt.Id)">Withdrawals</div>
+                            <div class="dropdown-item-custom" @onclick="() => PublicDonate(evt.Id)">Donate</div>
+                            <div class="dropdown-item-custom" @onclick="() => GenerateQrCode(evt.Id)">
+                                <a download="@(evt.EventCode)_QRCode.png"
+                                   href="@GenerateQrCode(evt.Id)" style="text-decoration: none; color: black;">
+                                    Generate QR Code
+
+                                </a>
+                                
+                            </div>
+                            <div class="dropdown-item-custom delete" @onclick="() => DeleteEvent(evt.Id)">Delete Event</div>
+                           
+                        </div>
+                    }
+                </div>
+            </td>
+        </tr>
+        }
+        </tbody>
+    </table>
+</div>
+}
+
+<!-- Event Details Modal -->
+<div class="event-modal @(showEventModal ? "show" : "")">
+    @if (selectedEvent != null)
+    {
+        <div class="modal-content-wrapper">
+            <button class="close-btn" @onclick="CloseEventModal">×</button>
+            <button class="edit-details-btn" @onclick="EditEventDetails">
+                Edit Event Details ↗
+            </button>
+            <div class="modal-grid">
+                <div>
+                    @if (!string.IsNullOrEmpty(selectedEvent.Banner))
+                    {
+                        <img src="@($"/api/imageproxy/getimage/{selectedEvent.Banner}")" alt="@selectedEvent.Title" class="event-poster">
+                    }
+                    else
+                    {
+                        <img src="https://via.placeholder.com/400" alt="Event Poster" class="event-poster">
+                    }
+                </div>
+
+                <div class="event-details">
+                    <div class="stats-row">
+                        <div class="stat-card stat-card-green">
+                            <img src="icons/Group 1912.svg" alt="" class="stat-icon">
+                            <div class="stat-label">Total Donations</div>
+                            <div class="stat-value">+ @selectedEvent.TotalDonations.ToString("N2")</div>
+                        </div>
+                        <div class="stat-card stat-card-pink">
+                            <img src="icons/wallet.svg" alt="" class="stat-icon">
+                            <div class="stat-label">Total Donations Withdrawn</div>
+                            <div class="stat-value">- @selectedEvent.TotalWithdrawals.ToString("N2")</div>
+                        </div>
+                    </div>
+
+                    <h2 class="event-title">@selectedEvent.Title</h2>
+
+                    <p class="event-description">
+                        @(string.IsNullOrEmpty(selectedEvent.Description) ? "No description available." : selectedEvent.Description)
+                    </p>
+
+                    <div class="event-meta">
+                        @if (selectedEvent.Organizer != null)
+                        {
+                            <div class="meta-item">
+                                <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                <span>@selectedEvent.Organizer.FullName</span>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(selectedEvent.Location))
+                        {
+                            <div class="meta-item">
+                                <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                                <span>@selectedEvent.Location</span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="details-grid-1">
+                        <div class="detail-item">
+                            <div class="detail-label">Start Date</div>
+                            <div class="detail-value">@selectedEvent.StartDate.ToString("dd/MM/yyyy")</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">End Date</div>
+                            <div class="detail-value">@selectedEvent.EndDate.ToString("dd/MM/yyyy")</div>
+                        </div>
+                    </div>
+                    <div class="details-grid-2">
+                        <div class="detail-item">
+                            <div class="detail-label">Event Code</div>
+                            <div class="detail-value">@(string.IsNullOrEmpty(selectedEvent.EventCode) ? "N/A" : selectedEvent.EventCode)</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">R.S.V.P</div>
+                            <div class="detail-value">@(string.IsNullOrEmpty(selectedEvent.Rsvp) ? "N/A" : selectedEvent.Rsvp)</div>
+                        </div>
+                    </div>
+
+                    <div class="notification-toggle">
+                        <span class="toggle-label">Notification</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked="@selectedEvent.NotifyOrganizer">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <AddEventAffiliateModal 
+                        EventId="@selectedEvent.Id" 
+                        ShowModal="@showAffiliateModal"
+                        OnClose="@CloseAffiliateModal"
+                        OnSuccess="@HandleAffiliateAdded" />
+
+                    <div style="justify-content: space-between;" class="details-btns">
+                        @* <button class="add-affiliate-btn" @onclick="OpenAffiliateModal"> *@
+                        @*     Add an Affiliate ↗ *@
+                        @* </button> *@
+                        <button class="view-affiliate-btn" @onclick="() => ViewAffiliates(selectedEvent.Id)">
+                            View Affiliate ↗
+                        </button>
+                        <button class="add-affiliate-btn" @onclick="() => ViewGroups(selectedEvent.Id)">
+                            View Groups ↗
+                        </button>
+                    </div>
+                  
+                </div>
+            </div>
+        </div>
+    }
+    else if (isLoadingEventDetails)
+    {
+        <div class="modal-content-wrapper">
+            <button class="close-btn" @onclick="CloseEventModal">×</button>
+            <div class="loading-container">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p>Loading event details...</p>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="delete-modal @(showDeleteConfirmation ? "show" : "")">
+    <div class="modal-content-delete">
+        <div class="delete-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+        </div>
+        <h2>Delete Event</h2>
+        
+        @if (eventToDelete != null)
+        {
+            <p>
+                Are you sure you want to Delete <strong>@eventToDelete.Title</strong>?
+            </p>
+            <p class="warning-text">
+                This will delete the event and it will no longer accept donations. This action cannot be undone.
+            </p>
+        }
+
+        @if (!string.IsNullOrEmpty(deleteErrorMessage))
+        {
+            <div class="delete-error-alert">
+                @deleteErrorMessage
+            </div>
+        }
+
+        <div class="modal-footer">
+            <button class="btn-cancel" @onclick="CancelDelete" disabled="@isDeleting">Cancel</button>
+            <button class="btn-delete-confirm" @onclick="ConfirmDelete" disabled="@isDeleting">
+                @if (isDeleting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span>Deleting...</span>
+                }
+                else
+                {
+                    <span>Delete Event</span>
+                }
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<EventViewModel> events = new();
+    private EventViewModel selectedEvent;
+    private bool isLoading = true;
+    private bool isLoadingEventDetails = false;
+    private bool showEventModal = false;
+    private string errorMessage = string.Empty;
+    private Guid? activeMenuId = null;
+    
+    // Delete confirmation state
+    private bool showDeleteConfirmation = false;
+    private EventViewModel eventToDelete = null;
+    private bool isDeleting = false;
+    private string deleteErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+    }
+
+    private async Task LoadEvents()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var result = await ApiClient.MyEventsAsync();
+
+            if (result.Success && result.Data != null)
+            {
+                events = result.Data.OrderByDescending(e => e.CreatedAt).ToList();
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to load events.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                401 => "You are not authorized. Please log in again.",
+                404 => "Events endpoint not found.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while loading events. (Error code: {apiEx.StatusCode})"
+            };
+
+      
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred while loading events.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private bool showAffiliateModal = false;
+
+    private void OpenAffiliateModal()
+    {
+        showAffiliateModal = true;
+    }
+
+    private void CloseAffiliateModal()
+    {
+        showAffiliateModal = false;
+    }
+
+    private async Task HandleAffiliateAdded()
+    {
+        // Refresh event details or show success message
+        Console.WriteLine("Affiliate added successfully!");
+        
+        // Optionally reload event data
+        // if (selectedEvent != null)
+        // {
+        //     await ViewEventDetails(selectedEvent.Id);
+        // }
+    }
+
+    private async Task ViewEventDetails(Guid eventId)
+    {
+        activeMenuId = null;
+        
+        try
+        {
+            isLoadingEventDetails = true;
+            showEventModal = true;
+            StateHasChanged();
+
+            var result = await ApiClient.EventAsync(eventId);
+
+            if (result.Success && result.Data != null)
+            {
+                selectedEvent = result.Data;
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to load event details.";
+                showEventModal = false;
+            }
+        }
+        catch (ApiException apiEx)
+        {
+            errorMessage = apiEx.StatusCode switch
+            {
+                401 => "You are not authorized. Please log in again.",
+                404 => "Event not found.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while loading event details. (Error code: {apiEx.StatusCode})"
+            };
+            
+            showEventModal = false;
+            
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred while loading event details.";
+            showEventModal = false;
+           
+        }
+        finally
+        {
+            isLoadingEventDetails = false;
+            StateHasChanged();
+        }
+    }
+    
+    private string GenerateQrCode(Guid eventId)
+    {
+        using QRCodeGenerator qrGenerator = new QRCodeGenerator();
+        using QRCodeData qrCodeData =
+            qrGenerator.CreateQrCode($"{Navigation.BaseUri.TrimEnd('/')}/donate/{eventId}", QRCodeGenerator.ECCLevel.Q);
+        using PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
+        byte[] qrCodeImage = qrCode.GetGraphic(20);
+        return $"data:image/png;base64,{Convert.ToBase64String(qrCodeImage)}";
+    }
+    
+    private void ViewAffiliates(Guid eventId)
+    {
+        Navigation.NavigateTo($"/events/{eventId}/affiliates");
+    }
+    
+    private void ViewGroups(Guid eventId)
+    {
+        Navigation.NavigateTo($"/events/{eventId}/groups");
+    }
+
+    private void CloseEventModal()
+    {
+        showEventModal = false;
+        selectedEvent = null;
+    }
+
+    private void EditEventDetails()
+    {
+        if (selectedEvent != null)
+        {
+            Navigation.NavigateTo($"/events/{selectedEvent.Id}/edit");
+        }
+    }
+    
+
+    private void ToggleMenu(Guid eventId)
+    {
+        activeMenuId = activeMenuId == eventId ? null : eventId;
+    }
+
+    private void CreateNewEvent()
+    {
+        Navigation.NavigateTo("/create-event");
+    }
+
+    private void ViewDonations(Guid eventId)
+    {
+        activeMenuId = null;
+        Navigation.NavigateTo($"/events/{eventId}/donations");
+    }
+    
+    private void PublicDonate(Guid eventId)
+    {
+        activeMenuId = null;
+        Navigation.NavigateTo($"/donate/{eventId}");
+    }
+
+    private void ViewWithdrawals(Guid eventId)
+    {
+        activeMenuId = null;
+        Navigation.NavigateTo($"/events/{eventId}/withdraw");
+    }
+
+    private void GenerateQRCode(Guid eventId)
+    {
+        activeMenuId = null;
+        Navigation.NavigateTo($"/events/{eventId}/qr-code");
+    }
+    
+    
+    private void DeleteEvent(Guid eventId)
+    {
+        activeMenuId = null;
+        
+        // Find the event to delete
+        eventToDelete = events.FirstOrDefault(e => e.Id == eventId);
+        if (eventToDelete != null)
+        {
+            showDeleteConfirmation = true;
+        }
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirmation = false;
+        eventToDelete = null;
+        deleteErrorMessage = string.Empty;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (eventToDelete == null) return;
+
+        try
+        {
+            isDeleting = true;
+            deleteErrorMessage = string.Empty;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            var deactivateDto = new DeactivateEventDto
+            {
+                EventId = eventToDelete.Id
+            };
+
+            var result = await ApiClient.DeactivateAsync(deactivateDto);
+
+            if (result != null && result.Success)
+            {
+                errorMessage = $"Event '{eventToDelete.Title}' has been deactivated successfully!";
+                
+                CancelDelete();
+                
+                await LoadEvents();
+                
+                await Task.Delay(3000);
+                errorMessage = string.Empty;
+                StateHasChanged();
+            }
+            else
+            {
+                deleteErrorMessage = result?.Message ?? "Failed to deactivate event. Please try again.";
+            }
+        }
+        catch (ApiException apiEx)
+        {
+
+            deleteErrorMessage = apiEx.StatusCode switch
+            {
+                400 => "Invalid request. Please try again.",
+                401 => "You are not authorized to deactivate this event.",
+                404 => "Event not found.",
+                409 => "Cannot deactivate event. It may have pending donations or withdrawals.",
+                500 => "Server error. Please try again later.",
+                _ => $"An error occurred while deactivating event. (Error code: {apiEx.StatusCode})"
+            };
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = "An unexpected error occurred while deactivating event.";
+            Console.WriteLine($"Delete error: {ex.Message}");
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+    
+}
+
+<script>
+    
+
+        function toggleMenu(btn) {
+            const allMenus = document.querySelectorAll('.dropdown-menu-custom');
+            const menu = btn.nextElementSibling;
+            
+            allMenus.forEach(m => {
+                if (m !== menu) m.classList.remove('show');
+            });
+            
+            menu.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.action-menu')) {
+                document.querySelectorAll('.dropdown-menu-custom').forEach(m => {
+                    m.classList.remove('show');
+                });
+            }
+        });
+        
+    </script>
+    
+        <style>
+
+            .btn-create {
+                background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+                border: none;
+                border-radius: 50px;
+                padding: 12px 30px;
+                font-size: 16px;
+                font-weight: 600;
+                color: #000;
+                cursor: pointer;
+                transition: transform 0.2s;
+                margin-bottom: 30px;
+            }
+            .btn-create:hover {
+                transform: translateY(-2px);
+            }
+            .table-card {
+                background: white;
+                border-radius: 20px;
+                padding: 20px;
+                overflow-x: auto;
+                overflow-y: unset;
+            }
+            .table {
+                margin-bottom: 0;
+                min-width: 900px;
+            }
+            .table thead th {
+                border-bottom: 2px solid #f0f0f0;
+                font-weight: 800;
+                text-transform: uppercase;
+                font-size: 12px;
+                letter-spacing: 1px;
+                padding: 15px;
+                background-color: #f8f9fa;
+                white-space: nowrap;
+            }
+            .table tbody td {
+                padding: 20px 15px;
+                vertical-align: middle;
+                border-bottom: 1px solid #f0f0f0;
+            }
+            
+            .event-image {
+                width: 60px;
+                height: 60px;
+                border-radius: 8px;
+                object-fit: cover;
+                flex-shrink: 0;
+            }
+            .event-cell {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .action-menu {
+                position: absolute;
+                display: inline-block;
+            }
+            .action-btn {
+                background: #1e7a6d;
+                border: none;
+                border-radius: 50%;
+                width: 36px;
+                height: 36px;
+                color: white;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 18px;
+            }
+            
+            .dropdown-menu-custom {
+                position: absolute !important;
+                right: 0;
+                top: 40px;
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                padding: 10px 0;
+                min-width: 180px;
+                z-index: 9999;
+                display: none;
+            }
+            .dropdown-menu-custom.show {
+                display: block;
+                z-index: 9999 !important;
+            }
+            .dropdown-item-custom {
+                padding: 10px 20px;
+                cursor: pointer;
+                transition: background 0.2s;
+                font-size: 14px;
+            }
+            .dropdown-item-custom:hover {
+                background-color: #f8f9fa;
+            }
+            .dropdown-item-custom.delete {
+                color: #dc3545;
+            }
+            .loading-container {
+                text-align: center;
+                padding: 40px;
+            }
+            .no-events {
+                text-align: center;
+                padding: 40px;
+                color: #666;
+            }
+            .error-alert {
+                background: #f8d7da;
+                border: 1px solid #f5c6cb;
+                color: #721c24;
+                padding: 15px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+            }
+            .text-success {
+                color: #28a745;
+            }
+            .text-danger {
+                color: #dc3545;
+            }
+
+            @@media (max-width: 992px) {
+                .mobile-header {
+                    display: flex;
+                }
+
+                .table tbody td:last-child {
+                    position: relative;
+                    min-width: 100px;
+                }
+                .sidebar {
+                    transform: translateX(-100%);
+                }
+                .sidebar.show {
+                    transform: translateX(0);
+                }
+                .main-wrapper {
+                    margin-left: 0 !important;
+                }
+                .top-bar {
+                    display: none;
+                }
+            }
+
+            @@media (max-width: 576px) {
+                .table-card {
+                    padding: 10px;
+                }
+                .btn-create {
+                    width: 100%;
+                    padding: 12px 20px;
+                }
+                .event-image {
+                    width: 50px;
+                    height: 50px;
+                }
+            }
+            
+            
+
+        /* Modal Styles */
+        .event-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .event-modal.show {
+            display: flex;
+        }
+
+        .modal-content-wrapper {
+            background: white;
+            border-radius: 20px;
+            max-width: 1300px;
+            width: 100%;
+            max-height: 100vh;
+            overflow-y: auto;
+            position: relative;
+            padding: 20px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #f0f0f0;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        .close-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .edit-details-btn {
+            position: absolute;
+            top: 20px;
+            right: 70px;
+            background: #1e7a6d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s;
+        }
+
+        .edit-details-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 0.9fr 1.1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .event-poster {
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;
+            object-fit: cover;
+        }
+
+        .event-details {
+            display: flex;
+            flex-direction: column;
+            padding: 50px;
+
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            padding: 15px 18px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .stat-card-green {
+            background: #e1f098;
+        }
+
+        .stat-card-pink {
+            background: #FFE6E6;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .stat-icon {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            opacity: 0.25;
+            width: 35px;
+            height: 35px;
+        }
+
+        .event-title {
+            font-size: 30px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: #000;
+        }
+
+        .event-description {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .event-meta {
+            display: flex;
+            gap: 180px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .meta-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .details-grid-1 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 30px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .details-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 30px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-size: 15px;
+            font-weight: 800;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #999;
+        }
+
+        .notification-toggle {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 80px;
+            height: 32px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            border-radius: 34px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "OFF";
+            height: 24px;
+            width: 38px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            border-radius: 34px;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            color: #666;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: #2ecc71;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(38px);
+            content: "ON";
+            color: #2ecc71;
+        }
+
+        .add-affiliate-btn {
+            background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+            border: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: fit-content;
+        }
+
+            .view-affiliate-btn {
+                background: #1e7a6d;
+                border: none;
+                color: white;
+                padding: 12px 28px;
+                border-radius: 50px;
+                font-weight: 700;
+                font-size: 14px;
+                cursor: pointer;
+                transition: transform 0.2s;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                width: fit-content;
+            }
+
+        .add-affiliate-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+
+        @@media (max-width: 768px) {
+            .modal-content-wrapper {
+                padding: 25px 20px;
+                padding-top: 60px;
+            }
+
+            .table tbody td:last-child {
+                position: relative;
+                min-width: 100px;
+            }
+
+            .modal-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .event-details {
+                display: flex;
+                flex-direction: column;
+                padding: 40px;
+            }
+
+            .edit-details-btn {
+                top: 15px;
+                right: 50px;
+                font-size: 12px;
+                padding: 8px 15px;
+            }
+
+            .details-btns{
+                justify-content: space-between;
+                display: flex;
+            }
+
+            .close-btn {
+                top: 15px;
+                right: 15px;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+
+            .event-meta {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .event-title {
+                font-size: 20px;
+            }
+        }
+            
+            /* Delete Confirmation Modal */
+            .delete-modal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 3000;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+
+            .delete-modal.show {
+                display: flex;
+            }
+
+            .modal-content-delete {
+                background: white;
+                border-radius: 20px;
+                padding: 40px 30px 30px;
+                max-width: 500px;
+                width: 100%;
+                text-align: center;
+            }
+
+            .delete-icon {
+                width: 80px;
+                height: 80px;
+                margin: 0 auto 20px;
+                background: #fee;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .delete-icon svg {
+                width: 40px;
+                height: 40px;
+                color: #dc3545;
+            }
+
+            .modal-content-delete h2 {
+                font-size: 24px;
+                font-weight: 700;
+                margin-bottom: 15px;
+                color: #333;
+            }
+
+            .modal-content-delete p {
+                color: #666;
+                font-size: 14px;
+                line-height: 1.6;
+                margin-bottom: 15px;
+            }
+
+            .warning-text {
+                background: #fff3cd;
+                border: 1px solid #ffc107;
+                color: #856404;
+                padding: 12px;
+                border-radius: 8px;
+                font-size: 13px;
+                margin-bottom: 20px;
+            }
+
+            .delete-error-alert {
+                background: #f8d7da;
+                border: 1px solid #f5c6cb;
+                color: #721c24;
+                padding: 12px;
+                border-radius: 8px;
+                font-size: 13px;
+                margin-bottom: 20px;
+            }
+
+            .modal-footer {
+                display: flex;
+                gap: 10px;
+            }
+
+            .btn-cancel,
+            .btn-delete-confirm {
+                flex: 1;
+                padding: 12px 24px;
+                border: none;
+                border-radius: 10px;
+                font-weight: 600;
+                font-size: 14px;
+                cursor: pointer;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .btn-cancel {
+                background: #f0f0f0;
+                color: #333;
+            }
+
+            .btn-cancel:hover:not(:disabled) {
+                background: #e0e0e0;
+            }
+
+            .btn-cancel:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .btn-delete-confirm {
+                background: #dc3545;
+                color: white;
+            }
+
+            .btn-delete-confirm:hover:not(:disabled) {
+                background: #c82333;
+            }
+
+            .btn-delete-confirm:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            @@media (max-width: 576px) {
+            .modal-content-delete {
+                padding: 30px 20px 20px;
+            }
+
+                .event-details {
+                    display: flex;
+                    flex-direction: column;
+                    padding: 30px;
+                }
+
+                .table tbody td:last-child {
+                    position: relative;
+                    min-width: 100px;
+                }
+                
+
+            .modal-footer {
+                flex-direction: column;
+            }
+            
+            .details-btns{
+                justify-content: space-between;
+                display: flex;
+            }
+
+            .btn-cancel,
+            .btn-delete-confirm {
+                width: 100%;
+            }
+            
+            }    
+            
+    </style>

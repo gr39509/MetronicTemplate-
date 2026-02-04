@@ -1,0 +1,127 @@
+is_global = true
+build_property.TargetFramework = net9.0
+build_property.TargetFrameworkIdentifier = .NETCoreApp
+build_property.TargetFrameworkVersion = v9.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = NsawaWeb
+build_property.RootNamespace = NsawaWeb
+build_property.ProjectDir = /Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 9.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = /Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 9.0
+build_property.EnableCodeStyleSeverity = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/App.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9BcHAucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Layout/AccountLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9MYXlvdXQvQWNjb3VudExheW91dC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Layout/CustomMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9MYXlvdXQvQ3VzdG9tTWVudS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/AddEventAffiliateModal.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZGRFdmVudEFmZmlsaWF0ZU1vZGFsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/AffiliateEvent.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9BZmZpbGlhdGVFdmVudC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/CreateEvent.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9DcmVhdGVFdmVudC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/Dashboard.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9EYXNoYm9hcmQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/Donate.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Eb25hdGUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/Donations.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Eb25hdGlvbnMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/Error.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FcnJvci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/EventAffiliates.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FdmVudEFmZmlsaWF0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/EventEdit.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FdmVudEVkaXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/EventGroups.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9FdmVudEdyb3Vwcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9Mb2dpbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/MyEvents.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9NeUV2ZW50cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/PublicDonate.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9QdWJsaWNEb25hdGUucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/ReceiveDonations.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9SZWNlaXZlRG9uYXRpb25zLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/ResetPassword.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9SZXNldFBhc3N3b3JkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/SignUp.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9TaWduVXAucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/Test.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9UZXN0LnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/Weather.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9XZWF0aGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Pages/Withdrawals.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9QYWdlcy9XaXRoZHJhd2Fscy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Routes.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9Sb3V0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9fSW1wb3J0cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Layout/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9MYXlvdXQvTWFpbkxheW91dC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-mn6m7bp1s4
+
+[/Users/tahirukofitey/Desktop/NsawaWeb/NsawaWeb/NsawaWeb/Components/Layout/NavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50cy9MYXlvdXQvTmF2TWVudS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-fhchj865hz
