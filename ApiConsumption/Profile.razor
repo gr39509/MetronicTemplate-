@@ -1,0 +1,420 @@
+@page "/account/profile"
+@using Microsoft.AspNetCore.Components.Web
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #f0f2f7;
+    --surface:   #ffffff;
+    --border:    #e2e6f0;
+    --text:      #1a1f36;
+    --muted:     #6b7399;
+    --accent:    #4f46e5;
+    --accent-lt: #eef2ff;
+    --danger:    #ef4444;
+    --radius:    12px;
+    --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  }
+
+  .container-fluid.mt-4 {
+    padding: 1.75rem 2rem;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+
+  /* ── breadcrumb ─────────────────────────────────── */
+  .breadcrumb {
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+  }
+  .breadcrumb span { color: var(--accent); font-weight: 500; }
+  .breadcrumb .sep { opacity: .4; }
+
+  /* ── card ───────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: .85rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .card-header h2 { font-size: .95rem; font-weight: 700; margin: 0; color: var(--text); }
+  .card-header .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+  }
+  .card-body { padding: 1.75rem 1.4rem; }
+
+  /* ── section divider ────────────────────────────── */
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+  }
+
+  /* ── 2-col form grid ────────────────────────────── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem 2rem;
+  }
+  .form-grid.full { grid-template-columns: 1fr; }
+  @@media (max-width: 720px) { .form-grid { grid-template-columns: 1fr; } }
+
+  /* ── field group ────────────────────────────────── */
+  .field-group { display: flex; flex-direction: column; gap: .4rem; }
+  .field-group label {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: .2rem;
+    letter-spacing: .01em;
+  }
+  .field-group label .req { color: var(--danger); }
+
+  /* ── icon input ─────────────────────────────────── */
+  .icon-input {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface);
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .icon-input:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+  }
+  .icon-input .icon-slot {
+    width: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f6fa;
+    border-right: 1px solid var(--border);
+    color: var(--muted);
+    font-size: .9rem;
+    flex-shrink: 0;
+  }
+  .icon-input input,
+  .icon-input select {
+    flex: 1;
+    padding: .6rem .85rem;
+    border: none;
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    color: var(--text);
+    background: transparent;
+    min-width: 0;
+  }
+  .icon-input input::placeholder { color: #b0b7d3; }
+  .icon-input select { appearance: none; cursor: pointer; }
+
+  /* phone prefix */
+  .phone-prefix {
+    padding: .6rem .75rem .6rem .85rem;
+    font-family: 'DM Mono', monospace;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--muted);
+    border-right: 1px solid var(--border);
+    background: #f5f6fa;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* select with chevron */
+  .select-wrap {
+    position: relative;
+  }
+  .select-wrap select { padding-right: 2rem; }
+  .select-wrap .chevron {
+    position: absolute;
+    right: .75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+    font-size: .7rem;
+  }
+
+  /* standalone select (account type) */
+  .standalone-select {
+    width: 100%;
+    padding: .65rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    color: var(--text);
+    background: #f5f6fa;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .standalone-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+  }
+  .standalone-select-wrap { position: relative; }
+  .standalone-select-wrap .chevron {
+    position: absolute;
+    right: .9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+    font-size: .7rem;
+  }
+
+  /* ── save button ────────────────────────────────── */
+  .btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .65rem 1.6rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(79,70,229,.35);
+    transition: background .18s, transform .12s;
+    margin-top: .5rem;
+  }
+  .btn-save:hover { background: #4338ca; transform: translateY(-1px); }
+
+  /* ── footer ─────────────────────────────────────── */
+  .dash-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: .75rem;
+    color: #b0b7d3;
+  }
+  .dash-footer a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="container-fluid mt-4">
+
+  <div class="breadcrumb">
+    Portal <span class="sep">/</span> My Account <span class="sep">/</span> <span>Profile</span>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Account Profile</h2>
+    </div>
+
+    <div class="card-body">
+
+      <!-- ── Personal Info ──────────────────────────── -->
+      <div class="form-grid">
+
+        <!-- First Name -->
+        <div class="field-group">
+          <label>First Name <span class="req">*</span></label>
+          <div class="icon-input">
+            <span class="icon-slot">👤</span>
+            <input type="text" @bind="profile.FirstName" placeholder="First Name" />
+          </div>
+        </div>
+
+        <!-- Other Names -->
+        <div class="field-group">
+          <label>Other Names</label>
+          <div class="icon-input">
+            <span class="icon-slot">👤</span>
+            <input type="text" @bind="profile.OtherNames" placeholder="Other Names" />
+          </div>
+        </div>
+
+        <!-- Country -->
+        <div class="field-group">
+          <label>Country <span class="req">*</span></label>
+          <div class="icon-input select-wrap">
+            <span class="icon-slot">🚩</span>
+            <select @bind="profile.Country">
+              <option value="GH">Ghana (+233)</option>
+              <option value="NG">Nigeria (+234)</option>
+              <option value="KE">Kenya (+254)</option>
+              <option value="ZA">South Africa (+27)</option>
+              <option value="US">United States (+1)</option>
+              <option value="GB">United Kingdom (+44)</option>
+            </select>
+            <span class="chevron">▾</span>
+          </div>
+        </div>
+
+        <!-- Phone Number -->
+        <div class="field-group">
+          <label>Phone Number <span class="req">*</span></label>
+          <div class="icon-input">
+            <span class="phone-prefix">+233</span>
+            <input type="tel" @bind="profile.PhoneNumber" placeholder="000 000 0000" />
+          </div>
+        </div>
+
+        <!-- Email Address -->
+        <div class="field-group">
+          <label>Email Address <span class="req">*</span></label>
+          <div class="icon-input">
+            <span class="icon-slot">@@</span>
+            <input type="email" @bind="profile.Email" placeholder="email@example.com" />
+          </div>
+        </div>
+
+        <!-- Company / Institution -->
+        <div class="field-group">
+          <label>Company / Institution</label>
+          <div class="icon-input">
+            <span class="icon-slot">🏢</span>
+            <input type="text" @bind="profile.Company" placeholder="Company or institution name" />
+          </div>
+        </div>
+
+      </div>
+
+      <hr class="section-divider" />
+
+      <!-- ── Address ───────────────────────────────── -->
+      <div class="form-grid">
+
+        <!-- Address Line 1 -->
+        <div class="field-group">
+          <label>Address Line #1</label>
+          <div class="icon-input">
+            <span class="icon-slot"></span>
+            <input type="text" @bind="profile.AddressLine1" placeholder="Street address" />
+          </div>
+        </div>
+
+        <!-- Address Line 2 -->
+        <div class="field-group">
+          <label>Address Line #2</label>
+          <div class="icon-input">
+            <span class="icon-slot"></span>
+            <input type="text" @bind="profile.AddressLine2" placeholder="Apt, suite, etc. (optional)" />
+          </div>
+        </div>
+
+        <!-- Town / City -->
+        <div class="field-group">
+          <label>Town / City <span class="req">*</span></label>
+          <div class="icon-input">
+            <span class="icon-slot">🏙</span>
+            <input type="text" @bind="profile.City" placeholder="Town or city" />
+          </div>
+        </div>
+
+        <!-- Region -->
+        <div class="field-group">
+          <label>Region <span class="req">*</span></label>
+          <div class="icon-input select-wrap">
+            <span class="icon-slot">🗺</span>
+            <select @bind="profile.Region">
+              <option value="">-- Select Region --</option>
+              <option value="greater-accra">Greater Accra</option>
+              <option value="ashanti">Ashanti</option>
+              <option value="western">Western</option>
+              <option value="central">Central</option>
+              <option value="eastern">Eastern</option>
+              <option value="northern">Northern</option>
+              <option value="volta">Volta</option>
+              <option value="brong-ahafo">Brong-Ahafo</option>
+              <option value="upper-east">Upper East</option>
+              <option value="upper-west">Upper West</option>
+            </select>
+            <span class="chevron">▾</span>
+          </div>
+        </div>
+
+      </div>
+
+      <hr class="section-divider" />
+
+      <!-- ── Account Type ───────────────────────────── -->
+      <div class="field-group" style="max-width: 100%">
+        <label>Account Type <span class="req">*</span></label>
+        <div class="standalone-select-wrap">
+          <select class="standalone-select" @bind="profile.AccountType">
+            <option value="developer">Developer</option>
+            <option value="business">Business</option>
+            <option value="individual">Individual</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
+          <span class="chevron">▾</span>
+        </div>
+      </div>
+
+      <br />
+
+      <!-- Save -->
+      <button class="btn-save" @onclick="SaveProfile">
+        Save Profile
+      </button>
+
+    </div>
+  </div>
+  
+</div>
+
+@code {
+  private ProfileModel profile = new()
+  {
+    FirstName    = "TIMOTHY",
+    OtherNames   = "ANANG",
+    Country      = "GH",
+    PhoneNumber  = "593961122",
+    Email        = "t.anang@fnfictsolutions.com",
+    Company      = "F & F ICT SOLUTIONS",
+    AddressLine1 = "NO. 1 MISSION LINK, OSU",
+    AddressLine2 = "",
+    City         = "OSU",
+    Region       = "greater-accra",
+    AccountType  = "developer",
+  };
+
+  private void SaveProfile()
+  {
+    // TODO: wire up to API
+    Console.WriteLine($"Saving profile for {profile.FirstName} {profile.OtherNames}");
+  }
+
+  private class ProfileModel
+  {
+    public string FirstName    { get; set; } = string.Empty;
+    public string OtherNames   { get; set; } = string.Empty;
+    public string Country      { get; set; } = "GH";
+    public string PhoneNumber  { get; set; } = string.Empty;
+    public string Email        { get; set; } = string.Empty;
+    public string Company      { get; set; } = string.Empty;
+    public string AddressLine1 { get; set; } = string.Empty;
+    public string AddressLine2 { get; set; } = string.Empty;
+    public string City         { get; set; } = string.Empty;
+    public string Region       { get; set; } = string.Empty;
+    public string AccountType  { get; set; } = "developer";
+  }
+}

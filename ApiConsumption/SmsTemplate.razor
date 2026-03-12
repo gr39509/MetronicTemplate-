@@ -1,0 +1,349 @@
+@page "/sms-templates"
+@using Microsoft.AspNetCore.Components.Web
+@using NovaAccounts.Components.Shared
+@using NovaAccounts.SharedModels.ModalFields
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #f0f2f7;
+    --surface:   #ffffff;
+    --border:    #e2e6f0;
+    --text:      #1a1f36;
+    --muted:     #6b7399;
+    --accent:    #4f46e5;
+    --accent-lt: #eef2ff;
+    --radius:    12px;
+    --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  }
+
+  .container-fluid.mt-4 {
+    padding: 1.75rem 2rem;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+
+  .breadcrumb {
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+  }
+  .breadcrumb span { color: var(--accent); font-weight: 500; }
+  .breadcrumb .sep { opacity: .4; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: .85rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .card-header h2 { font-size: .9rem; font-weight: 600; margin: 0; }
+  .card-header .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .card-body { padding: 1.25rem; }
+
+  .alert-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: .9rem 1.1rem;
+    color: #1d4ed8;
+    font-size: .875rem;
+    text-align: center;
+    margin-bottom: 1.1rem;
+  }
+
+  .tpl-table-wrap { overflow-x: auto; margin-bottom: 1.1rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+  thead tr { background: #f5f6fa; border-bottom: 1px solid var(--border); }
+  thead th {
+    padding: .55rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: .75rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+  tbody tr { border-bottom: 1px solid #f0f2f7; transition: background .12s; }
+  tbody tr:hover { background: var(--accent-lt); }
+  tbody td { padding: .6rem 1rem; color: var(--text); }
+  tbody td.td-muted { color: var(--muted); font-family: 'DM Mono', monospace; font-size: .78rem; }
+
+  .tbl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .28rem .65rem;
+    border-radius: 5px;
+    font-size: .75rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: opacity .15s;
+    margin-right: .3rem;
+  }
+  .tbl-btn:hover { opacity: .8; }
+  .tbl-edit   { background: #e0f2fe; color: #0369a1; }
+  .tbl-delete { background: #fee2e2; color: #991b1b; }
+
+  /* form fields inside modal BodyContent */
+  .smstp-form-group { margin-bottom: 1rem; }
+  .smstp-form-group label {
+    display: block;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: .4rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .smstp-form-group input[type=text],
+  .smstp-form-group textarea {
+    width: 100%;
+    padding: .6rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    color: var(--text);
+    transition: border-color .18s, box-shadow .18s;
+    background: var(--surface);
+    box-sizing: border-box;
+  }
+  .smstp-form-group input:focus,
+  .smstp-form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+  }
+  .smstp-form-group textarea { min-height: 110px; resize: vertical; line-height: 1.55; }
+  .smstp-char-count {
+    margin-top: .35rem;
+    font-size: .75rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .dash-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: .75rem;
+    color: #b0b7d3;
+  }
+  .dash-footer a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="container-fluid mt-4">
+
+  <div class="breadcrumb">
+    Portal <span class="sep">/</span> SMS <span class="sep">/</span> <span>SMS Templates</span>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>SMS Templates</h2>
+    </div>
+    <div class="card-body">
+
+      @if (!templates.Any())
+      {
+        <div class="alert-info">
+          There are no SMS message templates.
+        </div>
+      }
+      else
+      {
+        <div class="tpl-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Reference Name</th>
+                <th>Template</th>
+                <th>Characters</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var (tpl, i) in templates.Select((t, i) => (t, i)))
+              {
+                <tr>
+                  <td class="td-muted">@(i + 1)</td>
+                  <td><strong>@tpl.ReferenceName</strong></td>
+                  <td>@(tpl.TemplateText.Length > 60 ? tpl.TemplateText[..60] + "…" : tpl.TemplateText)</td>
+                  <td class="td-muted">@tpl.TemplateText.Length</td>
+                  <td>
+                    <button class="tbl-btn tbl-edit"   @onclick="() => OpenEditModal(i)">✎ Edit</button>
+                    <button class="tbl-btn tbl-delete" @onclick="() => DeleteTemplate(i)">🗑 Delete</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- ── New Template Modal ─────────────────────── -->
+      <!-- Uses ShowTriggerButton=true so the component renders its own "⊕ New" button -->
+      <ReusableModal @ref="newModal"
+                     Title="Message Template"
+                     TriggerButtonText="⊕ New"
+                     TriggerButtonClass="btn btn-secondary"
+                     ShowTriggerButton="true"
+                     Size="ModalSize.Default"
+                     TitleFontSize="1rem"
+                     TitleColor="#1a1f36"
+                     BodyFontSize="0.875rem"
+                     SaveButtonText="Save"
+                     SaveButtonClass="btn btn-primary"
+                     CancelButtonText="✕ Cancel"
+                     CancelButtonClass="btn btn-outline-secondary"
+                     OnSave="SaveTemplate"
+                     OnClose="ResetNewForm">
+        <BodyContent>
+          <div class="smstp-form-group">
+            <label>Reference Name</label>
+            <input type="text" @bind="newTemplate.ReferenceName"
+                   placeholder="e.g. Welcome Message" />
+          </div>
+          <div class="smstp-form-group">
+            <label>SMS Template</label>
+            <textarea @bind="newTemplate.TemplateText"
+                      @bind:event="oninput"
+                      placeholder="Type your SMS template here…"></textarea>
+            <div class="smstp-char-count">Characters: @newTemplate.TemplateText.Length</div>
+          </div>
+        </BodyContent>
+      </ReusableModal>
+
+    </div>
+  </div>
+
+  <!-- ── Edit Template Modal ──────────────────────────── -->
+  <!-- ShowTriggerButton=false — opened programmatically via editModal.OpenModal() -->
+  <ReusableModal @ref="editModal"
+                 Title="Edit Message Template"
+                 ShowTriggerButton="false"
+                 Size="ModalSize.Default"
+                 TitleFontSize="1rem"
+                 TitleColor="#1a1f36"
+                 BodyFontSize="0.875rem"
+                 SaveButtonText="Save"
+                 SaveButtonClass="btn btn-primary"
+                 CancelButtonText="✕ Cancel"
+                 CancelButtonClass="btn btn-outline-secondary"
+                 OnSave="UpdateTemplate">
+    <BodyContent>
+      <div class="smstp-form-group">
+        <label>Reference Name</label>
+        <input type="text" @bind="editTemplate.ReferenceName"
+               placeholder="e.g. Welcome Message" />
+      </div>
+      <div class="smstp-form-group">
+        <label>SMS Template</label>
+        <textarea @bind="editTemplate.TemplateText"
+                  @bind:event="oninput"
+                  placeholder="Type your SMS template here…"></textarea>
+        <div class="smstp-char-count">Characters: @editTemplate.TemplateText.Length</div>
+      </div>
+    </BodyContent>
+  </ReusableModal>
+  
+</div>
+
+@code {
+  // ── modal refs (programmatic control via OpenModal / CloseModal) ──
+  private ReusableModal newModal  = default!;
+  private ReusableModal editModal = default!;
+
+  // ── state ────────────────────────────────────────────
+  private List<SmsTemplates> templates   = new();
+  private int               editIndex   = -1;
+
+  private SmsTemplates newTemplate  = new();
+  private SmsTemplates editTemplate = new();
+
+  // ── new template ─────────────────────────────────────
+  private async Task SaveTemplate()
+  {
+    if (string.IsNullOrWhiteSpace(newTemplate.ReferenceName) ||
+        string.IsNullOrWhiteSpace(newTemplate.TemplateText))
+      return;
+
+    templates.Add(new SmsTemplates
+    {
+      ReferenceName = newTemplate.ReferenceName.Trim(),
+      TemplateText  = newTemplate.TemplateText.Trim()
+    });
+
+    await newModal.CloseModal();
+    newTemplate = new();
+  }
+
+  private void ResetNewForm()
+  {
+    // Called via OnClose — clears the form if user cancels
+    newTemplate = new();
+  }
+
+  // ── edit template ─────────────────────────────────────
+  private async Task OpenEditModal(int index)
+  {
+    editIndex    = index;
+    editTemplate = new SmsTemplates
+    {
+      ReferenceName = templates[index].ReferenceName,
+      TemplateText  = templates[index].TemplateText
+    };
+    await editModal.OpenModal();
+  }
+
+  private async Task UpdateTemplate()
+  {
+    if (editIndex < 0) return;
+    if (string.IsNullOrWhiteSpace(editTemplate.ReferenceName) ||
+        string.IsNullOrWhiteSpace(editTemplate.TemplateText))
+      return;
+
+    templates[editIndex] = new SmsTemplates
+    {
+      ReferenceName = editTemplate.ReferenceName.Trim(),
+      TemplateText  = editTemplate.TemplateText.Trim()
+    };
+
+    await editModal.CloseModal();
+    editIndex = -1;
+  }
+
+  // ── delete ────────────────────────────────────────────
+  private void DeleteTemplate(int index)
+  {
+    templates.RemoveAt(index);
+  }
+
+  // ── model ─────────────────────────────────────────────
+  private class SmsTemplates
+  {
+    public string ReferenceName { get; set; } = string.Empty;
+    public string TemplateText  { get; set; } = string.Empty;
+  }
+}

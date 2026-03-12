@@ -1,0 +1,575 @@
+@page "/topup/buy"
+@using Microsoft.AspNetCore.Components.Web
+@using NovaAccounts.Components.Shared
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #f0f2f7;
+    --surface:   #ffffff;
+    --border:    #e2e6f0;
+    --text:      #1a1f36;
+    --muted:     #6b7399;
+    --accent:    #4f46e5;
+    --accent-lt: #eef2ff;
+    --green:     #22c55e;
+    --green-dk:  #16a34a;
+    --green-lt:  #dcfce7;
+    --radius:    12px;
+    --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  }
+
+  .container-fluid.mt-4 {
+    padding: 1.75rem 2rem;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+
+  /* ── breadcrumb ─────────────────────────────────── */
+  .breadcrumb {
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+  }
+  .breadcrumb span { color: var(--accent); font-weight: 500; }
+  .breadcrumb .sep { opacity: .4; }
+
+  /* ── card ───────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: .85rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .card-header h2 { font-size: .9rem; font-weight: 600; margin: 0; }
+  .card-header .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+  }
+
+  /* ── stepper ────────────────────────────────────── */
+  .stepper {
+    display: flex;
+    align-items: stretch;
+    background: #f8f9fb;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem 1.4rem .75rem 1.1rem;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #a0aabf;
+    background: #f0f2f7;
+    position: relative;
+    white-space: nowrap;
+    /* chevron right */
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+    margin-right: 2px;
+    min-width: 140px;
+    justify-content: center;
+  }
+  .step:first-child {
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+    border-radius: 0;
+  }
+  .step.done {
+    background: #bbf7d0;
+    color: var(--green-dk);
+  }
+  .step.active {
+    background: var(--green);
+    color: #fff;
+  }
+  .step .step-num {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step.active  .step-num { background: rgba(255,255,255,.3); color: #fff; }
+  .step.done    .step-num { background: var(--green-dk);      color: #fff; }
+  .step.pending .step-num { background: #d1d5e0;              color: #6b7399; }
+
+  /* ── step body ──────────────────────────────────── */
+  .step-body {
+    padding: 1.75rem 2rem;
+    min-height: 340px;
+  }
+  .step-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 1.25rem;
+    padding-bottom: .75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── step 1: package info ───────────────────────── */
+  .pkg-showcase {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 1rem 2rem;
+    gap: .5rem;
+  }
+  .pkg-cart-icon {
+    font-size: 2.8rem;
+    color: #334155;
+    margin-bottom: .25rem;
+    line-height: 1;
+  }
+  .pkg-amount {
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .pkg-amount .sym { font-size: 2rem; color: var(--muted); margin-right: .15rem; }
+  .pkg-sms-credit {
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: .02em;
+  }
+  .pkg-desc {
+    margin-top: .75rem;
+    font-size: .875rem;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.7;
+  }
+  .pkg-desc strong { color: var(--text); }
+  .pkg-desc em { font-style: italic; }
+  .pkg-desc .price-highlight { color: var(--accent); font-weight: 700; }
+  .pkg-hint {
+    margin-top: .25rem;
+    font-size: .875rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .pkg-hint strong { color: var(--text); }
+
+  /* ── step 2: payment method ─────────────────────── */
+  .payment-options { display: flex; flex-direction: column; gap: 0; }
+
+  .payment-option {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .payment-option:last-child { border-bottom: none; }
+
+  .pay-radio-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    cursor: pointer;
+    margin-bottom: .35rem;
+  }
+  .pay-radio-row input[type=radio] {
+    accent-color: var(--accent);
+    width: 16px; height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .pay-icon { font-size: 1.1rem; color: var(--muted); }
+  .pay-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .pay-desc {
+    margin-left: 2.25rem;
+    font-size: .82rem;
+    color: var(--muted);
+    margin-bottom: .6rem;
+  }
+  .pay-desc .fee { color: #ef4444; font-style: italic; }
+
+  .card-logos {
+    margin-left: 2.25rem;
+    display: flex;
+    gap: .4rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .card-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px; height: 30px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: .6rem;
+    font-weight: 800;
+    letter-spacing: .03em;
+    background: #fff;
+  }
+  .logo-visa       { color: #1a1f8c; }
+  .logo-mc         { background: linear-gradient(90deg,#eb001b 45%,#f79e1b 55%); color: transparent; border-color: transparent; }
+  .logo-discover   { background: #f76f20; color: #fff; }
+  .logo-amex       { background: #007bc1; color: #fff; }
+
+  .mobile-option-wrap {
+    margin-left: 2.25rem;
+    margin-top: .6rem;
+  }
+  .mobile-option-wrap label {
+    display: block;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: .4rem;
+  }
+  .mobile-option-wrap select {
+    width: 100%;
+    padding: .55rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .875rem;
+    color: var(--text);
+    background: var(--surface);
+    appearance: none;
+    cursor: pointer;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .mobile-option-wrap select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+  }
+
+  /* ── step 3: payment summary ────────────────────── */
+  .summary-hint {
+    font-size: .875rem;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    font-style: italic;
+    line-height: 1.6;
+  }
+  .summary-hint strong { color: var(--text); font-style: normal; }
+
+  .summary-table {
+    width: 100%;
+    max-width: 660px;
+    border-collapse: collapse;
+    font-size: .875rem;
+  }
+  .summary-table th {
+    padding: .6rem 1rem;
+    text-align: left;
+    font-weight: 700;
+    font-size: .8rem;
+    color: var(--text);
+    background: #f5f6fa;
+    border: 1px solid var(--border);
+  }
+  .summary-table td {
+    padding: .6rem 1rem;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: .875rem;
+  }
+  .summary-table tr.total-row td {
+    font-weight: 700;
+    background: #fafbfd;
+  }
+
+  /* ── footer nav ─────────────────────────────────── */
+  .step-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .6rem;
+    padding: 1rem 2rem 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .5rem 1.25rem;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background .18s, transform .12s, opacity .15s;
+  }
+  .btn-nav:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+
+  .btn-prev { background: #e2e6f0; color: var(--muted); }
+  .btn-prev:hover:not(:disabled) { background: #d1d5e0; }
+
+  .btn-next { background: #334155; color: #fff; }
+  .btn-next:hover:not(:disabled) { background: #1e293b; transform: translateY(-1px); }
+
+  .btn-finish { background: var(--accent); color: #fff; box-shadow: 0 3px 10px rgba(79,70,229,.3); }
+  .btn-finish:hover:not(:disabled) { background: #4338ca; transform: translateY(-1px); }
+
+  /* ── footer ─────────────────────────────────────── */
+  .dash-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: .75rem;
+    color: #b0b7d3;
+  }
+  .dash-footer a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="container-fluid mt-4">
+
+  <div class="breadcrumb">
+    Portal <span class="sep">/</span> Payments <span class="sep">/</span>
+    <a href="/topup" style="color:var(--muted);text-decoration:none">Topup</a>
+    <span class="sep">/</span> <span>Buy</span>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="dot"></div>
+      <h2>Credit Topup</h2>
+    </div>
+
+    <!-- ── Stepper ─────────────────────────────────── -->
+    <div class="stepper">
+      <div class="step @StepClass(1)">
+        <span class="step-num">@(currentStep > 1 ? "✓" : "1")</span>
+        Package Info
+      </div>
+      <div class="step @StepClass(2)">
+        <span class="step-num">@(currentStep > 2 ? "✓" : "2")</span>
+        Payment Method
+      </div>
+      <div class="step @StepClass(3)">
+        <span class="step-num">3</span>
+        Payment Summary
+      </div>
+    </div>
+
+    <!-- ── Step 1: Package Info ────────────────────── -->
+    @if (currentStep == 1)
+    {
+      <div class="step-body">
+        <div class="step-title">SMS Purchase</div>
+
+        <div class="pkg-showcase">
+          <div class="pkg-cart-icon">🛒</div>
+          <div class="pkg-amount">
+            <span class="sym">GH¢</span>@selectedPackage.Amount.ToString("F2")
+          </div>
+          <div class="pkg-sms-credit">@selectedPackage.SmsQty.ToString("N0") SMS Credit</div>
+
+          <p class="pkg-desc">
+            This package has <em>non-expiring</em> <strong>@selectedPackage.SmsQty.ToString("N0") SMS Credits</strong>
+            at <span class="price-highlight">GH¢ @selectedPackage.PricePerSms.ToString("F4")</span> per SMS
+          </p>
+          <p class="pkg-hint">
+            Click on the <strong>Next</strong> button to choose payment method
+          </p>
+        </div>
+      </div>
+    }
+
+    <!-- ── Step 2: Payment Method ──────────────────── -->
+    @if (currentStep == 2)
+    {
+      <div class="step-body">
+        <div class="step-title">Select Payment Method</div>
+
+        <div class="payment-options">
+
+          <!-- Credit / Debit Card -->
+          <div class="payment-option">
+            <div class="pay-radio-row" @onclick='() => selectedPayment = "card"'>
+              <input type="radio" name="payment" value="card"
+                     checked="@(selectedPayment == "card")"
+                     @onchange='() => selectedPayment = "card"' />
+              <span class="pay-icon">💳</span>
+              <span class="pay-label">Credit / Debit Card</span>
+            </div>
+            <div class="pay-desc">
+              Pay online with debit / credit card
+              <span class="fee">(3.00% Processing fee)</span>
+            </div>
+            <div class="card-logos">
+              <div class="card-logo logo-visa">VISA</div>
+              <div class="card-logo logo-mc">MC</div>
+              <div class="card-logo logo-discover">DISC</div>
+              <div class="card-logo logo-amex">AMEX</div>
+            </div>
+          </div>
+
+          <!-- Mobile Wallet -->
+          <div class="payment-option">
+            <div class="pay-radio-row" @onclick='() => selectedPayment = "mobile"'>
+              <input type="radio" name="payment" value="mobile"
+                     checked="@(selectedPayment == "mobile")"
+                     @onchange='() => selectedPayment = "mobile"' />
+              <span class="pay-icon">📱</span>
+              <span class="pay-label">Mobile Wallet</span>
+            </div>
+            <div class="pay-desc"><strong>Pay into our Mobile Money Wallet</strong></div>
+            @if (selectedPayment == "mobile")
+            {
+              <div class="mobile-option-wrap">
+                <label>Mobile Payment Option</label>
+                <select @bind="mobileOption">
+                  <option value="">-- Select payment option --</option>
+                  <option value="mtn">MTN Mobile Money</option>
+                  <option value="voda">Vodafone Cash</option>
+                  <option value="airteltigo">AirtelTigo Money</option>
+                </select>
+              </div>
+            }
+          </div>
+
+          <!-- Bank Deposit -->
+          <div class="payment-option">
+            <div class="pay-radio-row" @onclick='() => selectedPayment = "bank"'>
+              <input type="radio" name="payment" value="bank"
+                     checked="@(selectedPayment == "bank")"
+                     @onchange='() => selectedPayment = "bank"' />
+              <span class="pay-icon">🏦</span>
+              <span class="pay-label">Bank Deposit</span>
+            </div>
+            <div class="pay-desc">Pay into our bank account.</div>
+          </div>
+
+        </div>
+      </div>
+    }
+
+    <!-- ── Step 3: Payment Summary ─────────────────── -->
+    @if (currentStep == 3)
+    {
+      <div class="step-body">
+        <p class="summary-hint">
+          Please review topup details below. Click on <strong>Finish</strong> button to continue when ready.
+        </p>
+
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Package Validity</td><td>Non-expiring</td></tr>
+            <tr><td>Bonus SMS Credit</td><td>0</td></tr>
+            <tr><td>Package SMS Credit</td><td>@selectedPackage.SmsQty.ToString("N0")</td></tr>
+            <tr><td>Total SMS Credit</td><td>@selectedPackage.SmsQty.ToString("N0")</td></tr>
+            <tr><td>Package Amount</td><td>GH¢ @selectedPackage.Amount.ToString("F2")</td></tr>
+            <tr><td>Price Per SMS</td><td>GH¢ @selectedPackage.PricePerSms.ToString("F4")</td></tr>
+            <tr><td>Payment Method</td><td>@PaymentMethodLabel</td></tr>
+            <tr><td>Processing Fee</td><td>GH¢ @ProcessingFee.ToString("F2") (@ProcessingFeeRate)</td></tr>
+            <tr class="total-row">
+              <td><strong>Amount Payable</strong></td>
+              <td><strong>GH¢ @AmountPayable.ToString("F2")</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ── Navigation Footer ───────────────────────── -->
+    <div class="step-footer">
+      <button class="btn-nav btn-prev" @onclick="GoBack" disabled="@(currentStep == 1)">
+        Previous
+      </button>
+      @if (currentStep < 3)
+      {
+        <button class="btn-nav btn-next" @onclick="GoNext">
+          Next
+        </button>
+      }
+      else
+      {
+        <button class="btn-nav btn-next" disabled>Next</button>
+        <button class="btn-nav btn-finish" @onclick="Finish">
+          Finish
+        </button>
+      }
+    </div>
+
+  </div>
+  
+</div>
+
+@code {
+  // ── wizard state ──────────────────────────────────
+  private int currentStep = 1;
+
+  // ── package (passed from topup list page via query/state) ──
+  private record Package(decimal Amount, decimal PricePerSms, int SmsQty);
+  private Package selectedPackage = new(10m, 0.0325m, 307); // default/demo
+
+  // ── payment ───────────────────────────────────────
+  private string selectedPayment = "mobile"; // "card" | "mobile" | "bank"
+  private string mobileOption    = "";
+
+  // ── computed ──────────────────────────────────────
+  private string PaymentMethodLabel => selectedPayment switch
+  {
+    "card"   => "Credit / Debit Card",
+    "mobile" => "Mobile Wallet",
+    "bank"   => "Bank Deposit",
+    _        => "—"
+  };
+
+  private decimal ProcessingFeeRate => selectedPayment == "card" ? 0.03m : 0m;
+  private decimal ProcessingFee     => Math.Round(selectedPackage.Amount * ProcessingFeeRate, 2);
+  private decimal AmountPayable     => selectedPackage.Amount + ProcessingFee;
+
+  private string ProcessingFeeDisplay =>
+    selectedPayment == "card" ? "3.0%" : "0%";
+
+  // ── stepper helpers ───────────────────────────────
+  private string StepClass(int step)
+  {
+    if (currentStep > step)  return "step done";
+    if (currentStep == step) return "step active";
+    return "step pending";
+  }
+
+  // ── navigation ────────────────────────────────────
+  private void GoNext()
+  {
+    if (currentStep < 3) currentStep++;
+  }
+
+  private void GoBack()
+  {
+    if (currentStep > 1) currentStep--;
+  }
+
+  private void Finish()
+  {
+    // TODO: submit payment
+    Console.WriteLine($"Payment submitted: GH¢{AmountPayable} via {PaymentMethodLabel}");
+  }
+}

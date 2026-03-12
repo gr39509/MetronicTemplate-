@@ -13,7 +13,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<NovaAccounts.Shared.ApiClient>((serviceProvider, client) =>
 {
  
-    client.BaseAddress = new Uri("http://20.218.238.86");
+    client.BaseAddress = new Uri("http://185.132.37.188:5672");
 
     client.DefaultRequestHeaders.Add("Accept", "application/json");
     

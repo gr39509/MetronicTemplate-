@@ -1,0 +1,757 @@
+@page "/reports/messages"
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@using Microsoft.AspNetCore.Components.Web
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #f0f2f7;
+    --surface:   #ffffff;
+    --border:    #e2e6f0;
+    --text:      #1a1f36;
+    --muted:     #6b7399;
+    --accent:    #4f46e5;
+    --accent-lt: #eef2ff;
+    --radius:    12px;
+    --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  }
+
+  .container-fluid.mt-4 {
+    padding: 1.75rem 2rem;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+
+  .breadcrumb {
+    font-size: .8rem; color: var(--muted);
+    margin-bottom: 1.25rem;
+    display: flex; align-items: center; gap: .4rem;
+  }
+  .breadcrumb span { color: var(--accent); font-weight: 500; }
+  .breadcrumb .sep { opacity: .4; }
+
+  /* ── card ───────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: visible;
+  }
+  .card-header {
+    padding: .85rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-header h2 { font-size: .95rem; font-weight: 700; margin: 0; color: var(--text); }
+  .card-body { padding: 1.25rem 1.4rem; }
+
+  /* ── tabs ───────────────────────────────────────── */
+  .tab-bar {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1.25rem;
+  }
+  .tab-btn {
+    padding: .55rem 1.1rem;
+    font-size: .85rem; font-weight: 500;
+    font-family: inherit;
+    color: var(--muted);
+    background: none; border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: color .18s, border-color .18s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--accent); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  /* ── filter row ─────────────────────────────────── */
+  .filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+  .filter-row .field-group { display: flex; flex-direction: column; gap: .35rem; }
+  .filter-row label {
+    font-size: .75rem; font-weight: 600;
+    color: var(--text); letter-spacing: .01em;
+  }
+
+  /* ── icon input ─────────────────────────────────── */
+  .icon-input {
+    display: flex; align-items: stretch;
+    border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; background: var(--surface);
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .icon-input:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+  }
+  .icon-slot {
+    width: 36px; display: flex; align-items: center; justify-content: center;
+    background: #f5f6fa; border-right: 1px solid var(--border);
+    color: var(--muted); font-size: .85rem; flex-shrink: 0;
+  }
+  .icon-input input, .icon-input select {
+    flex: 1; padding: .55rem .75rem;
+    border: none; outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .85rem; color: var(--text);
+    background: transparent; min-width: 0;
+  }
+  .icon-input input::placeholder { color: #b0b7d3; }
+  .icon-input select { appearance: none; cursor: pointer; min-width: 140px; }
+
+  /* radio row */
+  .radio-row {
+    display: flex; align-items: center; gap: 1.25rem;
+    margin-bottom: 1.1rem;
+  }
+  .radio-opt { display: flex; align-items: center; gap: .4rem; cursor: pointer; font-size: .875rem; color: var(--text); }
+  .radio-opt input[type=radio] { accent-color: var(--accent); cursor: pointer; }
+
+  /* date range row (report summary) */
+  .date-range-row {
+    display: flex; align-items: center; gap: 1rem;
+    flex-wrap: wrap; margin-bottom: 1.25rem;
+  }
+  .date-label { font-size: .82rem; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .date-input-wrap { position: relative; }
+  .date-input-wrap .clock-icon {
+    position: absolute; left: .6rem; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted); font-size: .8rem; pointer-events: none;
+  }
+  .date-input-wrap input[type=text] {
+    padding: .52rem .75rem .52rem 2rem;
+    border: 1px solid var(--border); border-radius: 8px;
+    font-family: 'DM Mono', monospace; font-size: .82rem;
+    color: var(--text); background: #f5f6fa;
+    width: 138px; cursor: pointer;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .date-input-wrap input:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+  }
+
+  /* ── calendar popover ───────────────────────────── */
+  .cal-popover {
+    display: none; position: absolute;
+    top: calc(100% + 6px); left: 0; z-index: 200;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0,0,0,.12);
+    padding: .75rem; width: 252px;
+  }
+  .cal-popover.open { display: block; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: .5rem; }
+  .cal-nav button { background: none; border: none; cursor: pointer; font-size: .95rem; color: var(--muted); padding: .15rem .4rem; border-radius: 4px; }
+  .cal-nav button:hover { background: var(--accent-lt); color: var(--accent); }
+  .cal-nav span { font-size: .83rem; font-weight: 600; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+  .cal-grid .dn { text-align: center; font-size: .65rem; font-weight: 700; color: var(--muted); padding: .2rem 0; letter-spacing: .04em; }
+  .cal-grid .dd { text-align: center; padding: .28rem 0; border-radius: 5px; font-size: .78rem; cursor: pointer; transition: background .12s; }
+  .cal-grid .dd:hover { background: var(--accent-lt); color: var(--accent); }
+  .cal-grid .dd.today { border: 1.5px solid #f59e0b; color: #b45309; font-weight: 600; }
+  .cal-grid .dd.sel   { background: var(--accent); color: #fff; font-weight: 600; }
+  .cal-grid .dd.empty { cursor: default; }
+
+  /* ── buttons ────────────────────────────────────── */
+  .btn-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1.2rem; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; font-family: inherit;
+    font-size: .83rem; font-weight: 600; cursor: pointer;
+    box-shadow: 0 3px 10px rgba(79,70,229,.3);
+    transition: background .18s, transform .12s;
+  }
+  .btn-primary:hover { background: #4338ca; transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1.1rem; background: #334155; color: #fff;
+    border: none; border-radius: 8px; font-family: inherit;
+    font-size: .83rem; font-weight: 600; cursor: pointer;
+    transition: background .18s, transform .12s;
+  }
+  .btn-secondary:hover { background: #1e293b; transform: translateY(-1px); }
+  .btn-outline {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1.1rem; background: var(--surface); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 8px; font-family: inherit;
+    font-size: .83rem; font-weight: 500; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-outline:hover { background: #f0f2f7; }
+
+  /* ── table area ─────────────────────────────────── */
+  .table-controls {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: .75rem;
+    margin-bottom: .75rem;
+  }
+  .show-entries {
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .82rem; color: var(--muted);
+  }
+  .show-entries select {
+    padding: .25rem .4rem; border: 1px solid var(--border);
+    border-radius: 5px; font-family: 'DM Mono', monospace;
+    font-size: .78rem; color: var(--text);
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+  thead tr { border-bottom: 1px solid var(--border); background: #f8f9fb; }
+  thead th {
+    padding: .55rem .9rem; text-align: left;
+    font-weight: 700; font-size: .78rem;
+    color: var(--text); white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid #f0f2f7; transition: background .12s; }
+  tbody tr:hover { background: var(--accent-lt); }
+  tbody td { padding: .6rem .9rem; color: var(--text); font-size: .83rem; }
+  .empty-row td {
+    text-align: center; padding: 1.75rem;
+    color: var(--muted); font-size: .85rem; font-style: italic;
+  }
+
+  .table-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: .75rem;
+    margin-top: .75rem;
+    padding-top: .75rem; border-top: 1px solid var(--border);
+  }
+  .showing-info { font-size: .78rem; color: var(--muted); }
+  .pag-btns { display: flex; gap: .4rem; }
+  .pag-btn {
+    padding: .35rem .85rem; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--surface);
+    font-family: inherit; font-size: .78rem;
+    color: var(--muted); cursor: pointer;
+    transition: background .15s;
+  }
+  .pag-btn:hover:not(:disabled) { background: var(--accent-lt); color: var(--accent); }
+  .pag-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ── stat cards (report summary) ───────────────── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(3,1fr);
+    gap: 1.25rem; margin-bottom: 1.25rem;
+  }
+  @@media (max-width: 780px) { .stats-row { grid-template-columns: 1fr; } }
+  .stat-card {
+    border-radius: var(--radius); padding: 1.2rem 1.4rem 1rem;
+    position: relative; overflow: hidden; min-height: 110px;
+  }
+  .stat-card.purple { background: linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%); }
+  .stat-card.blue   { background: linear-gradient(135deg,#2563eb 0%,#0ea5e9 100%); }
+  .stat-card.red    { background: linear-gradient(135deg,#dc2626 0%,#f97316 100%); }
+  .stat-val  { font-size: 2rem; font-weight: 700; color: #fff; font-family: 'DM Mono',monospace; line-height: 1; margin-bottom: .3rem; }
+  .stat-lbl  { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.8); }
+  .sparkline { position: absolute; bottom: 0; left: 0; right: 0; height: 44px; opacity: .45; }
+  .mini-bars { position: absolute; bottom: 0; left: 0; right: 0; height: 44px; display: flex; align-items: flex-end; gap: 3px; padding: 0 10px; opacity: .45; }
+  .mini-bar  { flex: 1; background: rgba(255,255,255,.7); border-radius: 3px 3px 0 0; }
+
+  /* traffic chart card */
+  .chart-card { margin-top: 1.25rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+  .chart-header { padding: .85rem 1.25rem .5rem; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: .5rem; }
+  .chart-header h3 { font-size: .9rem; font-weight: 700; margin: 0; }
+  .chart-date { font-size: .8rem; color: var(--muted); font-family: 'DM Mono',monospace; }
+  .chart-body { padding: 1rem 1.25rem 1.25rem; }
+  canvas#rptChart { width: 100% !important; height: 260px !important; }
+
+  /* ── footer ─────────────────────────────────────── */
+  .dash-footer { margin-top: 1.5rem; text-align: center; font-size: .75rem; color: #b0b7d3; }
+  .dash-footer a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="container-fluid mt-4">
+  <div class="breadcrumb">
+    Portal <span class="sep">/</span> Reports <span class="sep">/</span> <span>Message Reports</span>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>Message Reports</h2></div>
+    <div class="card-body">
+
+      <!-- ── Tabs ──────────────────────────────────── -->
+      <div class="tab-bar">
+        <button class="tab-btn @(activeTab=="delivery" ? "active" : "")" @onclick='()=>activeTab="delivery"'>Delivery Log</button>
+        <button class="tab-btn @(activeTab=="export"   ? "active" : "")" @onclick='()=>activeTab="export"'>Export Log</button>
+        <button class="tab-btn @(activeTab=="summary"  ? "active" : "")" @onclick='()=>activeTab="summary"'>Report Summary</button>
+      </div>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- TAB 1 : Delivery Log                        -->
+      <!-- ════════════════════════════════════════════ -->
+      @if (activeTab == "delivery")
+      {
+        <!-- date mode -->
+        <div class="radio-row">
+          <label class="radio-opt">
+            <input type="radio" name="dlDateMode" value="today"
+                   checked="@(dlDateMode=="today")"
+                   @onchange='()=>dlDateMode="today"' />
+            Today's Log
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="dlDateMode" value="specify"
+                   checked="@(dlDateMode=="specify")"
+                   @onchange='()=>dlDateMode="specify"' />
+            Specify Date
+          </label>
+        </div>
+
+        <!-- filters -->
+        <div class="filter-row">
+          <div class="field-group">
+            <label>Sender</label>
+            <div class="icon-input">
+              <span class="icon-slot">👤</span>
+              <input type="text" @bind="dlSender" placeholder="" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Phone Number</label>
+            <div class="icon-input">
+              <span class="icon-slot"></span>
+              <input type="text" @bind="dlPhone" placeholder="" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Status</label>
+            <div class="icon-input">
+              <span class="icon-slot">⏱</span>
+              <select @bind="dlStatus">
+                <option value=""></option>
+                <option value="delivered">Delivered</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-bottom:1.25rem">
+          <button class="btn-primary" @onclick="LoadDelivery">Load</button>
+          <button class="btn-outline" @onclick="ResetDelivery">↺ Reset</button>
+          <div style="margin-left:auto" class="show-entries">
+            Show
+            <select @bind="dlPageSize"><option>10</option><option>25</option><option>50</option></select>
+            entries
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Message ID</th><th>To</th><th>From</th>
+                <th>Message</th><th>Length</th><th>Status</th>
+                <th>Sent At</th><th>Reported At</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (!deliveryRows.Any())
+              {
+                <tr class="empty-row"><td colspan="8">No data available in table</td></tr>
+              }
+              else
+              {
+                @foreach (var r in deliveryRows)
+                {
+                  <tr>
+                    <td>@r.MsgId</td><td>@r.To</td><td>@r.From</td>
+                    <td>@r.Message</td><td>@r.Length</td><td>@r.Status</td>
+                    <td>@r.SentAt</td><td>@r.ReportedAt</td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span class="showing-info">Showing 0 to 0 of 0 entries</span>
+          <div class="pag-btns">
+            <button class="pag-btn" disabled>Previous</button>
+            <button class="pag-btn" disabled>Next</button>
+          </div>
+        </div>
+      }
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- TAB 2 : Export Log                          -->
+      <!-- ════════════════════════════════════════════ -->
+      @if (activeTab == "export")
+      {
+        <!-- date mode -->
+        <div class="radio-row">
+          <label class="radio-opt">
+            <input type="radio" name="exDateMode" value="today"
+                   checked="@(exDateMode=="today")"
+                   @onchange='()=>exDateMode="today"' />
+            Today's Log
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="exDateMode" value="specify"
+                   checked="@(exDateMode=="specify")"
+                   @onchange='()=>exDateMode="specify"' />
+            Specify Date
+          </label>
+        </div>
+
+        <!-- filters -->
+        <div class="filter-row">
+          <div class="field-group">
+            <label>Sender</label>
+            <div class="icon-input">
+              <span class="icon-slot">👤</span>
+              <input type="text" @bind="exSender" placeholder="" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Phone Number</label>
+            <div class="icon-input">
+              <span class="icon-slot">🔗</span>
+              <input type="text" @bind="exPhone" placeholder="" />
+            </div>
+          </div>
+          <div class="field-group">
+            <label>Status</label>
+            <div class="icon-input">
+              <span class="icon-slot">⏱</span>
+              <select @bind="exStatus">
+                <option value=""></option>
+                <option value="delivered">Delivered</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-bottom:1.25rem">
+          <button class="btn-secondary" @onclick="ExportLog">Export</button>
+        </div>
+
+        <div class="table-controls">
+          <div class="show-entries">
+            Show
+            <select @bind="exPageSize"><option>10</option><option>25</option><option>50</option></select>
+            entries
+          </div>
+          <button class="btn-secondary" @onclick="ReloadExport">↺ Reload</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date From</th><th>Date To</th><th>Filter</th>
+                <th>Records</th><th>Exported</th><th>Download</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (!exportRows.Any())
+              {
+                <tr class="empty-row"><td colspan="6">No data available in table</td></tr>
+              }
+              else
+              {
+                @foreach (var r in exportRows)
+                {
+                  <tr>
+                    <td>@r.DateFrom</td><td>@r.DateTo</td><td>@r.Filter</td>
+                    <td>@r.Records</td><td>@r.Exported</td>
+                    <td><a href="@r.DownloadUrl" style="color:var(--accent)">⬇ Download</a></td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span class="showing-info">Showing 0 to 0 of 0 entries</span>
+          <div class="pag-btns">
+            <button class="pag-btn" disabled>Previous</button>
+            <button class="pag-btn" disabled>Next</button>
+          </div>
+        </div>
+      }
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- TAB 3 : Report Summary                      -->
+      <!-- ════════════════════════════════════════════ -->
+      @if (activeTab == "summary")
+      {
+        <!-- date range -->
+        <div class="date-range-row">
+          <span class="date-label">Start Date:</span>
+          <div class="date-input-wrap" style="position:relative">
+            <span class="clock-icon"></span>
+            <input type="text" id="rpt-startInput" value="@rptStart" readonly
+                   @onclick='()=>ToggleCal("start")' />
+            <div class="cal-popover @(activeCal=="start" ? "open" : "")" id="rpt-calStart">
+              @CalHtml("start")
+            </div>
+          </div>
+          <span class="date-label">End Date:</span>
+          <div class="date-input-wrap" style="position:relative">
+            <span class="clock-icon"></span>
+            <input type="text" id="rpt-endInput" value="@rptEnd" readonly
+                   @onclick='()=>ToggleCal("end")' />
+            <div class="cal-popover @(activeCal=="end" ? "open" : "")" id="rpt-calEnd">
+              @CalHtml("end")
+            </div>
+          </div>
+          <button class="btn-primary" @onclick="SubmitSummary">▶ Submit</button>
+        </div>
+
+        <!-- stat cards -->
+        <div class="stats-row">
+          <div class="stat-card purple">
+            <div class="stat-val">0</div>
+            <div class="stat-lbl">Total Destinations</div>
+            <svg class="sparkline" viewBox="0 0 300 44" preserveAspectRatio="none">
+              <polyline points="0,36 60,34 120,30 180,30 240,28 300,28"
+                fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2"/>
+              <circle cx="60" cy="34" r="3" fill="white"/>
+              <circle cx="180" cy="30" r="3" fill="white"/>
+              <circle cx="300" cy="28" r="3" fill="white"/>
+            </svg>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-val">0</div>
+            <div class="stat-lbl">Total Message Parts</div>
+            <svg class="sparkline" viewBox="0 0 300 44" preserveAspectRatio="none">
+              <polyline points="0,36 60,34 120,32 180,32 240,30 300,30"
+                fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2"/>
+              <circle cx="60" cy="34" r="3" fill="white"/>
+              <circle cx="180" cy="32" r="3" fill="white"/>
+              <circle cx="300" cy="30" r="3" fill="white"/>
+            </svg>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-val">0</div>
+            <div class="stat-lbl">Credit Usage</div>
+            <div class="mini-bars" id="rpt-miniBars"></div>
+          </div>
+        </div>
+
+        <!-- traffic chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Traffic:</h3>
+            <span class="chart-date">@rptStart</span>
+          </div>
+          <div class="chart-body">
+            <canvas id="rptChart"></canvas>
+          </div>
+        </div>
+      }
+
+    </div><!-- /card-body -->
+  </div><!-- /card -->
+  
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+  if (window.__rptInit) return;
+  window.__rptInit = true;
+
+  /* mini bars */
+  function buildBars() {
+    var el = document.getElementById('rpt-miniBars');
+    if (!el || el.children.length) return;
+    [7,13,5,9,4,11,6,15,5,8,10,3].forEach(function(h){
+      var b = document.createElement('div');
+      b.className = 'mini-bar';
+      b.style.height = (h*2.5)+'px';
+      el.appendChild(b);
+    });
+  }
+
+  /* traffic chart */
+  function buildChart() {
+    var canvas = document.getElementById('rptChart');
+    if (!canvas || canvas._chart) return;
+    var hours = Array.from({length:24}, function(_,i){ return i.toString().padStart(2,'0')+' hr'; });
+    canvas._chart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: hours,
+        datasets: [{
+          data: new Array(24).fill(0),
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,.07)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#2563eb',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          tension: 0.3, fill: true
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color:'#e8ebf4' }, ticks: { font:{family:"'DM Mono',monospace",size:10}, color:'#6b7399' } },
+          y: { min:-1, max:1, grid:{color:'#e8ebf4'}, ticks:{stepSize:.2, font:{family:"'DM Mono',monospace",size:10}, color:'#6b7399'} }
+        }
+      }
+    });
+  }
+
+  window.__rptBuild = function(){ buildBars(); buildChart(); };
+})();
+</script>
+
+@code {
+  // ── tab ──────────────────────────────────────────
+  private string activeTab = "delivery";
+  private string prevTab   = "";
+
+  // ── delivery log ─────────────────────────────────
+  private string dlDateMode = "today";
+  private string dlSender   = "";
+  private string dlPhone    = "";
+  private string dlStatus   = "";
+  private int    dlPageSize = 10;
+  private List<DeliveryRow> deliveryRows = new();
+
+  private void LoadDelivery()  { /* TODO: fetch */ }
+  private void ResetDelivery() { dlSender = dlPhone = dlStatus = ""; deliveryRows.Clear(); }
+
+  // ── export log ───────────────────────────────────
+  private string exDateMode = "today";
+  private string exSender   = "";
+  private string exPhone    = "";
+  private string exStatus   = "";
+  private int    exPageSize = 10;
+  private List<ExportRow> exportRows = new();
+
+  private void ExportLog()    { /* TODO */ }
+  private void ReloadExport() { /* TODO */ }
+
+  // ── report summary ───────────────────────────────
+  private string rptStart = DateTime.Today.ToString("yyyy-MM-dd");
+  private string rptEnd   = DateTime.Today.ToString("yyyy-MM-dd");
+
+  private void SubmitSummary() { /* TODO: fetch summary stats */ }
+
+  // ── calendar ─────────────────────────────────────
+  private string activeCal = "";
+  private (int year, int month, int day) calStart = (DateTime.Today.Year, DateTime.Today.Month - 1, DateTime.Today.Day);
+  private (int year, int month, int day) calEnd   = (DateTime.Today.Year, DateTime.Today.Month - 1, DateTime.Today.Day);
+
+  private void ToggleCal(string which)
+  {
+    activeCal = activeCal == which ? "" : which;
+  }
+
+  private RenderFragment CalHtml(string which) => builder =>
+  {
+    var s     = which == "start" ? calStart : calEnd;
+    var today = DateTime.Today;
+    var first = new DateTime(s.year, s.month + 1, 1);
+    var days  = DateTime.DaysInMonth(s.year, s.month + 1);
+    var startDow = (int)first.DayOfWeek;
+
+    string[] MONTHS = {"January","February","March","April","May","June","July","August","September","October","November","December"};
+    string[] DAYS   = {"Su","Mo","Tu","We","Th","Fr","Sa"};
+
+    int seq = 0;
+    builder.OpenElement(seq++, "div");
+    builder.AddAttribute(seq++, "class", "cal-nav");
+    builder.OpenElement(seq++, "button");
+    builder.AddAttribute(seq++, "type", "button");
+    builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ShiftCal(which, -1)));
+    builder.AddContent(seq++, "‹");
+    builder.CloseElement();
+    builder.OpenElement(seq++, "span");
+    builder.AddContent(seq++, $"{MONTHS[s.month]} {s.year}");
+    builder.CloseElement();
+    builder.OpenElement(seq++, "button");
+    builder.AddAttribute(seq++, "type", "button");
+    builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => ShiftCal(which, 1)));
+    builder.AddContent(seq++, "›");
+    builder.CloseElement();
+    builder.CloseElement();
+
+    builder.OpenElement(seq++, "div");
+    builder.AddAttribute(seq++, "class", "cal-grid");
+    foreach (var d in DAYS)
+    {
+      builder.OpenElement(seq++, "div"); builder.AddAttribute(seq++, "class", "dn"); builder.AddContent(seq++, d); builder.CloseElement();
+    }
+    for (int e = 0; e < startDow; e++)
+    {
+      builder.OpenElement(seq++, "div"); builder.AddAttribute(seq++, "class", "dd empty"); builder.CloseElement();
+    }
+    for (int d = 1; d <= days; d++)
+    {
+      var day = d;
+      bool isToday = today.Year == s.year && today.Month == s.month + 1 && today.Day == d;
+      bool isSel   = s.day == d;
+      var cls = "dd" + (isToday ? " today" : "") + (isSel ? " sel" : "");
+      builder.OpenElement(seq++, "div");
+      builder.AddAttribute(seq++, "class", cls);
+      builder.AddAttribute(seq++, "onclick", EventCallback.Factory.Create(this, () => PickDay(which, day)));
+      builder.AddContent(seq++, d.ToString());
+      builder.CloseElement();
+    }
+    builder.CloseElement();
+  };
+
+  private void ShiftCal(string which, int dir)
+  {
+    var s = which == "start" ? calStart : calEnd;
+    int m = s.month + dir;
+    int y = s.year;
+    if (m > 11) { m = 0;  y++; }
+    if (m < 0)  { m = 11; y--; }
+    if (which == "start") calStart = (y, m, s.day);
+    else                  calEnd   = (y, m, s.day);
+  }
+
+  private void PickDay(string which, int day)
+  {
+    var s   = which == "start" ? calStart : calEnd;
+    var str = $"{s.year}-{(s.month+1):D2}-{day:D2}";
+    if (which == "start") { calStart = (s.year, s.month, day); rptStart = str; }
+    else                  { calEnd   = (s.year, s.month, day); rptEnd   = str; }
+    activeCal = "";
+  }
+
+  // ── lifecycle: init chart when summary tab renders ──
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (activeTab == "summary" && prevTab != "summary")
+    {
+      prevTab = activeTab;
+      await Task.Delay(80);
+      await JSRuntime.InvokeVoidAsync("eval", "if(window.__rptBuild) window.__rptBuild();");
+    }
+    else if (activeTab != "summary")
+    {
+      prevTab = activeTab;
+    }
+  }
+
+  // ── row models ────────────────────────────────────
+  private record DeliveryRow(string MsgId, string To, string From, string Message,
+                              int Length, string Status, string SentAt, string ReportedAt);
+  private record ExportRow(string DateFrom, string DateTo, string Filter,
+                           int Records, string Exported, string DownloadUrl);
+}

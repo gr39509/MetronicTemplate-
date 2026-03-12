@@ -1,0 +1,162 @@
+@page "/account/balance"
+@using Microsoft.AspNetCore.Components.Web
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #f0f2f7;
+    --surface:   #ffffff;
+    --border:    #e2e6f0;
+    --text:      #1a1f36;
+    --muted:     #6b7399;
+    --accent:    #4f46e5;
+    --accent-lt: #eef2ff;
+    --radius:    12px;
+    --shadow:    0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  }
+
+  .container-fluid.mt-4 {
+    padding: 1.75rem 2rem;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+
+  /* ── breadcrumb ─────────────────────────────────── */
+  .breadcrumb {
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+  }
+  .breadcrumb span { color: var(--accent); font-weight: 500; }
+  .breadcrumb .sep { opacity: .4; }
+
+  /* ── card ───────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: .85rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .card-header h2 { font-size: .95rem; font-weight: 700; margin: 0; color: var(--text); }
+  .card-header .wallet-icon { font-size: 1rem; color: var(--muted); }
+
+  /* ── balance showcase ───────────────────────────── */
+  .balance-body {
+    padding: 2.5rem 1.4rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+  }
+
+  .balance-label {
+    font-size: .95rem;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: .01em;
+  }
+
+  /* briefcase SVG icon */
+  .balance-icon {
+    color: #9aa0b9;
+    margin: .25rem 0;
+  }
+
+  .balance-value {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #6b7399;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: -.02em;
+    line-height: 1;
+  }
+
+  /* ── divider + topup link ───────────────────────── */
+  .balance-footer {
+    margin-top: 1.75rem;
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.4rem;
+    text-align: center;
+  }
+  .topup-link {
+    font-size: .875rem;
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity .15s;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    padding: 0;
+  }
+  .topup-link:hover { opacity: .75; text-decoration: underline; }
+
+  /* ── footer ─────────────────────────────────────── */
+  .dash-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: .75rem;
+    color: #b0b7d3;
+  }
+  .dash-footer a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="container-fluid mt-4">
+
+  <div class="breadcrumb">
+    Portal <span class="sep">/</span> My Account <span class="sep">/</span> <span>Balance</span>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="wallet-icon"></span>
+      <h2>Your Account Balance</h2>
+    </div>
+
+    <div class="balance-body">
+
+      <div class="balance-label">Credit Balance</div>
+
+     
+      <div class="balance-icon">
+        <svg width="64" height="54" viewBox="0 0 64 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- briefcase body -->
+          <rect x="4" y="16" width="56" height="34" rx="4" stroke="#9aa0b9" stroke-width="2.5" fill="none"/>
+          <!-- briefcase handle -->
+          <path d="M22 16V12C22 9.79 23.79 8 26 8H38C40.21 8 42 9.79 42 12V16" stroke="#9aa0b9" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- center divider line -->
+          <line x1="4" y1="33" x2="60" y2="33" stroke="#9aa0b9" stroke-width="2" stroke-dasharray="0"/>
+          <!-- center slot -->
+          <rect x="27" y="29" width="10" height="8" rx="1" stroke="#9aa0b9" stroke-width="2" fill="none"/>
+        </svg>
+      </div>
+
+      <div class="balance-value">@balance.ToString("N0")</div>
+
+    </div>
+
+    <div class="balance-footer">
+      <a class="topup-link" href="/topup">Topup your account.</a>
+    </div>
+  </div>
+
+ 
+</div>
+
+@code {
+  
+  private int balance = 2533;
+}
