@@ -442,21 +442,17 @@
 </div>
 
 @code {
-  // ── filter state ──────────────────────────────────
   private bool   filterOpen       = false;
   private string filterInvoiceNum = string.Empty;
   private string filterStatus     = string.Empty;
   private DateTime? filterDateFrom;
-
-  // ── pagination ────────────────────────────────────
+  
   private int currentPage = 1;
   private int pageSize    = 10;
-
-  // ── sort ──────────────────────────────────────────
+  
   private string sortField = "InvoiceDate";
   private bool   sortAsc   = false;
-
-  // ── model ─────────────────────────────────────────
+  
   private record Invoice(
     string   InvoiceNum,
     DateTime InvoiceDate,
@@ -467,8 +463,7 @@
     decimal  AmountPaid,
     DateTime PaymentDate
   );
-
-  // ── sample data ───────────────────────────────────
+  
   private List<Invoice> allInvoices = new()
   {
     new("41606", new DateTime(2024,8,16,12,22,24), 3508, "Non-expiring", 100.00m, "PAID",    103.00m, new DateTime(2024,8,16,12,25,22)),
@@ -484,8 +479,7 @@
   {
     filteredInvoices = allInvoices.ToList();
   }
-
-  // ── filter logic ──────────────────────────────────
+  
   private void ApplyFilter()
   {
     filteredInvoices = allInvoices
@@ -496,8 +490,7 @@
       ).ToList();
     currentPage = 1;
   }
-
-  // ── sort logic ────────────────────────────────────
+  
   private void Sort(string field)
   {
     if (sortField == field) sortAsc = !sortAsc;
@@ -515,8 +508,7 @@
     "PaymentDate" => sortAsc ? filteredInvoices.OrderBy(i => i.PaymentDate)  : filteredInvoices.OrderByDescending(i => i.PaymentDate),
     _             => filteredInvoices.AsEnumerable()
   };
-
-  // ── pagination helpers ────────────────────────────
+  
   private int TotalPages => Math.Max(1, (int)Math.Ceiling((double)filteredInvoices.Count / pageSize));
 
   private IEnumerable<Invoice> PagedInvoices =>
@@ -535,8 +527,7 @@
   }
 
   private void ResetPage() => currentPage = 1;
-
-  // ── badge helper ──────────────────────────────────
+  
   private string BadgeClass(string status) => status switch
   {
     "PAID"    => "badge-paid",
@@ -545,7 +536,6 @@
     _         => "badge-pending"
   };
 
-  // ── view action ───────────────────────────────────
   private void ViewInvoice(Invoice inv)
   {
     // TODO: navigate to invoice detail page

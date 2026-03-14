@@ -618,11 +618,9 @@
 </script>
 
 @code {
-  // ── tab ──────────────────────────────────────────
   private string activeTab = "delivery";
   private string prevTab   = "";
-
-  // ── delivery log ─────────────────────────────────
+  
   private string dlDateMode = "today";
   private string dlSender   = "";
   private string dlPhone    = "";
@@ -643,14 +641,11 @@
 
   private void ExportLog()    { /* TODO */ }
   private void ReloadExport() { /* TODO */ }
-
-  // ── report summary ───────────────────────────────
+  
   private string rptStart = DateTime.Today.ToString("yyyy-MM-dd");
   private string rptEnd   = DateTime.Today.ToString("yyyy-MM-dd");
 
   private void SubmitSummary() { /* TODO: fetch summary stats */ }
-
-  // ── calendar ─────────────────────────────────────
   private string activeCal = "";
   private (int year, int month, int day) calStart = (DateTime.Today.Year, DateTime.Today.Month - 1, DateTime.Today.Day);
   private (int year, int month, int day) calEnd   = (DateTime.Today.Year, DateTime.Today.Month - 1, DateTime.Today.Day);
@@ -734,7 +729,6 @@
     activeCal = "";
   }
 
-  // ── lifecycle: init chart when summary tab renders ──
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (activeTab == "summary" && prevTab != "summary")
@@ -749,7 +743,6 @@
     }
   }
 
-  // ── row models ────────────────────────────────────
   private record DeliveryRow(string MsgId, string To, string From, string Message,
                               int Length, string Status, string SentAt, string ReportedAt);
   private record ExportRow(string DateFrom, string DateTo, string Filter,

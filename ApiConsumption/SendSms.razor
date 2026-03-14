@@ -1,4 +1,4 @@
-@page "/message/sms"
+@page "/"
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.JSInterop
@@ -757,6 +757,7 @@
                      placeholder="Sender Name (max 11 chars)"
                      maxlength="11"
                      @bind="senderName"
+                     readonly="readonly"
                      @bind:event="oninput" />
             </div>
             <span style="font-size:.7rem;color:var(--muted);margin-top:.3rem;display:block;">
@@ -1211,7 +1212,8 @@
     private SMSClientProviderConfigurationViewModel?      selectedConfig     = null;
     private bool isLoadingConfigs = false;
 
-    private string    senderName  = string.Empty;
+    private string    senderName  = "NSAWA";
+    //private string    senderName  = string.Empty;
     private string    messageType = "TEXT";
     private string    messageBody = string.Empty;
     private bool      personalise = false;
@@ -1226,7 +1228,7 @@
     private bool   showPasteModal = false;
     private string pasteBuffer    = string.Empty;
 
-    // ── Import state ────────────────────────────────────────────────────────
+  
     private bool                    showImportModal      = false;
     private string?                 importFileName       = null;
     private List<string>            importColumns        = new();
@@ -1239,8 +1241,7 @@
     private bool   showValidation = false;
     private string successMessage = string.Empty;
     private string errorMessage   = string.Empty;
-
-    // ── Computed ────────────────────────────────────────────────────────────
+    
 
     private int SmsSegments => messageBody.Length == 0
         ? 0 : (int)Math.Ceiling(messageBody.Length / 160.0);
@@ -1275,8 +1276,6 @@
     private int ImportSkippedCount =>
         string.IsNullOrEmpty(importSelectedColumn) ? 0 :
         importRawRows.Count - GetImportPreview().Count;
-
-    // ── Lifecycle ───────────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
     {
@@ -1335,8 +1334,7 @@
         importFileName = fileName;
         isParsingFile = true;
         StateHasChanged();
-
-        // Convert base64 to stream
+        
         byte[] fileBytes = Convert.FromBase64String(base64Content);
         using var ms = new MemoryStream(fileBytes);
 
@@ -1354,7 +1352,6 @@
         else
           ParseExcelFromStream(ms);
 
-        // Auto-select column with a phone-like name
         if (importColumns.Count > 0)
         {
           var phoneCol = importColumns.FirstOrDefault(c =>
@@ -1415,13 +1412,11 @@
         return digits.Length >= 7 && digits.Length <= 15;
     }
 
-    /// Ensures number starts with "+". Pure-digit strings of 10+ chars get a "+" prepended.
+   
     private static string NormalisePhone(string value)
     {
         if (string.IsNullOrWhiteSpace(value)) return string.Empty;
-        // Already has +
         if (value.StartsWith("+")) return value;
-        // Strip any leading zeros or spaces, then prepend +
         var digits = new string(value.Where(char.IsDigit).ToArray());
         return digits.Length >= 7 ? "+" + digits : value;
     }
@@ -1567,7 +1562,7 @@
 
     private static List<string> SplitCsvLine(string line)
     {
-        // Simple CSV split – handles quoted fields
+      
         var result  = new List<string>();
         var current = new System.Text.StringBuilder();
         bool inQuotes = false;
@@ -1594,8 +1589,7 @@
 
     private void ParseExcelFromStream(MemoryStream ms)
     {
-        // Requires ClosedXML NuGet package:
-        // <PackageReference Include="ClosedXML" Version="0.102.*" />
+      
         ms.Position = 0;
         using var workbook = new ClosedXML.Excel.XLWorkbook(ms);
         var worksheet = workbook.Worksheets.FirstOrDefault();
@@ -1624,8 +1618,7 @@
                 return string.IsNullOrWhiteSpace(val) ? $"Column {i + 1}" : val;
             })
             .ToList();
-
-        // Data rows
+        
         importRawRows = new();
         for (int r = 1; r < rows.Count; r++)
         {
@@ -1649,7 +1642,7 @@
 
             if (cell.HasFormula)
             {
-                // Try the cached/calculated value first
+              
                 try
                 {
                     var cached = cell.CachedValue.ToString()?.Trim() ?? string.Empty;
@@ -1657,9 +1650,7 @@
                         return cached;
                 }
                 catch { /* cached value unavailable */ }
-
-                // Fall back: strip leading "=" from the formula text
-                // e.g. "=233548324259" -> "233548324259"
+                
                 var formula = cell.FormulaA1?.Trim() ?? string.Empty;
                 if (formula.StartsWith("="))
                     formula = formula[1..].Trim().Trim('"');
@@ -1690,8 +1681,7 @@
         showImportModal = false;
         StateHasChanged();
     }
-
-    // ── Validation & Send ────────────────────────────────────────────────────
+    
 
     private bool IsValid()
     {

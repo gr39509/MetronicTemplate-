@@ -521,18 +521,15 @@
 </div>
 
 @code {
-  // ── wizard state ──────────────────────────────────
+
   private int currentStep = 1;
-
-  // ── package (passed from topup list page via query/state) ──
+  
   private record Package(decimal Amount, decimal PricePerSms, int SmsQty);
-  private Package selectedPackage = new(10m, 0.0325m, 307); // default/demo
+  private Package selectedPackage = new(10m, 0.0325m, 307);
 
-  // ── payment ───────────────────────────────────────
-  private string selectedPayment = "mobile"; // "card" | "mobile" | "bank"
+  private string selectedPayment = "mobile"; 
   private string mobileOption    = "";
 
-  // ── computed ──────────────────────────────────────
   private string PaymentMethodLabel => selectedPayment switch
   {
     "card"   => "Credit / Debit Card",

@@ -271,18 +271,15 @@
 </div>
 
 @code {
-  // ── modal refs (programmatic control via OpenModal / CloseModal) ──
   private ReusableModal newModal  = default!;
   private ReusableModal editModal = default!;
 
-  // ── state ────────────────────────────────────────────
   private List<SmsTemplates> templates   = new();
   private int               editIndex   = -1;
 
   private SmsTemplates newTemplate  = new();
   private SmsTemplates editTemplate = new();
-
-  // ── new template ─────────────────────────────────────
+  
   private async Task SaveTemplate()
   {
     if (string.IsNullOrWhiteSpace(newTemplate.ReferenceName) ||
@@ -301,11 +298,9 @@
 
   private void ResetNewForm()
   {
-    // Called via OnClose — clears the form if user cancels
     newTemplate = new();
   }
 
-  // ── edit template ─────────────────────────────────────
   private async Task OpenEditModal(int index)
   {
     editIndex    = index;
@@ -334,13 +329,11 @@
     editIndex = -1;
   }
 
-  // ── delete ────────────────────────────────────────────
   private void DeleteTemplate(int index)
   {
     templates.RemoveAt(index);
   }
 
-  // ── model ─────────────────────────────────────────────
   private class SmsTemplates
   {
     public string ReferenceName { get; set; } = string.Empty;
