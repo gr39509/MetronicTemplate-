@@ -53,8 +53,14 @@ public static partial class Format
     public static string BannerUrl(string? banner) =>
         string.IsNullOrWhiteSpace(banner) ? string.Empty : $"/api/imageproxy/getimage/{Uri.EscapeDataString(banner)}";
 
-    public static string EventTitle(string? title) =>
-        string.IsNullOrWhiteSpace(title) ? "Untitled event" : Culture.TextInfo.ToTitleCase(title.Trim().ToLower(Culture));
+    /// <summary>Keeps the organiser's casing, but tidies titles typed in all lower or all upper case.</summary>
+    public static string EventTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return "Untitled event";
+        title = title.Trim();
+        var needsTidy = title == title.ToLower(Culture) || title == title.ToUpper(Culture);
+        return needsTidy ? Culture.TextInfo.ToTitleCase(title.ToLower(Culture)) : title;
+    }
 
     [GeneratedRegex("[^0-9]")]
     private static partial Regex NonDigits();

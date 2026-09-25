@@ -75,7 +75,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
     backdrop-filter: saturate(1.4) blur(8px);
     border-bottom: 1px solid var(--line);
 }
-.topbar__menu { display: none; }
+.topbar .topbar__menu { display: none; }
 .topbar__spacer { flex: 1; }
 
 .content { width: 100%; max-width: var(--content-max); margin: 0 auto; padding: var(--space-6); display: grid; gap: var(--space-6); align-content: start; flex: 1; }
@@ -92,7 +92,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
     }
     .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
     .topbar { padding: 0 var(--space-4); }
-    .topbar__menu { display: inline-flex; }
+    .topbar .topbar__menu { display: inline-flex; }
     .content { padding: var(--space-4); gap: var(--space-5); }
 }
 

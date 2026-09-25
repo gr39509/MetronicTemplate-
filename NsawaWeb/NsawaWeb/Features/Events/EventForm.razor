@@ -64,7 +64,7 @@
             <h2 class="form-section__title">Banner</h2>
             <p class="form-section__hint">Shown at the top of the donation page. A clear photo works best.</p>
             <Field Label="Banner image" For="event-banner" Optional="!RequireBanner" Error="@_errors["banner"]"
-                   Hint="@(PreviewUrl is null ? "JPG or PNG, up to 10 MB." : "Choose another image to replace this one.")">
+                   Hint="@(PreviewUrl is null ? null : "Choose another image to replace this one.")">
                 <div class="dropzone @Invalid("banner")">
                     @if (PreviewUrl is not null)
                     {
