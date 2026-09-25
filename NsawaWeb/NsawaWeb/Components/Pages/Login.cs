@@ -29,10 +29,9 @@ public partial class Login
     {
         if (await AuthService.IsAuthenticatedAsync())
         {
-            NavigationManager.NavigateTo(ReturnUrl ?? "/home");
-            return;
+            NavigationManager.NavigateTo("/home", forceLoad: false);
+            StateHasChanged();
         }
-
         authChecked = true;
     }
 

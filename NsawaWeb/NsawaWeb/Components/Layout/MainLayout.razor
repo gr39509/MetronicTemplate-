@@ -578,7 +578,7 @@
             var user = await AuthService.GetUserAsync();
             if (user != null)
             {
-                // Try to get name from claims
+               
                 var nameClaim = user.FindFirst(System.Security.Claims.ClaimTypes.Name);
                 if (nameClaim != null)
                 {

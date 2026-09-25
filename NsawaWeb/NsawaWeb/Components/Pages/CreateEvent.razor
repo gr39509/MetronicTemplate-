@@ -537,12 +537,12 @@
                 longitude: eventModel.Longitude,
                 latitude: eventModel.Latitude,
                 banner: bannerParam,
-                startDate: new DateTimeOffset(eventModel.StartDate, TimeSpan.Zero),
-                endDate: new DateTimeOffset(eventModel.EndDate, TimeSpan.Zero),
+                startDate: new DateTimeOffset(DateTime.SpecifyKind(eventModel.StartDate, DateTimeKind.Unspecified), TimeSpan.Zero),
+                endDate: new DateTimeOffset(DateTime.SpecifyKind(eventModel.EndDate, DateTimeKind.Unspecified), TimeSpan.Zero),
                 rSVP: eventModel.Rsvp ?? string.Empty,
                 notifyOrganizer: eventModel.NotifyOrganizer,
                 notifyAffiliateOrganizers: eventModel.NotifyAffiliateOrganizers,
-                expiryDate: new DateTimeOffset(expiryDateValue, TimeSpan.Zero)
+                expiryDate: new DateTimeOffset(DateTime.SpecifyKind(expiryDateValue, DateTimeKind.Unspecified), TimeSpan.Zero)
             );
 
             Console.WriteLine("=== Create Response ===");

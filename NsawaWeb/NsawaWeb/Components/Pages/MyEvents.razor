@@ -1,6 +1,8 @@
 @page "/my-events"
+@using System.Drawing
 @using NsawaWeb.Services.Services
 @using QRCoder
+@using SkiaSharp
 @inject ApiClient ApiClient
 @inject NavigationManager Navigation
 
@@ -278,7 +280,7 @@ else
     private string errorMessage = string.Empty;
     private Guid? activeMenuId = null;
     
-    // Delete confirmation state
+    
     private bool showDeleteConfirmation = false;
     private EventViewModel eventToDelete = null;
     private bool isDeleting = false;
@@ -316,8 +318,7 @@ else
                 500 => "Server error. Please try again later.",
                 _ => $"An error occurred while loading events. (Error code: {apiEx.StatusCode})"
             };
-
-      
+            
         }
         catch (Exception ex)
         {
@@ -344,14 +345,7 @@ else
 
     private async Task HandleAffiliateAdded()
     {
-        // Refresh event details or show success message
-        Console.WriteLine("Affiliate added successfully!");
-        
-        // Optionally reload event data
-        // if (selectedEvent != null)
-        // {
-        //     await ViewEventDetails(selectedEvent.Id);
-        // }
+       
     }
 
     private async Task ViewEventDetails(Guid eventId)
@@ -402,15 +396,128 @@ else
         }
     }
     
+    // FOR LOGO ON THE QR CODE
+    // private string GenerateQrCode(Guid eventId)
+    // {
+    //     using QRCodeGenerator qrGenerator = new QRCodeGenerator();
+    //     using QRCodeData qrCodeData = qrGenerator.CreateQrCode(
+    //         $"{Navigation.BaseUri.TrimEnd('/')}/donate/{eventId}", 
+    //         QRCodeGenerator.ECCLevel.H);
+    //
+    //     using PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
+    //     byte[] qrCodeImage = qrCode.GetGraphic(20);
+    //
+    //     using var ms = new MemoryStream(qrCodeImage);
+    //     using var originalBitmap = SKBitmap.Decode(ms);
+    //
+    //     using var surface = SKSurface.Create(new SKImageInfo(originalBitmap.Width, originalBitmap.Height));
+    //     var canvas = surface.Canvas;
+    //
+    //     canvas.DrawBitmap(originalBitmap, 0, 0);
+    //
+    //     int centerX = originalBitmap.Width / 2;
+    //     int centerY = originalBitmap.Height / 2;
+    //     int logoSize = originalBitmap.Width / 5;
+    //
+    //     // Draw white circle background
+    //     var circlePaint = new SKPaint
+    //     {
+    //         Color = SKColors.White,
+    //         IsAntialias = true,
+    //         Style = SKPaintStyle.Fill
+    //     };
+    //     canvas.DrawCircle(centerX, centerY, logoSize / 2 + 10, circlePaint);
+    //
+    //     // Load and draw logo
+    //     var logoPath = Path.Combine("wwwroot", "icons", "Logo.jpg");
+    //     if (File.Exists(logoPath))
+    //     {
+    //         using var logoStream = File.OpenRead(logoPath);
+    //         using var logoBitmap = SKBitmap.Decode(logoStream);
+    //     
+    //         var destRect = new SKRect(
+    //             centerX - logoSize / 2,
+    //             centerY - logoSize / 2,
+    //             centerX + logoSize / 2,
+    //             centerY + logoSize / 2
+    //         );
+    //     
+    //         canvas.DrawBitmap(logoBitmap, destRect);
+    //     }
+    //
+    //     using var image = surface.Snapshot();
+    //     using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+    //     using var outputMs = new MemoryStream();
+    //     data.SaveTo(outputMs);
+    //
+    //     return $"data:image/png;base64,{Convert.ToBase64String(outputMs.ToArray())}";
+    // }
+
+    // FOR TEXT ON THE QR CODE
     private string GenerateQrCode(Guid eventId)
+{
+    using QRCodeGenerator qrGenerator = new QRCodeGenerator();
+    using QRCodeData qrCodeData = qrGenerator.CreateQrCode(
+        $"{Navigation.BaseUri.TrimEnd('/')}/donate/{eventId}", 
+        QRCodeGenerator.ECCLevel.H);
+    
+    using PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
+    byte[] qrCodeImage = qrCode.GetGraphic(20);
+    
+   
+    using var ms = new MemoryStream(qrCodeImage);
+    using var originalBitmap = SKBitmap.Decode(ms);
+    
+    using var surface = SKSurface.Create(new SKImageInfo(originalBitmap.Width, originalBitmap.Height));
+    var canvas = surface.Canvas;
+    canvas.DrawBitmap(originalBitmap, 0, 0);
+    
+    int centerX = originalBitmap.Width / 2;
+    int centerY = originalBitmap.Height / 2;
+    int circleSize = originalBitmap.Width / 5;
+    
+    var circlePaint = new SKPaint
     {
-        using QRCodeGenerator qrGenerator = new QRCodeGenerator();
-        using QRCodeData qrCodeData =
-            qrGenerator.CreateQrCode($"{Navigation.BaseUri.TrimEnd('/')}/donate/{eventId}", QRCodeGenerator.ECCLevel.Q);
-        using PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
-        byte[] qrCodeImage = qrCode.GetGraphic(20);
-        return $"data:image/png;base64,{Convert.ToBase64String(qrCodeImage)}";
-    }
+        Color = SKColors.Green,
+        IsAntialias = true,
+        Style = SKPaintStyle.Fill
+    };
+    canvas.DrawCircle(centerX, centerY, circleSize / 2, circlePaint);
+    
+    string text = "NSAWA DONATE";
+    var textPaint = new SKPaint
+    {
+        Color = SKColors.White,
+        IsAntialias = true,
+        TextSize = 24,
+        TextAlign = SKTextAlign.Center,
+        Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
+    };
+    
+    var textBounds = new SKRect();
+    textPaint.MeasureText(text, ref textBounds);
+    float textY = centerY - textBounds.MidY;
+    
+    canvas.DrawText(text, centerX, textY, textPaint);
+    
+    // Save to PNG
+    using var image = surface.Snapshot();
+    using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+    using var outputMs = new MemoryStream();
+    data.SaveTo(outputMs);
+    
+    return $"data:image/png;base64,{Convert.ToBase64String(outputMs.ToArray())}";
+}
+    
+    // private string GenerateQrCode(Guid eventId)
+    // {
+    //     using QRCodeGenerator qrGenerator = new QRCodeGenerator();
+    //     using QRCodeData qrCodeData =
+    //         qrGenerator.CreateQrCode($"{Navigation.BaseUri.TrimEnd('/')}/donate/{eventId}", QRCodeGenerator.ECCLevel.Q);
+    //     using PngByteQRCode qrCode = new PngByteQRCode(qrCodeData);
+    //     byte[] qrCodeImage = qrCode.GetGraphic(20);
+    //     return $"data:image/png;base64,{Convert.ToBase64String(qrCodeImage)}";
+    // }
     
     private void ViewAffiliates(Guid eventId)
     {
@@ -554,8 +661,6 @@ else
 }
 
 <script>
-    
-
         function toggleMenu(btn) {
             const allMenus = document.querySelectorAll('.dropdown-menu-custom');
             const menu = btn.nextElementSibling;

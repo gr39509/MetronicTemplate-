@@ -65,7 +65,7 @@
                     <InputText 
                         type="text" 
                         class="form-control" 
-                        placeholder="Address (optional)" 
+                        placeholder="Address" 
                         @bind-Value="request.Address"
                         @oninput="ClearError" />
                     <ValidationMessage For="@(() => request.Address)" />
@@ -75,7 +75,7 @@
                     <InputText 
                         type="text" 
                         class="form-control" 
-                        placeholder="Organization name (optional)" 
+                        placeholder="Organization name" 
                         @bind-Value="request.OrganizationName"
                         @oninput="ClearError" />
                     <ValidationMessage For="@(() => request.OrganizationName)" />
@@ -225,7 +225,7 @@
                 StateHasChanged();
                 
                 await Task.Delay(2000);
-                NavigationManager.NavigateTo("/login", true);
+                NavigationManager.NavigateTo("/", true);
             }
             else
             {

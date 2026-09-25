@@ -7,7 +7,7 @@ using NsawaWeb.Services.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
@@ -48,7 +48,7 @@ else
 }
 
 app.UseHttpsRedirection();
-
+app.UseStaticFiles();
 
 app.UseAntiforgery();
 

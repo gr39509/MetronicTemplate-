@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="QRCoder" Version="1.7.0" />
+        <PackageReference Include="SkiaSharp" Version="3.119.1" />
         <ProjectReference Include="..\..\NsawaWeb.Data\NsawaWeb.Data.csproj" />
         <ProjectReference Include="..\..\NsawaWeb.Services\NsawaWeb.Services.csproj" />
         <ProjectReference Include="..\NsawaWeb.Client\NsawaWeb.Client.csproj"/>

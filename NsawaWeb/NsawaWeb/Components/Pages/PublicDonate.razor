@@ -197,7 +197,7 @@
                                     }
                                 </div>
                                 <div>
-                                    <h2 class="form-title">Hello, @(!string.IsNullOrEmpty(verifiedDonor?.FullName) ? verifiedDonor.FullName : "Friend")!</h2>
+                                    @* <h2 class="form-title">Hello, @(!string.IsNullOrEmpty(verifiedDonor?.FullName) ? verifiedDonor.FullName : "Friend")!</h2> *@
                                     <p class="form-subtitle">Complete your donation</p>
                                 </div>
                             </div>
@@ -328,7 +328,7 @@
     private string donorName = string.Empty;
     private DonorViewModel verifiedDonor;
     
-    private List<string> networks = new() { "MTN", "Vodafone", "AirtelTigo" };
+    private List<string> networks = new() { "MTN", "Telecel", "AirtelTigo" };
     private string selectedNetwork = string.Empty;
     private double donationAmount = 0;
     private string donationMessage = string.Empty;

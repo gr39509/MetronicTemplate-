@@ -38,12 +38,12 @@
             <p>Loading events...</p>
         </div>
     }
-    else if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger" role="alert">
-            @errorMessage
-        </div>
-    }
+    @* else if (!string.IsNullOrEmpty(errorMessage)) *@
+    @* { *@
+    @*     <div class="alert alert-danger" role="alert"> *@
+    @*         @errorMessage *@
+    @*     </div> *@
+    @* } *@
     else if (events == null || !events.Any())
     {
         <div class="text-center p-4">
@@ -98,18 +98,27 @@
     private double totalDonations = 0;
     private double totalWithdrawals = 0;
     private int activeEventsCount = 0;
-
-    protected override async Task OnInitializedAsync()
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadEvents();
-        await base.OnInitializedAsync();
+        if (firstRender)
+        {
+            await LoadEvents();
+            
+        }
     }
+ 
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     await LoadEvents();
+    //     await base.OnInitializedAsync();
+    // }
 
     private async Task LoadEvents()
     {
         try
         {
-            isLoading = true;
             errorMessage = string.Empty;
             
             var result = await ApiClient.MyEventsAsync();
@@ -118,7 +127,6 @@
             {
                 events = result.Data.ToList();
                 
-                // Calculate statistics
                 totalDonations = events.Sum(e => e.TotalDonations);
                 totalWithdrawals = events.Sum(e => e.TotalWithdrawals);
                 activeEventsCount = events.Count(e => e.Active);
@@ -138,12 +146,10 @@
                 _ => $"An error occurred while loading events. (Error code: {apiEx.StatusCode})"
             };
             
-           // Console.WriteLine($"API Error: {apiEx.Message}");
         }
         catch (Exception ex)
         {
             errorMessage = "An unexpected error occurred while loading events.";
-            //Console.WriteLine($"Error loading events: {ex.Message}");
         }
         finally
         {
