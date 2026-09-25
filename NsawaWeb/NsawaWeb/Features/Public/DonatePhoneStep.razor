@@ -1,0 +1,54 @@
+@* Step 1: the donor's mobile money number. We text a code to it. *@
+@inject DonationsService Donations
+
+<div class="donate-step">
+    <div class="donate-step__head">
+        <h2>Your mobile money number</h2>
+        <p class="muted">We'll text you a 6-digit code to confirm it's you. Use the number you'll pay from.</p>
+    </div>
+
+    <Alert Message="@_error" />
+
+    <form class="form" @onsubmit="SendCode" novalidate>
+        <Field Label="Phone number" For="donor-phone" Error="@_errors["phone"]" Hint="10 digits, e.g. 0241234567">
+            <input id="donor-phone" class="input @(_errors.Has("phone") ? "invalid" : "")" type="tel" inputmode="numeric"
+                   autocomplete="tel-national" maxlength="13" placeholder="0241234567"
+                   @bind="_phone" @bind:event="oninput" />
+        </Field>
+        <Button Type="submit" Size="lg" Block="true" Loading="_busy">Send code</Button>
+    </form>
+</div>
+
+@code {
+    [Parameter] public string? Phone { get; set; }
+    [Parameter] public EventCallback<string> OnCodeSent { get; set; }
+
+    private readonly FormErrors _errors = new();
+    private string? _phone, _error;
+    private bool _busy;
+
+    protected override void OnInitialized() => _phone = Phone;
+
+    private async Task SendCode()
+    {
+        if (_busy) return;
+        _error = null;
+        _errors.Clear();
+        var phone = Format.DigitsOnly(_phone);
+        _errors.Check(phone.Length == 0, "phone", "Enter your phone number.")
+               .Check(!Format.IsLocalPhone(phone), "phone", "Enter a 10-digit Ghana number starting with 0, e.g. 0241234567.");
+        if (_errors.Any) return;
+
+        _busy = true;
+        var result = await Donations.RequestDonorCodeAsync(Format.ToInternational(phone));
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        await OnCodeSent.InvokeAsync(phone);
+    }
+}

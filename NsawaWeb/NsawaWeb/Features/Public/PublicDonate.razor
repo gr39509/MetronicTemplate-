@@ -1,0 +1,158 @@
+@page "/donate/{EventId:guid}"
+@layout PublicLayout
+@inject EventsService Events
+@inject NavigationManager Navigation
+
+<PageTitle>@(_event is null ? "Donate" : $"Donate to {Format.EventTitle(_event.Title)}") · Nova Nsawa</PageTitle>
+
+<div class="donate">
+    @if (_loading)
+    {
+        <div class="donate-card">
+            <LoadingState Text="Opening the donation page…" />
+        </div>
+    }
+    else if (_loadError is not null)
+    {
+        <div class="donate-card">
+            <ErrorState Title="We couldn't open this donation page" Message="@_loadError" OnRetry="LoadAsync" />
+        </div>
+    }
+    else if (_event is null || !_event.Active)
+    {
+        <div class="donate-card">
+            <EmptyState Icon="heart" Title="This donation page is closed"
+                        Text="The family is no longer receiving donations here. Thank you for thinking of them. If you still wish to give, please contact the organiser." />
+        </div>
+    }
+    else
+    {
+        <DonateEventCard Event="_event">
+            @if (_step == DonateStep.Phone && !string.IsNullOrWhiteSpace(_event.Description))
+            {
+                <p class="donate-intro">@Intro(_event.Description)</p>
+            }
+
+            <DonateStepBar Step="(int)_step" Total="4" Label="@StepLabel" />
+
+            @switch (_step)
+            {
+                case DonateStep.Phone:
+                    <DonatePhoneStep Phone="@_phone" OnCodeSent="CodeSent" />
+                    break;
+                case DonateStep.Code:
+                    <DonateCodeStep Phone="@(_phone!)" Name="@_name" OnVerified="Verified" OnChangeNumber="ChangeNumber" />
+                    break;
+                case DonateStep.Gift:
+                    <DonateGiftStep EventId="EventId" Donor="_donor!" Phone="@(_phone!)" DonorName="@DonorName"
+                                    OnDonated="Donated" OnChangeNumber="ChangeNumber" />
+                    break;
+                case DonateStep.Pay:
+                    <DonateDoneStep Amount="_amount" PayUrl="@_payUrl" OnGiveAgain="GiveAgain" />
+                    break;
+            }
+        </DonateEventCard>
+
+        <p class="donate-note">
+            <Icon Name="shield" Size="14" />
+            You approve every payment yourself on your phone. Nsawa never asks for your PIN.
+        </p>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid EventId { get; set; }
+
+    private enum DonateStep { Phone = 1, Code = 2, Gift = 3, Pay = 4 }
+
+    private EventViewModel? _event;
+    private bool _loading = true;
+    private string? _loadError;
+
+    private DonateStep _step = DonateStep.Phone;
+    private string? _phone;
+    private string? _name;
+    private DonorViewModel? _donor;
+    private double _amount;
+    private string? _payUrl;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadError = null;
+        var result = await Events.GetAsync(EventId);
+        _loading = false;
+
+        if (result.Failed)
+        {
+            _loadError = result.Message;
+            return;
+        }
+
+        _event = result.Value;
+    }
+
+    private string StepLabel => _step switch
+    {
+        DonateStep.Phone => "Step 1 of 4 · Your number",
+        DonateStep.Code => "Step 2 of 4 · Confirm it's you",
+        DonateStep.Gift => "Step 3 of 4 · Your gift",
+        _ => "Step 4 of 4 · Payment"
+    };
+
+    /// <summary>Name the family will see: what the donor typed, or what we already hold for them.</summary>
+    private string DonorName =>
+        !string.IsNullOrWhiteSpace(_donor?.FullName) ? _donor.FullName.Trim()
+        : !string.IsNullOrWhiteSpace(_name) ? _name.Trim()
+        : string.Empty;
+
+    private void CodeSent(string phone)
+    {
+        _phone = phone;
+        _step = DonateStep.Code;
+    }
+
+    private void Verified((DonorViewModel Donor, string? Name) verified)
+    {
+        _donor = verified.Donor;
+        _name = verified.Name;
+        _step = DonateStep.Gift;
+    }
+
+    private void ChangeNumber()
+    {
+        _donor = null;
+        _step = DonateStep.Phone;
+    }
+
+    private void Donated((double Amount, string? PayUrl) donation)
+    {
+        _amount = donation.Amount;
+        _payUrl = IsSafePayUrl(donation.PayUrl) ? donation.PayUrl : null;
+        _step = DonateStep.Pay;
+
+        if (_payUrl is not null)
+        {
+            // The payment partner finishes the payment; send the donor there straight away.
+            Navigation.NavigateTo(_payUrl, forceLoad: true);
+        }
+    }
+
+    private void GiveAgain()
+    {
+        _payUrl = null;
+        _amount = 0;
+        _step = DonateStep.Gift;
+    }
+
+    private static bool IsSafePayUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp);
+
+    private static string Intro(string description)
+    {
+        var text = description.Trim();
+        return text.Length <= 220 ? text : text[..220].TrimEnd() + "…";
+    }
+}

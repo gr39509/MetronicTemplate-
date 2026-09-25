@@ -1,0 +1,206 @@
+@* Step 3: network, amount, message, and the donation itself. *@
+@using System.Globalization
+@inject DonationsService Donations
+@inject LookupService Lookup
+
+<div class="donate-step">
+    <div class="donate-step__head">
+        <h2 tabindex="-1" @ref="_heading">Your gift</h2>
+        <p class="muted">
+            Giving as <strong>@(string.IsNullOrWhiteSpace(DonorName) ? "you" : DonorName)</strong>
+            from <strong class="num">@DonateText.Phone(Phone)</strong>.
+            <button type="button" class="donate-link" @onclick="() => OnChangeNumber.InvokeAsync()" disabled="@_busy">Use a different number</button>
+        </p>
+    </div>
+
+    <Alert Message="@_error" />
+
+    <form class="form" @onsubmit="Donate" novalidate>
+        <fieldset class="donate-group">
+            <legend class="field__label">Mobile money network</legend>
+            @if (_networksLoading)
+            {
+                <p class="muted row"><span class="spinner" aria-hidden="true"></span> Loading networks…</p>
+            }
+            else if (_networksError is not null)
+            {
+                <Alert Message="@_networksError">
+                    <div><Button Variant="secondary" Size="sm" Icon="refresh" OnClick="LoadNetworksAsync">Try again</Button></div>
+                </Alert>
+            }
+            else
+            {
+                <div class="chips donate-networks" role="radiogroup">
+                    @foreach (var network in _networks)
+                    {
+                        var selected = _networkId == network.Id;
+                        <label class="chip @(selected ? "selected" : "")">
+                            <input type="radio" name="donate-network" value="@network.Id" checked="@selected"
+                                   @onchange="() => SelectNetwork(network.Id)" />
+                            @if (selected) { <Icon Name="check" Size="14" /> }
+                            @Format.Network(network.Id)
+                        </label>
+                    }
+                </div>
+            }
+            @if (_errors.Has("network")) { <span class="field__error" role="alert">@_errors["network"]</span> }
+        </fieldset>
+
+        <fieldset class="donate-group">
+            <legend class="field__label">Amount</legend>
+            <div class="amounts">
+                @foreach (var amount in QuickAmounts)
+                {
+                    <button type="button" class="amount @(_quick == amount ? "selected" : "")" aria-pressed="@(_quick == amount ? "true" : "false")"
+                            @onclick="() => PickAmount(amount)">
+                        GHS @amount
+                    </button>
+                }
+            </div>
+            <label class="sr-only" for="donor-amount">Another amount in cedis</label>
+            <div class="input-group @(_errors.Has("amount") ? "invalid" : "")">
+                <span class="input-group__addon">GHS</span>
+                <input id="donor-amount" class="input" type="text" inputmode="decimal" autocomplete="off"
+                       placeholder="Other amount" value="@_custom" @oninput="CustomChanged" />
+            </div>
+            @if (_errors.Has("amount")) { <span class="field__error" role="alert">@_errors["amount"]</span> }
+        </fieldset>
+
+        <Field Label="Message to the family" For="donor-message" Optional="true" Error="@_errors["message"]"
+               Hint="@($"{(_message?.Length ?? 0)}/{MaxMessage}")">
+            <textarea id="donor-message" class="textarea" rows="3" maxlength="@MaxMessage"
+                      placeholder="e.g. May her soul rest in perfect peace." @bind="_message" @bind:event="oninput"></textarea>
+        </Field>
+
+        <Switch @bind-Value="_anonymous" Label="Give anonymously"
+                Description="Your name is recorded as Anonymous. The family won't see who gave." />
+
+        <div class="donate-summary" aria-live="polite">
+            <div class="summary-line"><span>Amount</span><strong>@(Amount is { } a ? Format.Cedis(a) : "—")</strong></div>
+            <div class="summary-line"><span>Pay with</span><strong>@(_networkId is null ? "—" : $"{Format.Network(_networkId)} · {DonateText.Phone(Phone)}")</strong></div>
+            <div class="summary-line"><span>Shown as</span><strong>@ShownAs</strong></div>
+        </div>
+
+        <Button Type="submit" Size="lg" Block="true" Icon="heart" Loading="_busy">
+            @(Amount is { } total ? $"Donate {Format.Cedis(total)}" : "Donate")
+        </Button>
+    </form>
+</div>
+
+@code {
+    private const int MaxMessage = 300;
+    private static readonly int[] QuickAmounts = [20, 50, 100, 200, 500];
+
+    [Parameter, EditorRequired] public Guid EventId { get; set; }
+    [Parameter, EditorRequired] public DonorViewModel Donor { get; set; } = default!;
+    [Parameter, EditorRequired] public string Phone { get; set; } = default!;
+    [Parameter] public string? DonorName { get; set; }
+    [Parameter] public EventCallback<(double Amount, string? PayUrl)> OnDonated { get; set; }
+    [Parameter] public EventCallback OnChangeNumber { get; set; }
+
+    private readonly FormErrors _errors = new();
+    private ElementReference _heading;
+    private IReadOnlyList<NetworkType> _networks = [];
+    private bool _networksLoading = true;
+    private string? _networksError;
+
+    private string? _networkId, _custom, _message, _error;
+    private int? _quick;
+    private bool _anonymous, _busy;
+
+    private double? Amount
+    {
+        get
+        {
+            if (_quick is { } q) return q;
+            var text = _custom?.Trim().Replace(",", string.Empty);
+            return double.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value) && value > 0
+                ? Math.Round(value, 2)
+                : null;
+        }
+    }
+
+    private string ShownAs => _anonymous || string.IsNullOrWhiteSpace(DonorName) ? "Anonymous" : DonorName!;
+
+    protected override Task OnInitializedAsync() => LoadNetworksAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try { await _heading.FocusAsync(); } catch { /* Focus is a nicety only. */ }
+    }
+
+    private async Task LoadNetworksAsync()
+    {
+        _networksLoading = true;
+        _networksError = null;
+        var result = await Lookup.NetworksAsync();
+        _networksLoading = false;
+
+        if (result.Failed)
+        {
+            _networksError = result.Message;
+            return;
+        }
+
+        _networks = result.Value ?? [];
+        if (_networks.Count == 1) _networkId = _networks[0].Id;
+        else if (_networks.Count == 0) _networksError = "Mobile money isn't available right now. Please try again in a moment.";
+    }
+
+    private void SelectNetwork(string id)
+    {
+        _networkId = id;
+        _errors.Clear("network");
+    }
+
+    private void PickAmount(int amount)
+    {
+        _quick = amount;
+        _custom = null;
+        _errors.Clear("amount");
+    }
+
+    private void CustomChanged(ChangeEventArgs e)
+    {
+        _custom = e.Value?.ToString();
+        _quick = null;
+        _errors.Clear("amount");
+    }
+
+    private async Task Donate()
+    {
+        if (_busy) return;
+        _error = null;
+        _errors.Clear();
+        var amount = Amount;
+        _errors.Check(string.IsNullOrEmpty(_networkId), "network", "Choose the network your number is on.")
+               .Check(amount is null, "amount", "Choose an amount or enter your own.")
+               .Check(amount is < 1, "amount", "The smallest donation is GHS 1.00.")
+               .Check((_message?.Length ?? 0) > MaxMessage, "message", $"Keep the message under {MaxMessage} characters.");
+        if (_errors.Any) return;
+
+        _busy = true;
+        var message = string.IsNullOrWhiteSpace(_message) ? string.Empty : _message.Trim();
+        var result = await Donations.DonateAsync(new DonationDto
+        {
+            EventId = EventId,
+            DonorId = Donor.Id,
+            Amount = amount!.Value,
+            Network = _networkId!,
+            Message = message,
+            Anonymous = _anonymous,
+            DonorName = _anonymous ? "Anonymous" : DonorName ?? string.Empty,
+            GroupId = null
+        });
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        await OnDonated.InvokeAsync((amount.Value, result.Value?.PayUrl));
+    }
+}
