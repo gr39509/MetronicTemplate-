@@ -1,0 +1,83 @@
+@namespace NsawaWeb.Features.Donations
+@* Read-only view of one donation, opened from the donations table. Open while Donation is set. *@
+
+<Dialog Open="Donation is not null" Title="Donation details" Subtitle="@Subtitle" OnClose="OnClose">
+    <ChildContent>
+        @if (Donation is { } d)
+        {
+            <dl class="details">
+                <div>
+                    <dt>Donor</dt>
+                    <dd>@DonationDisplay.DonorName(d)</dd>
+                </div>
+                <div>
+                    <dt>Phone</dt>
+                    <dd>@OrDash(d.DonorPhoneNumber)</dd>
+                </div>
+                <div>
+                    <dt>Amount</dt>
+                    <dd class="num">@Format.Cedis(d.Amount)</dd>
+                </div>
+                <div>
+                    <dt>Date</dt>
+                    <dd>@Format.DateTime(d.DateDonated)</dd>
+                </div>
+                <div>
+                    <dt>Payment type</dt>
+                    <dd>
+                        @if (string.IsNullOrWhiteSpace(d.PaymentType))
+                        {
+                            <span>—</span>
+                        }
+                        else
+                        {
+                            <Badge Kind="@BadgeKind">@d.PaymentType</Badge>
+                        }
+                    </dd>
+                </div>
+                <div>
+                    <dt>Method</dt>
+                    <dd>@OrDash(d.PaymentMethod)</dd>
+                </div>
+                <div>
+                    <dt>Provider</dt>
+                    <dd>@OrDash(d.PaymentProvider)</dd>
+                </div>
+                <div>
+                    <dt>Transaction ID</dt>
+                    <dd>@OrDash(d.TransactionId)</dd>
+                </div>
+                <div>
+                    <dt>Reference</dt>
+                    <dd>@OrDash(d.PaymentReference)</dd>
+                </div>
+                <div>
+                    <dt>Source</dt>
+                    <dd>@DonationDisplay.Source(d)</dd>
+                </div>
+                <div>
+                    <dt>Group</dt>
+                    <dd>@OrDash(d.Group?.GroupName)</dd>
+                </div>
+                <div class="span-2">
+                    <dt>Message</dt>
+                    <dd>@OrDash(d.Message)</dd>
+                </div>
+            </dl>
+        }
+    </ChildContent>
+    <Footer>
+        <Button Variant="secondary" OnClick="OnClose">Close</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    [Parameter] public DonationViewModel? Donation { get; set; }
+    /// <summary>Badge colour for the payment type (brand, gold, info or null).</summary>
+    [Parameter] public string? BadgeKind { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string? Subtitle => Donation is null ? null : $"{Format.Cedis(Donation.Amount)} from {DonationDisplay.DonorName(Donation)}";
+
+    private static string OrDash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}
