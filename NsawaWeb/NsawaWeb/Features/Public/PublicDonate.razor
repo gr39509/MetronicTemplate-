@@ -102,10 +102,10 @@
         _ => "Step 4 of 4 · Payment"
     };
 
-    /// <summary>Name the family will see: what the donor typed, or what we already hold for them.</summary>
+    /// <summary>Suggested name for the gift: what the donor just typed, else what we already hold for this number.</summary>
     private string DonorName =>
-        !string.IsNullOrWhiteSpace(_donor?.FullName) ? _donor.FullName.Trim()
-        : !string.IsNullOrWhiteSpace(_name) ? _name.Trim()
+        !string.IsNullOrWhiteSpace(_name) ? _name.Trim()
+        : !string.IsNullOrWhiteSpace(_donor?.FullName) ? _donor.FullName.Trim()
         : string.Empty;
 
     private void CodeSent(string phone)

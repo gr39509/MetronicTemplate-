@@ -7,8 +7,7 @@
     <div class="donate-step__head">
         <h2 tabindex="-1" @ref="_heading">Your gift</h2>
         <p class="muted">
-            Giving as <strong>@(string.IsNullOrWhiteSpace(DonorName) ? "you" : DonorName)</strong>
-            from <strong class="num">@DonateText.Phone(Phone)</strong>.
+            Giving from <strong class="num">@DonateText.Phone(Phone)</strong>.
             <button type="button" class="donate-link" @onclick="() => OnChangeNumber.InvokeAsync()" disabled="@_busy">Use a different number</button>
         </p>
     </div>
@@ -72,6 +71,15 @@
                       placeholder="e.g. Rest in perfect peace. Our thoughts are with you." @bind="_message" @bind:event="oninput"></textarea>
         </Field>
 
+        @if (!_anonymous)
+        {
+            <Field Label="Your name" For="donor-display-name" Optional="true" Error="@_errors["name"]"
+                   Hint="This is how the family will see your gift.">
+                <input id="donor-display-name" class="input" type="text" autocomplete="name" maxlength="100"
+                       placeholder="e.g. Ama Mensah" @bind="_displayName" @bind:event="oninput" />
+            </Field>
+        }
+
         <Switch @bind-Value="_anonymous" Label="Give anonymously"
                 Description="Your name is recorded as Anonymous. The family won't see who gave." />
 
@@ -120,9 +128,16 @@
         }
     }
 
-    private string ShownAs => _anonymous || string.IsNullOrWhiteSpace(DonorName) ? "Anonymous" : DonorName!;
+    private string? _displayName;
 
-    protected override Task OnInitializedAsync() => LoadNetworksAsync();
+    private string ShownAs => _anonymous || string.IsNullOrWhiteSpace(_displayName) ? "Anonymous" : _displayName.Trim();
+
+    protected override Task OnInitializedAsync()
+    {
+        // Prefill once; the donor can change it and re-renders won't overwrite their edit.
+        _displayName = DonorName;
+        return LoadNetworksAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -190,7 +205,7 @@
             Network = _networkId!,
             Message = message,
             Anonymous = _anonymous,
-            DonorName = _anonymous ? "Anonymous" : DonorName ?? string.Empty,
+            DonorName = _anonymous ? "Anonymous" : _displayName?.Trim() ?? string.Empty,
             GroupId = null
         });
         _busy = false;
