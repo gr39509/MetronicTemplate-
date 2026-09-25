@@ -6,3 +6,4 @@ obj/
 *.DotSettings.user
 .vs/
 .superpowers/
+.claude/worktrees/
