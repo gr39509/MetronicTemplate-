@@ -1,0 +1,13 @@
+@page "/events/{EventId:guid}/withdraw"
+
+<PageTitle>Withdraw · Nova Nsawa</PageTitle>
+
+<EventPage EventId="EventId" Tab="EventTab.Withdraw">
+    <ChildContent Context="ctx">
+        <WithdrawPanel Event="ctx.Event" OnWithdrawn="ctx.ReloadAsync" />
+    </ChildContent>
+</EventPage>
+
+@code {
+    [Parameter] public Guid EventId { get; set; }
+}
