@@ -18,6 +18,8 @@
 </head>
 
 <body>
+    @* Shown until the interactive circuit renders the first page (prerendering is off). *@
+    <div class="boot" aria-hidden="true"><span class="spinner spinner--lg"></span></div>
     <Routes @rendermode="PageRenderMode" />
 
     <div id="blazor-error-ui" role="alert">
