@@ -1,25 +1,41 @@
-﻿@using NsawaWeb.Components.Layout
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GH">
 
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <base href="/"/>
-    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]"/>
-    @* <link rel="stylesheet" href="@Assets["app.css"]"/> *@
-    @* <link rel="stylesheet" href="@Assets["NsawaWeb.styles.css"]"/> *@
-    <link rel="stylesheet" href="css/custom.css"/>
-    <ImportMap/>
-    <link rel="icon" type="image/png" href="favicon.png"/>
-    <HeadOutlet/>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2b2d30" />
+    <base href="/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Jost:wght@400;500;600&display=swap" />
+    <link rel="stylesheet" href="@Assets["css/tokens.css"]" />
+    <link rel="stylesheet" href="@Assets["css/app.css"]" />
+    <link rel="stylesheet" href="@Assets["NsawaWeb.styles.css"]" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <ImportMap />
+    <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
-<Routes @rendermode="InteractiveServer"/>
-<script src="_framework/blazor.web.js"></script>
-<script src="js/custom.js"></script>
+    <Routes @rendermode="PageRenderMode" />
 
+    <div id="blazor-error-ui" role="alert">
+        Something went wrong and the page needs to reload.
+        <a href="" class="reload">Reload</a>
+        <span class="dismiss" aria-label="Dismiss">✕</span>
+    </div>
+    <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
+
+@code {
+    // The sign-in token lives in the browser, so pages render only once the interactive circuit is up.
+    private static readonly IComponentRenderMode InteractiveNoPrerender = new InteractiveServerRenderMode(prerender: false);
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    // Error and not-found pages opt out with [ExcludeFromInteractiveRouting] so they render statically.
+    private IComponentRenderMode? PageRenderMode => HttpContext.AcceptsInteractiveRouting() ? InteractiveNoPrerender : null;
+}

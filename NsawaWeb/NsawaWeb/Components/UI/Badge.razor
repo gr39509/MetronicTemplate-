@@ -1,0 +1,11 @@
+<span class="badge @(Kind is null ? "" : $"badge--{Kind}")">
+    @if (Dot) { <span class="badge__dot"></span> }
+    @ChildContent
+</span>
+
+@code {
+    /// <summary>success | warning | danger | info | brand | gold, or null for neutral.</summary>
+    [Parameter] public string? Kind { get; set; }
+    [Parameter] public bool Dot { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

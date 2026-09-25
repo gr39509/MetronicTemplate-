@@ -1,0 +1,21 @@
+<div class="table-wrap" aria-hidden="true">
+    <table class="table">
+        <tbody>
+            @for (var r = 0; r < Rows; r++)
+            {
+                <tr>
+                    @for (var c = 0; c < Columns; c++)
+                    {
+                        <td><span class="skeleton" style="height:14px;width:@(c == 0 ? 80 : 50)%"></span></td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<span class="sr-only" role="status">Loading…</span>
+
+@code {
+    [Parameter] public int Rows { get; set; } = 5;
+    [Parameter] public int Columns { get; set; } = 4;
+}

@@ -1,0 +1,31 @@
+@if (!string.IsNullOrWhiteSpace(Message) || ChildContent is not null)
+{
+    <div class="alert alert--@Kind" role="@(Kind == "error" ? "alert" : "status")">
+        <Icon Name="@IconName" Size="18" />
+        <div class="alert__body">
+            @if (Title is not null) { <span class="alert__title">@Title</span> }
+            @if (!string.IsNullOrWhiteSpace(Message)) { <span>@Message</span> }
+            @ChildContent
+        </div>
+        @if (OnDismiss.HasDelegate)
+        {
+            <button type="button" class="toast__close" style="color:inherit;opacity:.6" aria-label="Dismiss" @onclick="OnDismiss"><Icon Name="x" Size="16" /></button>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>error | success | info | warning</summary>
+    [Parameter] public string Kind { get; set; } = "error";
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private string IconName => Kind switch
+    {
+        "success" => "check-circle",
+        "info" => "info",
+        _ => "alert"
+    };
+}

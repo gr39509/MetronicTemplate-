@@ -1,0 +1,148 @@
+@* Shared frame for every /events/{id}/... page: loads the event, shows the header and tabs, then the tab body. *@
+@inject EventsService Events
+@inject NavigationManager Navigation
+
+@if (_loading)
+{
+    <Card><LoadingState Text="Loading event…" /></Card>
+}
+else if (_error is not null)
+{
+    <PageHeader Title="Event" BackHref="/my-events" BackLabel="My events" />
+    <Card><ErrorState Message="@_error" OnRetry="LoadAsync" /></Card>
+}
+else if (_event is not null && _access is not null)
+{
+    @if (!IsAllowed)
+    {
+        <PageHeader Title="@Format.EventTitle(_event.Title)" BackHref="@BackHref" BackLabel="@BackLabel" />
+        <Card><EmptyState Icon="shield" Title="You don't have access to this page" Text="Ask the event organiser to give you the right role." /></Card>
+    }
+    else
+    {
+        <a class="back-link" href="@BackHref"><Icon Name="chevron-left" Size="16" />@BackLabel</a>
+
+        <section class="event-hero">
+            @if (!string.IsNullOrWhiteSpace(_event.Banner))
+            {
+                <img class="event-hero__banner" src="@Format.BannerUrl(_event.Banner)" alt="" />
+            }
+            else
+            {
+                <div class="event-hero__banner"></div>
+            }
+            <div class="stack" style="gap:var(--space-3)">
+                <div class="row">
+                    @if (_event.Active)
+                    {
+                        <Badge Kind="success" Dot="true">Active</Badge>
+                    }
+                    else
+                    {
+                        <Badge Dot="true">Closed</Badge>
+                    }
+                    @if (_event.EventType?.Name is { } type) { <Badge>@type</Badge> }
+                    @if (!_access.IsOwner)
+                    {
+                        @foreach (var role in _access.Roles) { <Badge Kind="brand">@role</Badge> }
+                    }
+                </div>
+                <h1 style="font-size:var(--text-2xl)">@Format.EventTitle(_event.Title)</h1>
+                <div class="event-hero__meta">
+                    <span><Icon Name="calendar" Size="15" />@Format.DateRange(_event.StartDate, _event.EndDate)</span>
+                    @if (!string.IsNullOrWhiteSpace(_event.Location)) { <span><Icon Name="map-pin" Size="15" />@_event.Location</span> }
+                    @if (!string.IsNullOrWhiteSpace(_event.EventCode)) { <span><Icon Name="receipt" Size="15" />Code @_event.EventCode</span> }
+                </div>
+                @if (HeaderActions is not null)
+                {
+                    <div class="row">@HeaderActions(Context)</div>
+                }
+            </div>
+        </section>
+
+        <nav class="tabs" aria-label="Event sections">
+            @if (_access.IsOwner)
+            {
+                <a class="tab @(Tab == EventTab.Overview ? "active" : "")" href="@($"/events/{EventId}")">Overview</a>
+            }
+            <a class="tab @(Tab == EventTab.Donations ? "active" : "")" href="@($"/events/{EventId}/donations")">Donations</a>
+            @if (_access.IsOwner)
+            {
+                <a class="tab @(Tab == EventTab.Withdraw ? "active" : "")" href="@($"/events/{EventId}/withdraw")">Withdraw</a>
+                <a class="tab @(Tab == EventTab.Groups ? "active" : "")" href="@($"/events/{EventId}/groups")">Groups</a>
+                <a class="tab @(Tab == EventTab.Affiliates ? "active" : "")" href="@($"/events/{EventId}/affiliates")">Affiliates</a>
+                <a class="tab @(Tab == EventTab.Edit ? "active" : "")" href="@($"/events/{EventId}/edit")">Edit details</a>
+            }
+        </nav>
+
+        @ChildContent?.Invoke(Context)
+    }
+}
+
+@code {
+    private EventViewModel? _event;
+    private EventAccess? _access;
+    private string? _error;
+    private bool _loading = true;
+    private Guid _loadedId;
+
+    [Parameter, EditorRequired] public Guid EventId { get; set; }
+    [Parameter, EditorRequired] public EventTab Tab { get; set; }
+    [Parameter] public RenderFragment<EventPageContext>? ChildContent { get; set; }
+    [Parameter] public RenderFragment<EventPageContext>? HeaderActions { get; set; }
+
+    private EventPageContext Context => new(_event!, _access!, LoadAsync);
+
+    private bool IsAllowed => Tab switch
+    {
+        EventTab.Donations => _access!.CanViewDonations,
+        EventTab.Receive => _access!.CanReceiveDonations,
+        _ => _access!.CanManage
+    };
+
+    private string BackHref => _access?.IsOwner == false ? "/affiliate-events" : "/my-events";
+    private string BackLabel => _access?.IsOwner == false ? "Affiliate events" : "My events";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId != EventId)
+        {
+            _loadedId = EventId;
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = _event is null;
+        _error = null;
+
+        var eventTask = Events.GetAsync(EventId);
+        var accessTask = Events.GetAccessAsync(EventId);
+        await Task.WhenAll(eventTask, accessTask);
+
+        var ev = eventTask.Result;
+        var access = accessTask.Result;
+        if (ev.Failed || ev.Value is null)
+        {
+            _error = ev.Message ?? "This event doesn't exist or has been removed.";
+        }
+        else if (access.Failed)
+        {
+            _error = access.Message;
+        }
+        else
+        {
+            _event = ev.Value;
+            _access = access.Value;
+            // Affiliates land on Overview from old links; send them to the tab they can use.
+            if (Tab == EventTab.Overview && !_access!.IsOwner && _access.CanViewDonations)
+            {
+                Navigation.NavigateTo($"/events/{EventId}/donations", replace: true);
+            }
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+}

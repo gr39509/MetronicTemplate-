@@ -1,0 +1,8 @@
+<div class="state" role="status" aria-live="polite">
+    <span class="spinner spinner--lg" aria-hidden="true"></span>
+    <p class="state__text">@Text</p>
+</div>
+
+@code {
+    [Parameter] public string Text { get; set; } = "Loading…";
+}

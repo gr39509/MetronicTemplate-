@@ -1,0 +1,74 @@
+@page "/"
+@layout AuthLayout
+@inject AccountService Account
+@inject AuthService Auth
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in · Nova Nsawa</PageTitle>
+
+<div class="auth__panel">
+    <img class="auth__mobile-logo" src="icons/Logo.jpg" alt="Nova Nsawa" width="170" height="29" />
+    <div class="auth__heading">
+        <h2>Sign in</h2>
+        <p>Use the phone number you registered with.</p>
+    </div>
+
+    <Alert Message="@_error" />
+
+    <form class="form" @onsubmit="SignIn" novalidate>
+        <Field Label="Phone number" For="login-phone" Error="@_errors["phone"]" Hint="10 digits, e.g. 0241234567">
+            <input id="login-phone" class="input @(_errors.Has("phone") ? "invalid" : "")" type="tel" inputmode="numeric"
+                   autocomplete="tel-national" maxlength="10" placeholder="0241234567"
+                   @bind="_phone" @bind:event="oninput" />
+        </Field>
+        <Field Label="Password" For="login-password" Error="@_errors["password"]">
+            <PasswordInput Id="login-password" @bind-Value="_password" Invalid="@(_errors.Has("password"))" />
+        </Field>
+        <Button Type="submit" Size="lg" Block="true" Loading="_busy">Sign in</Button>
+    </form>
+
+    <p class="auth__alt">New to Nsawa? <a href="/register">Create an organiser account</a></p>
+</div>
+
+@code {
+    private readonly FormErrors _errors = new();
+    private string? _phone, _password, _error;
+    private bool _busy;
+
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await Auth.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo(SafeReturnUrl, replace: true);
+        }
+    }
+
+    private async Task SignIn()
+    {
+        _error = null;
+        _errors.Clear();
+        _phone = Format.DigitsOnly(_phone);
+        _errors.Check(string.IsNullOrEmpty(_phone), "phone", "Enter your phone number.")
+               .Check(_phone!.Length != 10, "phone", "Phone numbers have 10 digits.")
+               .Check(string.IsNullOrEmpty(_password), "password", "Enter your password.");
+        if (_errors.Any) return;
+
+        _busy = true;
+        var result = await Account.SignInAsync(_phone, _password!);
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        Navigation.NavigateTo(SafeReturnUrl, replace: true);
+    }
+
+    /// <summary>Only same-site paths are accepted, so a crafted link can't send people elsewhere.</summary>
+    private string SafeReturnUrl =>
+        ReturnUrl is { Length: > 1 } url && url[0] == '/' && url[1] != '/' && url[1] != '\\' ? url : "/home";
+}

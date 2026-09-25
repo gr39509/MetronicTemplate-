@@ -6,6 +6,8 @@ namespace NsawaWeb.Services.Services;
 
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {
+    private static readonly AuthenticationState Anonymous = new(new ClaimsPrincipal(new ClaimsIdentity()));
+
     private readonly AuthService _authService;
     private readonly ILogger<CustomAuthStateProvider> _logger;
 
@@ -21,17 +23,12 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         try
         {
             var user = await _authService.GetUserAsync();
-            
-            if (user != null)
-            {
-                return new AuthenticationState(user);
-            }
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            return user is null ? Anonymous : new AuthenticationState(user);
         }
         catch (Exception ex)
         {
-          
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            _logger.LogWarning(ex, "Could not resolve authentication state");
+            return Anonymous;
         }
     }
 

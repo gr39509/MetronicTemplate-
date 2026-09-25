@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+
+<div class="auth">
+    <aside class="auth__aside">
+        <img class="auth__logo" src="icons/Logo.jpg" alt="Nova Nsawa" width="200" height="34" />
+        <div class="auth__pitch">
+            <h1>Collect funeral donations with care.</h1>
+            <p>Share one link or QR code. Family and friends give by mobile money; you see every cedi as it arrives.</p>
+        </div>
+        <ul class="auth__points">
+            <li><Icon Name="check" Size="16" />Donations by MTN MoMo, Telecel Cash and AT Money</li>
+            <li><Icon Name="check" Size="16" />Cash and cheque recorded at the event</li>
+            <li><Icon Name="check" Size="16" />Withdraw to a verified wallet any time</li>
+        </ul>
+    </aside>
+    <main class="auth__main">
+        @Body
+    </main>
+</div>
+<Toasts />

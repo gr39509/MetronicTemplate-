@@ -1,109 +1,89 @@
 using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace NsawaWeb.Services.Services;
 
+/// <summary>
+/// Holds the signed-in user's JWT for the current circuit.
+/// The token is persisted in browser localStorage and cached in memory.
+/// This class never navigates; callers decide where to go after sign-in or sign-out.
+/// </summary>
 public class AuthService
 {
+    private const string TokenKey = "authToken";
+    private const string UserNameKey = "userName";
+    private const string FullNameKey = "fullName";
+
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<AuthService> _logger;
-    private readonly NavigationManager _navigationManager;
     private string? _cachedToken;
     private ClaimsPrincipal? _cachedUser;
-    private DateTime? _tokenExpiryTime;
+    private DateTime? _tokenExpiryUtc;
+    private bool _storageLoaded;
     private CustomAuthStateProvider? _authStateProvider;
-    private readonly UpdateDeviceTokenDto  _updateDeviceToken;
 
-    public AuthService(IJSRuntime jsRuntime, ILogger<AuthService> logger, NavigationManager navigationManager)
+    public AuthService(IJSRuntime jsRuntime, ILogger<AuthService> logger)
     {
         _jsRuntime = jsRuntime;
         _logger = logger;
-        _navigationManager = navigationManager;
     }
 
-    public void SetAuthStateProvider(CustomAuthStateProvider authStateProvider)
+    internal void SetAuthStateProvider(CustomAuthStateProvider authStateProvider)
     {
         _authStateProvider = authStateProvider;
     }
 
     public async Task<string?> GetTokenAsync()
     {
-       
-        if (!string.IsNullOrEmpty(_cachedToken) && IsTokenCacheValid())
+        if (!_storageLoaded)
         {
-            return _cachedToken;
+            _cachedToken = await ReadStorageAsync(TokenKey);
+            _tokenExpiryUtc = _cachedToken is null ? null : ReadExpiry(_cachedToken);
+            _storageLoaded = true;
         }
 
-        try
+        if (_cachedToken is null || _tokenExpiryUtc is null || _tokenExpiryUtc <= DateTime.UtcNow)
         {
-            _cachedToken = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "authToken");
-            
-          
-            if (!string.IsNullOrEmpty(_cachedToken))
-            {
-                UpdateTokenExpiry(_cachedToken);
-            }
-            
-            return _cachedToken;
-        }
-        catch (Exception ex)
-        {
-            //_logger.LogError(ex, "Error getting token");
             return null;
         }
-    }
-    
-    public async Task<string?> GetStoredUserName()
-    {
-        try
-        {
-            return await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "userName");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting stored username");
-            return null;
-        }
+
+        return _cachedToken;
     }
 
     public async Task<ClaimsPrincipal?> GetUserAsync()
     {
-        // Return cached user if token is still valid
-        if (_cachedUser != null && IsTokenCacheValid())
+        var token = await GetTokenAsync();
+        if (token is null)
         {
-            return _cachedUser;
+            _cachedUser = null;
+            return null;
         }
 
-        var token = await GetTokenAsync();
-        if (string.IsNullOrEmpty(token))
+        if (_cachedUser is not null)
         {
-            return null;
+            return _cachedUser;
         }
 
         try
         {
-            // Check if token is expired
-            if (!await IsTokenValidAsync())
+            var claims = ParseClaimsFromJwt(token).ToList();
+            if (!claims.Any(c => c.Type == ClaimTypes.Name))
             {
-                //_logger.LogWarning("Token is expired");
-                await ClearAuthenticationAsync();
-                return null;
+                var displayName = await ReadStorageAsync(FullNameKey) ?? await ReadStorageAsync(UserNameKey);
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    claims.Add(new Claim(ClaimTypes.Name, displayName));
+                }
             }
 
-            var claims = ParseClaimsFromJwt(token);
-            var claimsList = claims.ToList();
-            claimsList.Add(new Claim("token", token));
-            
-            var identity = new ClaimsIdentity(claimsList, "jwt");
-            _cachedUser = new ClaimsPrincipal(identity);
+            _cachedUser = new ClaimsPrincipal(new ClaimsIdentity(claims, "jwt"));
             return _cachedUser;
         }
         catch (Exception ex)
         {
-           // _logger.LogError(ex, "Error parsing user from token");
+            _logger.LogWarning(ex, "Stored token could not be parsed");
             return null;
         }
     }
@@ -113,220 +93,109 @@ public class AuthService
         var user = await GetUserAsync();
         return user?.Identity?.IsAuthenticated == true;
     }
-    
+
     public async Task LoginAsync(string token, string userName, string? fullName = null)
     {
-        try
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TokenKey, token);
+        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", UserNameKey, userName);
+        if (!string.IsNullOrWhiteSpace(fullName))
         {
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", token);
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "userName", userName);
-        
-            // Store full name if provided
-            if (!string.IsNullOrEmpty(fullName))
-            {
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "fullName", fullName);
-            }
-        
-            _cachedToken = token;
-            UpdateTokenExpiry(token);
-        
-            var claims = ParseClaimsFromJwt(token);
-            var claimsList = claims.ToList();
-            claimsList.Add(new Claim("token", token));
-        
-            if (!claimsList.Any(c => c.Type == ClaimTypes.Name))
-            {
-                // Use full name if available, otherwise use username
-                var displayName = fullName ?? userName;
-                claimsList.Add(new Claim(ClaimTypes.Name, displayName));
-            }
-        
-            var identity = new ClaimsIdentity(claimsList, "jwt");
-            _cachedUser = new ClaimsPrincipal(identity);
-        
-            _authStateProvider?.NotifyAuthenticationStateChanged();
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", FullNameKey, fullName);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error during login");
-            throw;
-        }
+
+        _cachedToken = token;
+        _tokenExpiryUtc = ReadExpiry(token);
+        _cachedUser = null;
+        _storageLoaded = true;
+        _authStateProvider?.NotifyAuthenticationStateChanged();
     }
 
-    // public async Task LoginAsync(string token, string userName)
-    // {
-    //     try
-    //     {
-    //         await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", token);
-    //         await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "userName", userName);
-    //         
-    //         _cachedToken = token;
-    //         UpdateTokenExpiry(token);
-    //         
-    //         var claims = ParseClaimsFromJwt(token);
-    //         var claimsList = claims.ToList();
-    //         claimsList.Add(new Claim("token", token));
-    //         
-    //         if (!claimsList.Any(c => c.Type == ClaimTypes.Name))
-    //         {
-    //             claimsList.Add(new Claim(ClaimTypes.Name, userName));
-    //         }
-    //         
-    //         var identity = new ClaimsIdentity(claimsList, "jwt");
-    //         _cachedUser = new ClaimsPrincipal(identity);
-    //         
-    //         _authStateProvider?.NotifyAuthenticationStateChanged();
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _logger.LogError("Error during login");
-    //         throw;
-    //     }
-    // }
-    
-    public async Task<string?> GetFullName()
+    public async Task<string?> GetDisplayNameAsync()
+    {
+        var user = await GetUserAsync();
+        var claim = user?.FindFirst(ClaimTypes.Name)
+                    ?? user?.FindFirst("name")
+                    ?? user?.FindFirst("fullName")
+                    ?? user?.FindFirst("full_name");
+        return string.IsNullOrWhiteSpace(claim?.Value) ? await ReadStorageAsync(UserNameKey) : claim.Value;
+    }
+
+    public async Task LogoutAsync()
+    {
+        foreach (var key in new[] { TokenKey, UserNameKey, FullNameKey })
+        {
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", key);
+            }
+            catch (JSException ex)
+            {
+                _logger.LogWarning(ex, "Could not clear {Key} from storage", key);
+            }
+        }
+
+        _cachedToken = null;
+        _cachedUser = null;
+        _tokenExpiryUtc = null;
+        _storageLoaded = true;
+        _authStateProvider?.NotifyAuthenticationStateChanged();
+    }
+
+    private async Task<string?> ReadStorageAsync(string key)
     {
         try
         {
-            var user = await GetUserAsync();
-            if (user != null)
-            {
-                // Check for common name claims
-                var nameClaim = user.FindFirst(ClaimTypes.Name) 
-                                ?? user.FindFirst("name") 
-                                ?? user.FindFirst("fullName")
-                                ?? user.FindFirst("full_name");
-            
-                if (nameClaim != null && !string.IsNullOrEmpty(nameClaim.Value))
-                {
-                    return nameClaim.Value;
-                }
-            }
-        
-            // Fallback to localStorage
-            return await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", "fullName");
+            var value = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", key);
+            return string.IsNullOrWhiteSpace(value) ? null : value;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException or TaskCanceledException)
         {
-            _logger.LogError(ex, "Error getting full name");
+            // JS is unavailable (no interactive circuit yet, or the circuit closed).
             return null;
         }
     }
 
-    public async Task LogoutAsync(ApiClient? apiClient = null)
+    private static DateTime? ReadExpiry(string token)
     {
         try
         {
-           
-            if (apiClient != null)
-            {
-                try
-                {
-                    await apiClient.UpdateDeviceTokenAsync(_updateDeviceToken);
-                    _logger.LogInformation("logout successful");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning("logout failed, continuing with local logout");
-                }
-            }
-
-            await ClearAuthenticationAsync();
-            
-            _logger.LogInformation("User logged out locally");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error during logout");
-        }
-    }
-
-    private async Task ClearAuthenticationAsync()
-    {
-        // Clear local storage
-        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
-        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "userName");
-        
-        _cachedToken = null;
-        _cachedUser = null;
-        _tokenExpiryTime = null;
-        
-        // Notify authentication state changed
-        _authStateProvider?.NotifyAuthenticationStateChanged();
-        
-        // Navigate to login page
-        _navigationManager.NavigateTo("/", true);
-    }
-    
-    public async Task<bool> IsTokenValidAsync()
-    {
-        var token = await GetTokenAsync();
-        if (string.IsNullOrEmpty(token)) return false;
-    
-        try
-        {
-            var claims = ParseClaimsFromJwt(token);
-            var expiryClaim = claims.FirstOrDefault(c => c.Type == "exp");
-            if (expiryClaim == null) return false;
-        
-            // Convert Unix timestamp to DateTime
-            var expiryDateTime = DateTimeOffset.FromUnixTimeSeconds(
-                long.Parse(expiryClaim.Value)).UtcDateTime;
-        
-            return expiryDateTime > DateTime.UtcNow;
+            var exp = ParseClaimsFromJwt(token).FirstOrDefault(c => c.Type == "exp");
+            return exp is null ? null : DateTimeOffset.FromUnixTimeSeconds(long.Parse(exp.Value)).UtcDateTime;
         }
         catch
         {
-            return false;
+            return null;
         }
-    }
-
-    private void UpdateTokenExpiry(string token)
-    {
-        try
-        {
-            var claims = ParseClaimsFromJwt(token);
-            var expiryClaim = claims.FirstOrDefault(c => c.Type == "exp");
-            if (expiryClaim != null)
-            {
-                _tokenExpiryTime = DateTimeOffset.FromUnixTimeSeconds(
-                    long.Parse(expiryClaim.Value)).UtcDateTime;
-            }
-        }
-        catch (Exception ex)
-        {
-           
-            _tokenExpiryTime = null;
-        }
-    }
-
-    private bool IsTokenCacheValid()
-    {
-        if (_tokenExpiryTime == null) return false;
-        
-      
-        return _tokenExpiryTime.Value.AddMinutes(-5) > DateTime.UtcNow;
     }
 
     private static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
     {
-        var claims = new List<Claim>();
         var payload = jwt.Split('.')[1];
-        
-        var jsonBytes = ParseBase64WithoutPadding(payload);
-        var keyValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBytes);
-
-        if (keyValuePairs != null)
+        var json = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(ParseBase64WithoutPadding(payload));
+        if (json is null)
         {
-            claims.AddRange(keyValuePairs.Select(kvp => 
-                new Claim(kvp.Key, kvp.Value?.ToString() ?? "")));
+            yield break;
         }
 
-        return claims;
+        foreach (var (key, value) in json)
+        {
+            if (value.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in value.EnumerateArray())
+                {
+                    yield return new Claim(key, item.ToString());
+                }
+            }
+            else
+            {
+                yield return new Claim(key, value.ToString());
+            }
+        }
     }
 
     private static byte[] ParseBase64WithoutPadding(string base64)
     {
+        base64 = base64.Replace('-', '+').Replace('_', '/');
         switch (base64.Length % 4)
         {
             case 2: base64 += "=="; break;

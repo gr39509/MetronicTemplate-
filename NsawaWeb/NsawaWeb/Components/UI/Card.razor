@@ -1,0 +1,34 @@
+<section class="card @Class">
+    @if (Title is not null || HeaderActions is not null)
+    {
+        <div class="card__header">
+            <div>
+                @if (Title is not null) { <h2 class="card__title">@Title</h2> }
+                @if (Subtitle is not null) { <p class="card__subtitle">@Subtitle</p> }
+            </div>
+            @HeaderActions
+        </div>
+    }
+    @if (Flush)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <div class="card__body">@ChildContent</div>
+    }
+    @if (Footer is not null)
+    {
+        <div class="card__footer">@Footer</div>
+    }
+</section>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public bool Flush { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+}

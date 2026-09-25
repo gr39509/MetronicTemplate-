@@ -10,11 +10,9 @@
     <ItemGroup>
         <PackageReference Include="QRCoder" Version="1.7.0" />
         <PackageReference Include="SkiaSharp" Version="3.119.1" />
-        <ProjectReference Include="..\..\NsawaWeb.Data\NsawaWeb.Data.csproj" />
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
         <ProjectReference Include="..\..\NsawaWeb.Services\NsawaWeb.Services.csproj" />
-        <ProjectReference Include="..\NsawaWeb.Client\NsawaWeb.Client.csproj"/>
         <PackageReference Include="Humanizer.Core" Version="3.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.8"/>
     </ItemGroup>
 
     <ItemGroup>

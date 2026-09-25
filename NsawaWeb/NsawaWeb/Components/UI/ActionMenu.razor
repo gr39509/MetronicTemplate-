@@ -1,0 +1,22 @@
+@* Row "more" menu. Items are passed as child content using .menu__item buttons or links. *@
+<div class="user-menu" @onclick:stopPropagation="true">
+    <Button Variant="ghost" Size="sm" IconOnly="true" Icon="more" aria-label="@Label" aria-haspopup="menu" aria-expanded="@(_open ? "true" : "false")"
+            OnClick="Toggle" />
+    @if (_open)
+    {
+        <div class="menu-catcher" @onclick="Close"></div>
+        <div class="menu" role="menu" @onclick="Close">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    private bool _open;
+
+    [Parameter] public string Label { get; set; } = "More actions";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private void Toggle() => _open = !_open;
+    private void Close() => _open = false;
+}

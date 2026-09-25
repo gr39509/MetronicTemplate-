@@ -1,0 +1,60 @@
+@* Modal dialog. Becomes a bottom sheet on phones. Escape or the backdrop closes it unless Busy. *@
+@if (Open)
+{
+    <div class="dialog-backdrop" @onclick="BackdropClick" @onkeydown="OnKeyDown" tabindex="-1" @ref="_backdrop">
+        <div class="dialog @(Size is null ? "" : $"dialog--{Size}")" role="dialog" aria-modal="true" aria-labelledby="@_titleId"
+             @onclick:stopPropagation="true">
+            <div class="dialog__header">
+                <div>
+                    <h2 class="dialog__title" id="@_titleId">@Title</h2>
+                    @if (Subtitle is not null) { <p class="dialog__subtitle">@Subtitle</p> }
+                </div>
+                <Button Variant="ghost" IconOnly="true" Icon="x" aria-label="Close" Disabled="Busy" OnClick="Close" />
+            </div>
+            <div class="dialog__body">
+                @ChildContent
+            </div>
+            @if (Footer is not null)
+            {
+                <div class="dialog__footer">@Footer</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private readonly string _titleId = $"dlg-{Guid.NewGuid():N}";
+    private ElementReference _backdrop;
+    private bool _focusPending;
+
+    [Parameter] public bool Open { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = default!;
+    [Parameter] public string? Subtitle { get; set; }
+    /// <summary>sm | lg, or null for the default width.</summary>
+    [Parameter] public string? Size { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    private bool _wasOpen;
+
+    protected override void OnParametersSet()
+    {
+        if (Open && !_wasOpen) _focusPending = true;
+        _wasOpen = Open;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending && Open)
+        {
+            _focusPending = false;
+            try { await _backdrop.FocusAsync(); } catch (InvalidOperationException) { }
+        }
+    }
+
+    private Task Close() => Busy ? Task.CompletedTask : OnClose.InvokeAsync();
+    private Task BackdropClick() => Close();
+    private Task OnKeyDown(KeyboardEventArgs e) => e.Key == "Escape" ? Close() : Task.CompletedTask;
+}

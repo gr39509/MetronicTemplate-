@@ -8,7 +8,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["NsawaWeb/NsawaWeb/NsawaWeb.csproj", "NsawaWeb/NsawaWeb/"]
-COPY ["NsawaWeb/NsawaWeb.Client/NsawaWeb.Client.csproj", "NsawaWeb/NsawaWeb.Client/"]
+COPY ["NsawaWeb.Services/NsawaWeb.Services.csproj", "NsawaWeb.Services/"]
 RUN dotnet restore "NsawaWeb/NsawaWeb/NsawaWeb.csproj"
 COPY . .
 WORKDIR "/src/NsawaWeb/NsawaWeb"

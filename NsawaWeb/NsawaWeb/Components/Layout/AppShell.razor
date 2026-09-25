@@ -1,0 +1,115 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject AccountService Account
+@inject AuthService Auth
+
+<AuthorizeView>
+    <Authorizing>
+        <div class="standalone"><LoadingState Text="Opening Nsawa…" /></div>
+    </Authorizing>
+    <NotAuthorized>
+        <RedirectToLogin />
+    </NotAuthorized>
+    <Authorized>
+        <div class="shell">
+            <aside class="sidebar @(_sidebarOpen ? "open" : "")" aria-label="Main navigation">
+                <a class="sidebar__brand" href="/home"><img src="icons/Logo.jpg" alt="Nova Nsawa" width="200" height="34" /></a>
+                <nav class="sidebar__nav">
+                    <span class="sidebar__group">Overview</span>
+                    <NavLink class="sidebar__link" href="/home" Match="NavLinkMatch.All"><Icon Name="dashboard" />Dashboard</NavLink>
+                    <span class="sidebar__group">Events</span>
+                    <NavLink class="sidebar__link" href="/my-events" Match="NavLinkMatch.Prefix"><Icon Name="calendar" />My events</NavLink>
+                    <NavLink class="sidebar__link" href="/affiliate-events"><Icon Name="handshake" />Affiliate events</NavLink>
+                    <NavLink class="sidebar__link" href="/create-event"><Icon Name="plus" />Create event</NavLink>
+                </nav>
+                <div class="sidebar__footer">© @DateTime.Now.Year F &amp; F ICT Solutions</div>
+            </aside>
+            @if (_sidebarOpen)
+            {
+                <div class="scrim" @onclick="() => _sidebarOpen = false"></div>
+            }
+
+            <div class="main">
+                <header class="topbar">
+                    <Button Class="topbar__menu" Variant="ghost" IconOnly="true" Icon="menu" aria-label="Open menu" OnClick="() => _sidebarOpen = true" />
+                    <span class="topbar__spacer"></span>
+                    <div class="user-menu">
+                        <button type="button" class="user-menu__trigger" aria-haspopup="menu" aria-expanded="@(_menuOpen ? "true" : "false")" @onclick="() => _menuOpen = !_menuOpen">
+                            <span class="avatar">@Format.Initials(_displayName)</span>
+                            <span class="user-menu__name">@_displayName</span>
+                            <Icon Name="chevron-down" Size="16" />
+                        </button>
+                        @if (_menuOpen)
+                        {
+                            <div class="menu-catcher" @onclick="() => _menuOpen = false"></div>
+                            <div class="menu" role="menu">
+                                <div class="menu__header">
+                                    <strong>@_displayName</strong>
+                                    <span>Organiser account</span>
+                                </div>
+                                <button type="button" class="menu__item" role="menuitem" @onclick="OpenChangePassword"><Icon Name="key" Size="16" />Change password</button>
+                                <div class="menu__sep"></div>
+                                <button type="button" class="menu__item menu__item--danger" role="menuitem" @onclick="SignOut"><Icon Name="logout" Size="16" />Sign out</button>
+                            </div>
+                        }
+                    </div>
+                </header>
+
+                <main class="content" id="main">
+                    <ErrorBoundary @ref="_errorBoundary">
+                        <ChildContent>@Body</ChildContent>
+                        <ErrorContent Context="error">
+                            <Card>
+                                <ErrorState Title="This page hit a problem" Message="The error has been logged. Try again, or go back to the dashboard." OnRetry="Recover" />
+                            </Card>
+                        </ErrorContent>
+                    </ErrorBoundary>
+                </main>
+            </div>
+        </div>
+
+        <NsawaWeb.Features.Auth.ChangePasswordDialog @bind-Open="_changePasswordOpen" />
+    </Authorized>
+</AuthorizeView>
+
+<Toasts />
+
+@code {
+    private ErrorBoundary? _errorBoundary;
+    private bool _sidebarOpen;
+    private bool _menuOpen;
+    private bool _changePasswordOpen;
+    private string _displayName = "Organiser";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        _displayName = await Auth.GetDisplayNameAsync() ?? _displayName;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _sidebarOpen = false;
+        _menuOpen = false;
+        _errorBoundary?.Recover();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Recover() => _errorBoundary?.Recover();
+
+    private void OpenChangePassword()
+    {
+        _menuOpen = false;
+        _changePasswordOpen = true;
+    }
+
+    private async Task SignOut()
+    {
+        _menuOpen = false;
+        await Account.SignOutAsync();
+        Navigation.NavigateTo("/", replace: true);
+    }
+
+    public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;
+}

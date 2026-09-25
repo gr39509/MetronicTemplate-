@@ -1,0 +1,15 @@
+<div class="state state--error" role="alert">
+    <div class="state__icon"><Icon Name="alert" Size="22" /></div>
+    <p class="state__title">@Title</p>
+    @if (Message is not null) { <p class="state__text">@Message</p> }
+    @if (OnRetry.HasDelegate)
+    {
+        <Button Variant="secondary" Icon="refresh" OnClick="OnRetry">Try again</Button>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "We couldn't load this";
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public EventCallback OnRetry { get; set; }
+}

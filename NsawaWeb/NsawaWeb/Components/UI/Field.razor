@@ -1,0 +1,29 @@
+@* Label + control + hint/error. Put the input as child content and give it id="@For". *@
+<div class="field @Class">
+    @if (Label is not null)
+    {
+        <label class="field__label" for="@For">
+            @Label
+            @if (Optional) { <span class="field__optional"> (optional)</span> }
+        </label>
+    }
+    @ChildContent
+    @if (!string.IsNullOrWhiteSpace(Error))
+    {
+        <span class="field__error" role="alert">@Error</span>
+    }
+    else if (Hint is not null)
+    {
+        <span class="field__hint">@Hint</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public string? For { get; set; }
+    [Parameter] public string? Hint { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool Optional { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

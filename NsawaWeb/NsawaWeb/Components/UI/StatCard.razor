@@ -1,0 +1,29 @@
+@using NsawaWeb.Application
+<div class="stat @(Highlight ? "stat--highlight" : "")">
+    <span class="stat__label">@Label</span>
+    @if (Loading)
+    {
+        <span class="skeleton" style="height:26px;width:70%"></span>
+    }
+    else if (Amount is not null)
+    {
+        <span class="stat__value"><span class="stat__currency">GHS</span>@Format.Money(Amount.Value)</span>
+    }
+    else
+    {
+        <span class="stat__value">@Value</span>
+    }
+    @if (Hint is not null)
+    {
+        <span class="stat__hint">@Hint</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = default!;
+    [Parameter] public double? Amount { get; set; }
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Hint { get; set; }
+    [Parameter] public bool Highlight { get; set; }
+    [Parameter] public bool Loading { get; set; }
+}

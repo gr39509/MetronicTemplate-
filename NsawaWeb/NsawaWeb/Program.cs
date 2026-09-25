@@ -1,62 +1,63 @@
-using System.Collections.Immutable;
 using Microsoft.AspNetCore.Components.Authorization;
-using NsawaWeb.Client.Pages;
+using Microsoft.Extensions.Options;
+using NsawaWeb.Application;
 using NsawaWeb.Components;
-using NsawaWeb.Services;
 using NsawaWeb.Services.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddOptions<ApiOptions>()
+    .Bind(builder.Configuration.GetSection(ApiOptions.SectionName))
+    .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _), "Api:BaseUrl must be an absolute URL.")
+    .ValidateOnStart();
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents();
+    .AddInteractiveServerComponents();
 
-builder.Services.AddScoped<ApiClient>(provider =>
+// One pooled socket handler for the whole app; each circuit wraps it with its own auth handler.
+builder.Services.AddSingleton(_ => new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) });
+builder.Services.AddScoped(sp =>
 {
-    var authService = provider.GetRequiredService<AuthService>();
-    
-    var authenticatedHttpClient = new HttpClient(new AuthHeaderHandler(authService)
+    var options = sp.GetRequiredService<IOptions<ApiOptions>>().Value;
+    var handler = new AuthHeaderHandler(sp.GetRequiredService<AuthService>())
     {
-        InnerHandler = new HttpClientHandler()
-    })
-    {
-        BaseAddress = new Uri(builder.Configuration.GetValue<string>("Api:BaseUrl"))
+        InnerHandler = sp.GetRequiredService<SocketsHttpHandler>()
     };
-   
-    return new ApiClient(authenticatedHttpClient, builder.Configuration.GetValue<string>("Api:BaseUrl"));
+    var http = new HttpClient(handler, disposeHandler: false) { BaseAddress = new Uri(options.BaseUrl) };
+    return new ApiClient(http, options.BaseUrl);
 });
 
+// Anonymous client for the banner image proxy (plain HTTP requests have no browser token).
+builder.Services.AddHttpClient(ImageProxyClient.Name, (sp, http) =>
+{
+    http.BaseAddress = new Uri(sp.GetRequiredService<IOptions<ApiOptions>>().Value.BaseUrl);
+    http.Timeout = TimeSpan.FromSeconds(20);
+});
 
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddScoped<CustomAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 builder.Services.AddAuthorizationCore();
+builder.Services.AddCascadingAuthenticationState();
+
+builder.Services.AddNsawaApplication();
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseWebAssemblyDebugging();
-}
-else
+if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
+app.UseStatusCodePagesWithReExecute("/not-found");
 app.UseHttpsRedirection();
-app.UseStaticFiles();
-
 app.UseAntiforgery();
 
-app.MapControllers();
 app.MapStaticAssets();
+app.MapControllers();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(NsawaWeb.Client._Imports).Assembly);
+    .AddInteractiveServerRenderMode();
 
 app.Run();

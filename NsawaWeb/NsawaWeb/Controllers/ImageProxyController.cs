@@ -1,37 +1,53 @@
 using Microsoft.AspNetCore.Mvc;
-using NsawaWeb.Services.Services;
+using NsawaWeb.Application;
 
 namespace NsawaWeb.Controllers;
 
+/// <summary>
+/// Serves event banners from the API's file store on this site's origin,
+/// so pages never link to the API host directly.
+/// </summary>
 [ApiController]
-[Route("/api/[controller]")]
-public class ImageProxyController : ControllerBase
+[Route("api/imageproxy")]
+public class ImageProxyController(IHttpClientFactory httpClientFactory, ILogger<ImageProxyController> logger) : ControllerBase
 {
-    private readonly IConfiguration _configuration;
-    private readonly ApiClient _client;
-    private readonly AuthService _authService;
-
-    public ImageProxyController(IConfiguration configuration, ApiClient client, AuthService authService)
+    [HttpGet("getimage/{fileName}")]
+    [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Any)]
+    public async Task<IActionResult> GetImage(string fileName, CancellationToken cancellationToken)
     {
-        _configuration = configuration;
-        _client = client;
-        _authService = authService;
-    }
-    
-    [HttpGet("GetImage/{imagePath}")]
-    public async Task<IActionResult> GetImage(string imagePath)
-    {
-        var x = _authService.GetTokenAsync();
-        var url = $"{_configuration.GetSection("Api:Baseurl").Value}/api/files/{imagePath}";
-        // var baseu = _httpClient.BaseAddress;
-        
-        var response = await _client._httpClient.GetAsync(url);
-        if (!response.IsSuccessStatusCode)
+        if (!IsSafeFileName(fileName))
+        {
             return NotFound();
+        }
 
-        var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
-        var imageBytes = await response.Content.ReadAsByteArrayAsync();
+        try
+        {
+            var client = httpClientFactory.CreateClient(ImageProxyClient.Name);
+            using var response = await client.GetAsync($"api/files/{Uri.EscapeDataString(fileName)}", cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return NotFound();
+            }
 
-        return File(imageBytes, contentType);
+            var contentType = response.Content.Headers.ContentType?.MediaType;
+            if (contentType is null || !contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                contentType = "image/jpeg";
+            }
+
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return File(bytes, contentType);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            logger.LogWarning(ex, "Could not fetch banner {FileName}", fileName);
+            return NotFound();
+        }
     }
+
+    private static bool IsSafeFileName(string fileName) =>
+        fileName.Length is > 0 and <= 255
+        && !fileName.Contains("..", StringComparison.Ordinal)
+        && fileName.IndexOfAny(['/', '\\', ':']) < 0
+        && !fileName.Any(char.IsControl);
 }

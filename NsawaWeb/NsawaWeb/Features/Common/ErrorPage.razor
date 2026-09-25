@@ -1,0 +1,28 @@
+@page "/Error"
+@using System.Diagnostics
+@attribute [ExcludeFromInteractiveRouting]
+@layout EmptyLayout
+
+<PageTitle>Something went wrong · Nova Nsawa</PageTitle>
+
+<div class="standalone">
+    <div class="standalone__panel">
+        <span class="standalone__code">500</span>
+        <h1>Something went wrong</h1>
+        <p class="muted">We've logged the problem. Please try again in a moment.</p>
+        @if (RequestId is not null)
+        {
+            <p class="muted" style="font-size:var(--text-xs)">Reference: <code>@RequestId</code></p>
+        }
+        <Button Href="/home">Back to Nsawa</Button>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

@@ -1,0 +1,13 @@
+<div class="state">
+    <div class="state__icon"><Icon Name="@Icon" Size="22" /></div>
+    <p class="state__title">@Title</p>
+    @if (Text is not null) { <p class="state__text">@Text</p> }
+    @Action
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "info";
+    [Parameter, EditorRequired] public string Title { get; set; } = default!;
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public RenderFragment? Action { get; set; }
+}
