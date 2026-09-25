@@ -1,0 +1,51 @@
+/* Donor page: phone-first, large touch targets. Applies to the step components through ::deep. */
+.donate { display: grid; gap: var(--space-4); }
+
+.donate-intro { color: var(--ink-soft); font-size: var(--text-md); line-height: 1.6; }
+
+.donate-note {
+    display: flex; align-items: flex-start; justify-content: center; gap: var(--space-2);
+    font-size: var(--text-xs); color: var(--muted); text-align: center; padding: 0 var(--space-4);
+}
+.donate-note ::deep svg { flex: none; margin-top: 2px; }
+
+.donate ::deep .donate-step { display: grid; gap: var(--space-5); }
+.donate ::deep .donate-step__head { display: grid; gap: var(--space-2); }
+.donate ::deep .donate-step__head h2 { font-size: var(--text-xl); }
+.donate ::deep h2[tabindex="-1"]:focus { box-shadow: none; }
+
+/* 16px text stops phones zooming in on focus; 48px keeps every control easy to tap. */
+.donate ::deep .input,
+.donate ::deep .textarea { font-size: 1rem; min-height: 48px; }
+.donate ::deep .input-group { min-height: 48px; }
+.donate ::deep .input-group .input { min-height: 46px; }
+.donate ::deep .input-group__addon { padding: 0 var(--space-4); }
+.donate ::deep .otp-input { font-size: 1.5rem; min-height: 56px; }
+.donate ::deep .btn--lg { min-height: 52px; font-size: 1rem; }
+.donate ::deep .chip { min-height: 48px; padding: 0 var(--space-4); font-size: var(--text-md); }
+.donate ::deep .amount { min-height: 52px; font-size: 1rem; }
+.donate ::deep .amounts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.donate ::deep .donate-group { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: var(--space-2); }
+.donate ::deep .donate-group legend { padding: 0; margin-bottom: var(--space-2); }
+.donate ::deep .donate-networks .chip { flex: 1 1 auto; justify-content: center; }
+
+.donate ::deep .donate-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
+.donate ::deep .donate-links .btn { min-height: 44px; }
+
+.donate ::deep .donate-link {
+    display: inline; padding: 0; border: 0; background: none; cursor: pointer;
+    color: var(--primary); font-weight: 600; text-decoration: underline; text-underline-offset: 2px;
+    min-height: 24px;
+}
+.donate ::deep .donate-link:disabled { color: var(--muted); cursor: not-allowed; }
+
+.donate ::deep .donate-summary {
+    padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg);
+    background: var(--surface-muted); border: 1px solid var(--line);
+}
+.donate ::deep .donate-summary .summary-line { font-size: var(--text-md); }
+.donate ::deep .donate-summary .summary-line strong { text-align: right; }
+
+.donate ::deep .donate-done { justify-items: center; text-align: center; padding: var(--space-4) 0; }
+.donate ::deep .donate-done p { max-width: 40ch; }

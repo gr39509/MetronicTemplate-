@@ -1,0 +1,44 @@
+@* Step 4: hand over to the payment partner, or thank the donor. *@
+@inject NavigationManager Navigation
+
+<div class="donate-step donate-done">
+    @if (!string.IsNullOrEmpty(PayUrl))
+    {
+        <div class="success-mark"><Icon Name="smartphone" Size="28" /></div>
+        <h2 tabindex="-1" @ref="_heading">Approve the payment on your phone</h2>
+        <p class="muted">
+            We're taking you to our payment partner to finish your gift of <strong class="num">@Format.Cedis(Amount)</strong>.
+            If nothing happens in a few seconds, tap the button below.
+        </p>
+        <Button Size="lg" Block="true" Icon="external" OnClick="ContinueToPayment">Continue to payment</Button>
+    }
+    else
+    {
+        <div class="success-mark"><Icon Name="heart" Size="28" /></div>
+        <h2 tabindex="-1" @ref="_heading">Thank you</h2>
+        <p class="muted">
+            Thank you for your gift of <strong class="num">@Format.Cedis(Amount)</strong>.
+            If your phone shows a mobile money prompt, approve it with your PIN to complete the payment.
+        </p>
+        <Button Variant="secondary" Size="lg" Block="true" Icon="plus" OnClick="() => OnGiveAgain.InvokeAsync()">Make another donation</Button>
+    }
+</div>
+
+@code {
+    [Parameter] public double Amount { get; set; }
+    [Parameter] public string? PayUrl { get; set; }
+    [Parameter] public EventCallback OnGiveAgain { get; set; }
+
+    private ElementReference _heading;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try { await _heading.FocusAsync(); } catch { /* Focus is a nicety only. */ }
+    }
+
+    private void ContinueToPayment()
+    {
+        if (!string.IsNullOrEmpty(PayUrl)) Navigation.NavigateTo(PayUrl, forceLoad: true);
+    }
+}

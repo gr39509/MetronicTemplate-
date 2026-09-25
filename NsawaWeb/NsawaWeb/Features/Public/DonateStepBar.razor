@@ -1,0 +1,16 @@
+@* Progress through the donor steps: a thin bar plus "Step 2 of 4" text. *@
+<div class="stack" style="gap:var(--space-2)">
+    <div class="steps" aria-hidden="true">
+        @for (var i = 1; i <= Total; i++)
+        {
+            <span class="steps__item @(i <= Step ? "done" : "")"></span>
+        }
+    </div>
+    <p class="steps__label" aria-live="polite">@Label</p>
+</div>
+
+@code {
+    [Parameter] public int Step { get; set; } = 1;
+    [Parameter] public int Total { get; set; } = 4;
+    [Parameter, EditorRequired] public string Label { get; set; } = default!;
+}

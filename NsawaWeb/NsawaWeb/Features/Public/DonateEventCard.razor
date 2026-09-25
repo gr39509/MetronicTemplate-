@@ -1,0 +1,34 @@
+@* The event the donor is giving to, with the current step underneath. *@
+<article class="donate-card">
+    <div class="donate-card__banner">
+        @if (!string.IsNullOrWhiteSpace(Event.Banner))
+        {
+            <img src="@Format.BannerUrl(Event.Banner)" alt="" decoding="async" fetchpriority="high" />
+        }
+        @if (!string.IsNullOrWhiteSpace(Event.EventCode))
+        {
+            <span class="donate-card__code">@Event.EventCode</span>
+        }
+        <div class="donate-card__title">
+            <h1>@Format.EventTitle(Event.Title)</h1>
+            <span>@Meta</span>
+        </div>
+    </div>
+    <div class="donate-card__body">
+        @ChildContent
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public EventViewModel Event { get; set; } = default!;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string Meta
+    {
+        get
+        {
+            var dates = Format.DateRange(Event.StartDate, Event.EndDate);
+            return string.IsNullOrWhiteSpace(Event.Location) ? dates : $"{Event.Location.Trim()} · {dates}";
+        }
+    }
+}

@@ -1,0 +1,132 @@
+@* Step 2: the 6-digit code we texted, plus an optional name. *@
+@implements IDisposable
+@inject DonationsService Donations
+
+<div class="donate-step">
+    <div class="donate-step__head">
+        <h2>Enter the code we sent</h2>
+        <p class="muted">We texted a 6-digit code to <strong class="num">@DonateText.Phone(Phone)</strong>. It can take a minute to arrive.</p>
+    </div>
+
+    <Alert Message="@_error" />
+    <Alert Kind="success" Message="@_notice" />
+
+    <form class="form" @onsubmit="Confirm" novalidate>
+        <Field Label="6-digit code" For="donor-code" Error="@_errors["code"]">
+            <input id="donor-code" class="input otp-input @(_errors.Has("code") ? "invalid" : "")" type="text"
+                   inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="••••••"
+                   @ref="_codeInput" @bind="_code" @bind:event="oninput" />
+        </Field>
+        <Field Label="Your name" For="donor-name" Optional="true" Hint="So the family knows who gave. You can still give anonymously in the next step." Error="@_errors["name"]">
+            <input id="donor-name" class="input @(_errors.Has("name") ? "invalid" : "")" type="text" autocomplete="name"
+                   maxlength="100" placeholder="e.g. Ama Mensah" @bind="_name" @bind:event="oninput" />
+        </Field>
+        <Button Type="submit" Size="lg" Block="true" Loading="_busy">Confirm</Button>
+    </form>
+
+    <div class="donate-links">
+        <Button Variant="ghost" Icon="refresh" Disabled="@(_cooldown > 0 || _resending || _busy)" Loading="_resending" OnClick="Resend">
+            @(_cooldown > 0 ? $"Send a new code in {_cooldown}s" : "Send a new code")
+        </Button>
+        <Button Variant="ghost" Icon="edit" Disabled="_busy" OnClick="() => OnChangeNumber.InvokeAsync()">Change number</Button>
+    </div>
+</div>
+
+@code {
+    private const int CooldownSeconds = 30;
+
+    [Parameter, EditorRequired] public string Phone { get; set; } = default!;
+    [Parameter] public string? Name { get; set; }
+    [Parameter] public EventCallback<(DonorViewModel Donor, string? Name)> OnVerified { get; set; }
+    [Parameter] public EventCallback OnChangeNumber { get; set; }
+
+    private readonly FormErrors _errors = new();
+    private ElementReference _codeInput;
+    private System.Threading.Timer? _timer;
+    private string? _code, _name, _error, _notice;
+    private bool _busy, _resending, _disposed;
+    private int _cooldown;
+
+    protected override void OnInitialized()
+    {
+        _name = Name;
+        StartCooldown(); // A code was just sent to reach this step.
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try { await _codeInput.FocusAsync(); } catch { /* Focus is a nicety; ignore if the element is gone. */ }
+    }
+
+    private async Task Confirm()
+    {
+        if (_busy) return;
+        _error = null;
+        _notice = null;
+        _errors.Clear();
+        var code = Format.DigitsOnly(_code);
+        _code = code;
+        _errors.Check(code.Length == 0, "code", "Enter the code from the text message.")
+               .Check(code.Length != 6, "code", "The code has 6 digits.");
+        if (_errors.Any) return;
+
+        _busy = true;
+        var name = string.IsNullOrWhiteSpace(_name) ? null : _name.Trim();
+        var result = await Donations.VerifyDonorCodeAsync(Format.ToInternational(Phone), code, name);
+        _busy = false;
+
+        if (result.Failed || result.Value is null)
+        {
+            _error = result.Message ?? "We couldn't check the code. Please try again.";
+            return;
+        }
+
+        await OnVerified.InvokeAsync((result.Value, name));
+    }
+
+    private async Task Resend()
+    {
+        if (_cooldown > 0 || _resending) return;
+        _error = null;
+        _notice = null;
+        _resending = true;
+        var result = await Donations.RequestDonorCodeAsync(Format.ToInternational(Phone));
+        _resending = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        _code = null;
+        _notice = $"We sent a new code to {DonateText.Phone(Phone)}.";
+        StartCooldown();
+    }
+
+    private void StartCooldown()
+    {
+        _cooldown = CooldownSeconds;
+        _timer?.Dispose();
+        _timer = new System.Threading.Timer(_ => InvokeAsync(Tick), null, 1000, 1000);
+    }
+
+    private void Tick()
+    {
+        if (_disposed || _cooldown <= 0) return;
+        _cooldown--;
+        if (_cooldown == 0)
+        {
+            _timer?.Dispose();
+            _timer = null;
+        }
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _timer?.Dispose();
+    }
+}
