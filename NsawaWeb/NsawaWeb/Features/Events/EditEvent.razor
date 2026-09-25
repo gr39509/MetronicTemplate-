@@ -1,0 +1,13 @@
+@page "/events/{EventId:guid}/edit"
+
+<PageTitle>Edit event · Nova Nsawa</PageTitle>
+
+<EventPage EventId="EventId" Tab="EventTab.Edit">
+    <ChildContent Context="ctx">
+        <EditEventPanel Page="ctx" />
+    </ChildContent>
+</EventPage>
+
+@code {
+    [Parameter] public Guid EventId { get; set; }
+}

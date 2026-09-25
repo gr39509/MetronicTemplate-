@@ -1,0 +1,44 @@
+@* Body of the Edit tab: the event form prefilled from the loaded event. *@
+@inject EventsService Events
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+
+<div class="stack">
+    <Alert Message="@_error" />
+
+    <EventForm Model="_model" CurrentBannerUrl="@BannerUrl" RequireBanner="false" Busy="_busy"
+               SubmitText="Save changes" OnSubmit="SaveAsync" OnCancel="Cancel" />
+</div>
+
+@code {
+    private EventInput _model = default!;
+    private string? _error;
+    private bool _busy;
+
+    [Parameter, EditorRequired] public EventPageContext Page { get; set; } = default!;
+
+    private string? BannerUrl => string.IsNullOrWhiteSpace(Page.Event.Banner) ? null : Format.BannerUrl(Page.Event.Banner);
+
+    // Only prefill once, so a header refresh doesn't wipe what the organiser is typing.
+    protected override void OnInitialized() => _model = EventInput.From(Page.Event);
+
+    private async Task SaveAsync((EventInput Input, BannerUpload? Banner) submission)
+    {
+        _error = null;
+        _busy = true;
+        var result = await Events.UpdateAsync(Page.Event.Id, submission.Input, submission.Banner);
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        Toasts.Success("Changes saved");
+        await Page.ReloadAsync();
+        Navigation.NavigateTo($"/events/{Page.Event.Id}");
+    }
+
+    private void Cancel() => Navigation.NavigateTo($"/events/{Page.Event.Id}");
+}

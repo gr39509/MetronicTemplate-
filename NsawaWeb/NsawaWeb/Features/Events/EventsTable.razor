@@ -1,0 +1,65 @@
+@* Organiser's events as a table (list cards on narrow screens). Rows open the event. Wrap in <Card Flush="true">. *@
+@inject NavigationManager Navigation
+
+<div class="table-wrap collapse-mobile">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Event</th>
+                <th>Dates</th>
+                <th>Status</th>
+                <th class="num">Donations</th>
+                <th class="num">Withdrawn</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var e in Events)
+            {
+                <tr class="is-clickable" @onclick="() => Open(e)">
+                    <td>
+                        <div class="event-cell">
+                            <EventThumb Event="e" />
+                            <div>
+                                <a class="cell-strong" href="@Href(e)" @onclick:stopPropagation="true">@Format.EventTitle(e.Title)</a>
+                                <span class="cell-sub">@Meta(e)</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>@Format.DateRange(e.StartDate, e.EndDate)</td>
+                    <td><EventStatus Active="e.Active" /></td>
+                    <td class="num">@Format.Cedis(e.TotalDonations)</td>
+                    <td class="num">@Format.Cedis(e.TotalWithdrawals)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="list-cards">
+    @foreach (var e in Events)
+    {
+        <a class="list-card" href="@Href(e)">
+            <div class="event-cell">
+                <EventThumb Event="e" />
+                <div>
+                    <span class="cell-strong">@Format.EventTitle(e.Title)</span>
+                    <span class="cell-sub">@Format.DateRange(e.StartDate, e.EndDate)</span>
+                </div>
+            </div>
+            <div class="list-card__row"><span class="muted">Status</span><EventStatus Active="e.Active" /></div>
+            <div class="list-card__row"><span class="muted">Donations</span><span class="num">@Format.Cedis(e.TotalDonations)</span></div>
+            <div class="list-card__row"><span class="muted">Withdrawn</span><span class="num">@Format.Cedis(e.TotalWithdrawals)</span></div>
+        </a>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<EventViewModel> Events { get; set; } = [];
+
+    private static string Href(EventViewModel e) => $"/events/{e.Id}";
+
+    private void Open(EventViewModel e) => Navigation.NavigateTo(Href(e));
+
+    internal static string Meta(EventViewModel e) =>
+        string.Join(" · ", new[] { e.EventType?.Name, e.Location }.Where(s => !string.IsNullOrWhiteSpace(s)));
+}

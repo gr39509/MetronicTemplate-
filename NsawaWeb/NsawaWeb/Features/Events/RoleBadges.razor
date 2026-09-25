@@ -1,0 +1,18 @@
+@* The affiliate roles someone holds on an event, as badges. *@
+@if (Roles is { Count: > 0 })
+{
+    <span class="row">
+        @foreach (var role in Roles)
+        {
+            <Badge Kind="brand">@role</Badge>
+        }
+    </span>
+}
+else
+{
+    <span class="muted">—</span>
+}
+
+@code {
+    [Parameter] public ICollection<string>? Roles { get; set; }
+}
