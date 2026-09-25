@@ -130,7 +130,7 @@
     private void Donated((double Amount, string? PayUrl) donation)
     {
         _amount = donation.Amount;
-        _payUrl = IsSafePayUrl(donation.PayUrl) ? donation.PayUrl : null;
+        _payUrl = Format.IsSafeExternalUrl(donation.PayUrl) ? donation.PayUrl : null;
         _step = DonateStep.Pay;
 
         if (_payUrl is not null)
@@ -147,8 +147,6 @@
         _step = DonateStep.Gift;
     }
 
-    private static bool IsSafePayUrl(string? url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp);
 
     private static string Intro(string description)
     {

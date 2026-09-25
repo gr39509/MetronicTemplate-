@@ -176,11 +176,12 @@ else if (_summary is not null)
 
         _verifying = true;
         var phone = _phone!;
-        var result = await Withdrawals.VerifyWalletAsync(_networkId!, Format.ToInternational(phone));
+        var network = _networkId!;
+        var result = await Withdrawals.VerifyWalletAsync(network, Format.ToInternational(phone));
         _verifying = false;
 
         // The number or network may have changed while we waited.
-        if (phone != _phone) return;
+        if (phone != _phone || network != _networkId) return;
 
         if (result.Failed)
         {
@@ -215,7 +216,7 @@ else if (_summary is not null)
         _errors.Check(_verified is null, "phone", "Verify the wallet number first.")
                .Check(string.IsNullOrWhiteSpace(_amount), "amount", "Enter an amount.")
                .Check(!parsed, "amount", "Enter the amount as a number, e.g. 250.00.")
-               .Check(amount <= 0, "amount", "The amount must be more than zero.")
+               .Check(amount < 1, "amount", "The smallest withdrawal is GHS 1.00.")
                .Check(amount > Math.Round(Balance, 2), "amount", $"You can withdraw up to {Format.Cedis(Balance)}.")
                .Check(string.IsNullOrWhiteSpace(_remarks), "remarks", "Add a short note, e.g. Withdrawal.");
         if (_errors.Any) return;

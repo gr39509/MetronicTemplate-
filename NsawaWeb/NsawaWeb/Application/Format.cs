@@ -50,6 +50,10 @@ public static partial class Format
     /// <summary>0241234567 → 233241234567.</summary>
     public static string ToInternational(string local) => "233" + DigitsOnly(local).TrimStart('0');
 
+    /// <summary>True only for absolute http(s) links, e.g. a payment page returned by the API.</summary>
+    public static bool IsSafeExternalUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp);
+
     public static string BannerUrl(string? banner) =>
         string.IsNullOrWhiteSpace(banner) ? string.Empty : $"/api/imageproxy/getimage/{Uri.EscapeDataString(banner)}";
 

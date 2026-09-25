@@ -69,7 +69,7 @@
         <Field Label="Message to the family" For="donor-message" Optional="true" Error="@_errors["message"]"
                Hint="@($"{(_message?.Length ?? 0)}/{MaxMessage}")">
             <textarea id="donor-message" class="textarea" rows="3" maxlength="@MaxMessage"
-                      placeholder="e.g. May her soul rest in perfect peace." @bind="_message" @bind:event="oninput"></textarea>
+                      placeholder="e.g. Rest in perfect peace. Our thoughts are with you." @bind="_message" @bind:event="oninput"></textarea>
         </Field>
 
         <Switch @bind-Value="_anonymous" Label="Give anonymously"

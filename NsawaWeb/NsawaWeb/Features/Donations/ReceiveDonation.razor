@@ -300,7 +300,7 @@
 
         _errors.Check(_method is null, "method", "Choose how the donor is paying.")
                .Check(_method?.IsMoMo == true && string.IsNullOrEmpty(_networkId), "network", "Choose the donor's mobile network.")
-               .Check(_amount is null || _amount <= 0, "amount", "Enter an amount greater than 0.")
+               .Check(_amount is null || _amount < 1, "amount", "The smallest donation is GHS 1.00.")
                .Check(string.IsNullOrEmpty(_phone), "phone", "Enter the donor's phone number.")
                .Check(!Format.IsLocalPhone(_phone), "phone", "Enter a 10-digit Ghana number, e.g. 0241234567.")
                .Check(_method?.IsCheque == true && string.IsNullOrWhiteSpace(_chequeNumber), "cheque", "Enter the cheque number.")
@@ -331,9 +331,9 @@
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(result.Value?.PayUrl))
+        if (Format.IsSafeExternalUrl(result.Value?.PayUrl))
         {
-            _payUrl = result.Value.PayUrl;
+            _payUrl = result.Value!.PayUrl;
             ContinueToPayment();
             return;
         }
