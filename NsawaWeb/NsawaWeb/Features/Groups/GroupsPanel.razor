@@ -1,0 +1,164 @@
+@* Groups tab body: the event's donor circles with add, rename and delete. *@
+@inject GroupsService Groups
+@inject ToastService Toasts
+
+<div class="stack">
+    <p class="muted">
+        Groups let you see who gave by circle, for example Family, Church or Old school mates.
+        Donors and cashiers pick a group when a donation is recorded.
+    </p>
+
+    <Card Title="Groups" Subtitle="@CountText" Flush="true">
+        <HeaderActions>
+            @if (_groups is { Count: > 0 })
+            {
+                <Button Icon="plus" Size="sm" OnClick="OpenAdd">Add group</Button>
+            }
+        </HeaderActions>
+        <ChildContent>
+            @if (_loading)
+            {
+                <TableSkeleton Rows="4" Columns="5" />
+            }
+            else if (_error is not null)
+            {
+                <ErrorState Message="@_error" OnRetry="LoadAsync" />
+            }
+            else if (_groups is not { Count: > 0 })
+            {
+                <EmptyState Icon="layers" Title="No groups yet"
+                            Text="Add a group such as Family or Church so donations can be counted by circle.">
+                    <Action>
+                        <Button Icon="plus" OnClick="OpenAdd">Add group</Button>
+                    </Action>
+                </EmptyState>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Created by</th>
+                                <th class="actions"><span class="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var g in _groups)
+                            {
+                                <tr>
+                                    <td class="cell-strong">@g.GroupName</td>
+                                    <td>
+                                        @if (g.IsActive)
+                                        {
+                                            <Badge Kind="success" Dot="true">Active</Badge>
+                                        }
+                                        else
+                                        {
+                                            <Badge Dot="true">Inactive</Badge>
+                                        }
+                                    </td>
+                                    <td>@Format.Date(g.CreatedAt)</td>
+                                    <td>@(string.IsNullOrWhiteSpace(g.CreatedBy) ? "—" : g.CreatedBy)</td>
+                                    <td class="actions">
+                                        <Button Variant="ghost" Size="sm" IconOnly="true" Icon="edit"
+                                                aria-label="@($"Rename {g.GroupName}")" title="Rename" OnClick="() => OpenRename(g)" />
+                                        <Button Variant="ghost" Size="sm" IconOnly="true" Icon="trash"
+                                                aria-label="@($"Delete {g.GroupName}")" title="Delete" OnClick="() => AskDelete(g)" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </ChildContent>
+    </Card>
+</div>
+
+<GroupDialog Open="_dialogOpen" EventId="Event.Id" Group="_editing" OnClose="CloseDialog" OnSaved="Saved" />
+
+<ConfirmDialog Open="_deleting is not null" Title="Delete this group?"
+               Message="@($"{_deleting?.GroupName} will be removed from this event, and donors won't be able to pick it any more.")"
+               ConfirmText="Delete group" Danger="true" Busy="_deleteBusy" Error="@_deleteError"
+               OnConfirm="Delete" OnCancel="CancelDelete" />
+
+@code {
+    private IReadOnlyList<EventGroupViewModel>? _groups;
+    private EventGroupViewModel? _editing, _deleting;
+    private string? _error, _deleteError;
+    private bool _loading = true, _dialogOpen, _deleteBusy;
+
+    [Parameter, EditorRequired] public EventViewModel Event { get; set; } = default!;
+
+    private string? CountText => _groups is { Count: > 0 } g ? (g.Count == 1 ? "1 group" : $"{g.Count} groups") : null;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = _groups is null;
+        _error = null;
+        var result = await Groups.ListAsync(Event.Id);
+        if (result.Failed) _error = result.Message;
+        else _groups = result.Value ?? [];
+        _loading = false;
+    }
+
+    private void OpenAdd()
+    {
+        _editing = null;
+        _dialogOpen = true;
+    }
+
+    private void OpenRename(EventGroupViewModel group)
+    {
+        _editing = group;
+        _dialogOpen = true;
+    }
+
+    private void CloseDialog() => _dialogOpen = false;
+
+    private async Task Saved(string name)
+    {
+        var renamed = _editing is not null;
+        _dialogOpen = false;
+        _editing = null;
+        Toasts.Success(renamed ? "Group renamed" : "Group added");
+        await LoadAsync();
+    }
+
+    private void AskDelete(EventGroupViewModel group)
+    {
+        _deleteError = null;
+        _deleting = group;
+    }
+
+    private void CancelDelete()
+    {
+        if (_deleteBusy) return;
+        _deleting = null;
+    }
+
+    private async Task Delete()
+    {
+        if (_deleting is null) return;
+        _deleteBusy = true;
+        _deleteError = null;
+        var result = await Groups.DeleteAsync(_deleting.Id);
+        _deleteBusy = false;
+
+        if (result.Failed)
+        {
+            _deleteError = result.Message;
+            return;
+        }
+
+        _deleting = null;
+        Toasts.Success("Group deleted");
+        await LoadAsync();
+    }
+}

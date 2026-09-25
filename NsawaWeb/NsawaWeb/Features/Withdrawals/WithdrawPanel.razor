@@ -1,0 +1,272 @@
+@* Withdraw tab body: balance on the left, send-to-wallet form on the right. *@
+@using System.Globalization
+@inject EventsService Events
+@inject WithdrawalsService Withdrawals
+@inject LookupService Lookups
+@inject ToastService Toasts
+
+@if (_loading)
+{
+    <div class="grid-2">
+        <Card Title="Available to withdraw">
+            <div class="stack">
+                <StatCard Label="Withdrawable balance" Loading="true" Highlight="true" />
+                <span class="skeleton" style="height:14px;width:80%"></span>
+                <span class="skeleton" style="height:14px;width:60%"></span>
+            </div>
+        </Card>
+        <Card Title="Send to a mobile money wallet"><LoadingState Text="Loading…" /></Card>
+    </div>
+}
+else if (_error is not null)
+{
+    <Card><ErrorState Message="@_error" OnRetry="LoadAsync" /></Card>
+}
+else if (_summary is not null)
+{
+    <div class="grid-2">
+        <Card Title="Available to withdraw" Subtitle="Service fees are already taken off the balance.">
+            <div class="stack">
+                <StatCard Label="Withdrawable balance" Amount="_summary.WithdrawableBalance" Highlight="true" />
+                <div>
+                    <div class="summary-line"><span>Total donations</span><strong>@Format.Cedis(_summary.TotalDonations)</strong></div>
+                    <div class="summary-line"><span>Already withdrawn</span><strong>@Format.Cedis(_summary.TotalWithdrawals)</strong></div>
+                    <div class="summary-line"><span>Service fee</span><strong>@Format.Cedis(_summary.ServiceFee)</strong></div>
+                </div>
+            </div>
+        </Card>
+
+        <Card Title="Send to a mobile money wallet" Subtitle="Money goes straight to the wallet you verify below.">
+            @if (Balance <= 0)
+            {
+                <EmptyState Icon="wallet" Title="Nothing to withdraw yet"
+                            Text="When donations come in, the balance you can withdraw will show here." />
+            }
+            else
+            {
+                <form class="form" @onsubmit="Review" novalidate>
+                    <Field Label="Network" Error="@_errors["network"]">
+                        <div class="chips" role="radiogroup" aria-label="Network">
+                            @foreach (var n in _networks)
+                            {
+                                var selected = _networkId == n.Id;
+                                <label class="chip @(selected ? "selected" : "")">
+                                    <input type="radio" name="wd-network" value="@n.Id" checked="@selected"
+                                           @onchange="() => SelectNetwork(n.Id)" />
+                                    @Format.Network(n.Id)
+                                </label>
+                            }
+                        </div>
+                    </Field>
+
+                    <Field Label="Wallet number" For="wd-phone" Error="@_errors["phone"]" Hint="10 digits, e.g. 0241234567">
+                        <div class="input-group @(_errors.Has("phone") ? "invalid" : "")">
+                            <input id="wd-phone" class="input" type="tel" inputmode="numeric" autocomplete="off"
+                                   maxlength="10" placeholder="0241234567"
+                                   @bind="_phone" @bind:event="oninput" @bind:after="ClearVerification" />
+                            <Button Variant="secondary" Loading="_verifying" OnClick="Verify">Verify</Button>
+                        </div>
+                    </Field>
+
+                    @if (_verified is not null)
+                    {
+                        <Alert Kind="success" Message="@($"Wallet belongs to {_verified.AccountName}")" />
+                    }
+
+                    <Field Label="Amount" For="wd-amount" Error="@_errors["amount"]">
+                        <div class="input-group @(_errors.Has("amount") ? "invalid" : "")">
+                            <span class="input-group__addon">GHS</span>
+                            <input id="wd-amount" class="input" type="text" inputmode="decimal" autocomplete="off"
+                                   placeholder="0.00" @bind="_amount" @bind:event="oninput" />
+                        </div>
+                        <div class="row row--between">
+                            <span class="field__hint">Up to @Format.Cedis(Balance)</span>
+                            <Button Variant="ghost" Size="sm" OnClick="WithdrawAll">Withdraw all</Button>
+                        </div>
+                    </Field>
+
+                    <Field Label="Remarks" For="wd-remarks" Error="@_errors["remarks"]" Hint="Shown on the withdrawal record.">
+                        <input id="wd-remarks" class="input @(_errors.Has("remarks") ? "invalid" : "")" type="text" maxlength="200"
+                               @bind="_remarks" @bind:event="oninput" />
+                    </Field>
+
+                    <div class="form-actions">
+                        <Button Type="submit" Icon="arrow-out" Disabled="@(_verified is null)">Withdraw</Button>
+                    </div>
+                    @if (_verified is null)
+                    {
+                        <p class="field__hint" style="text-align:right">Verify the wallet number to continue.</p>
+                    }
+                </form>
+            }
+        </Card>
+    </div>
+
+    <ConfirmDialog Open="_confirmOpen" Title="Send this withdrawal?" Message="@ConfirmMessage" ConfirmText="Send money"
+                   Busy="_sending" Error="@_sendError" OnConfirm="Send" OnCancel="CloseConfirm" />
+}
+
+@code {
+    private DonationSummaryViewModel? _summary;
+    private IReadOnlyList<NetworkType> _networks = [];
+    private MoMoNumberVerificationResponse? _verified;
+    private readonly FormErrors _errors = new();
+    private string? _error, _sendError, _networkId, _phone, _amount;
+    private string _remarks = "Withdrawal";
+    private string? _verifiedPhone;
+    private bool _loading = true, _verifying, _confirmOpen, _sending;
+    private double _confirmedAmount;
+
+    [Parameter, EditorRequired] public EventViewModel Event { get; set; } = default!;
+    [Parameter] public EventCallback OnWithdrawn { get; set; }
+
+    private double Balance => _summary?.WithdrawableBalance ?? 0;
+
+    private string ConfirmMessage =>
+        $"Send {Format.Cedis(_confirmedAmount)} to {_verified?.AccountName} ({Format.Network(_networkId)} {_verifiedPhone})?";
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = _summary is null;
+        _error = null;
+
+        var summaryTask = Events.GetSummaryAsync(Event.Id);
+        var networksTask = Lookups.NetworksAsync();
+        await Task.WhenAll(summaryTask, networksTask);
+
+        if (summaryTask.Result.Failed) _error = summaryTask.Result.Message;
+        else if (networksTask.Result.Failed) _error = networksTask.Result.Message;
+        else
+        {
+            _summary = summaryTask.Result.Value;
+            _networks = networksTask.Result.Value ?? [];
+            if (_summary is null) _error = "We couldn't load the balance for this event.";
+        }
+
+        _loading = false;
+    }
+
+    private void SelectNetwork(string id)
+    {
+        if (_networkId == id) return;
+        _networkId = id;
+        _errors.Clear("network");
+        ClearVerification();
+    }
+
+    private void ClearVerification()
+    {
+        _verified = null;
+        _verifiedPhone = null;
+        _errors.Clear("phone");
+    }
+
+    private async Task Verify()
+    {
+        _errors.Clear("network");
+        _errors.Clear("phone");
+        _verified = null;
+        _phone = Format.DigitsOnly(_phone);
+        _errors.Check(string.IsNullOrEmpty(_networkId), "network", "Choose the wallet's network.")
+               .Check(string.IsNullOrEmpty(_phone), "phone", "Enter the wallet number.")
+               .Check(!Format.IsLocalPhone(_phone), "phone", "Enter a 10-digit mobile number, e.g. 0241234567.");
+        if (_errors.Has("network") || _errors.Has("phone")) return;
+
+        _verifying = true;
+        var phone = _phone!;
+        var result = await Withdrawals.VerifyWalletAsync(_networkId!, Format.ToInternational(phone));
+        _verifying = false;
+
+        // The number or network may have changed while we waited.
+        if (phone != _phone) return;
+
+        if (result.Failed)
+        {
+            _errors.Check(true, "phone", result.Message!);
+        }
+        else if (result.Value is not { IsRegistered: true } wallet)
+        {
+            _errors.Check(true, "phone", $"This number isn't registered for {Format.Network(_networkId)}. Check the number and network.");
+        }
+        else
+        {
+            _verified = wallet;
+            _verifiedPhone = phone;
+            if (string.IsNullOrWhiteSpace(_verified.AccountName)) _verified.AccountName = "the wallet owner";
+        }
+    }
+
+    private void WithdrawAll()
+    {
+        _amount = Balance.ToString("0.00", CultureInfo.InvariantCulture);
+        _errors.Clear("amount");
+    }
+
+    private bool TryParseAmount(out double amount) =>
+        double.TryParse(_amount?.Replace(",", "").Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
+
+    private void Review()
+    {
+        _errors.Clear();
+        var parsed = TryParseAmount(out var amount);
+        amount = Math.Round(amount, 2);
+        _errors.Check(_verified is null, "phone", "Verify the wallet number first.")
+               .Check(string.IsNullOrWhiteSpace(_amount), "amount", "Enter an amount.")
+               .Check(!parsed, "amount", "Enter the amount as a number, e.g. 250.00.")
+               .Check(amount <= 0, "amount", "The amount must be more than zero.")
+               .Check(amount > Math.Round(Balance, 2), "amount", $"You can withdraw up to {Format.Cedis(Balance)}.")
+               .Check(string.IsNullOrWhiteSpace(_remarks), "remarks", "Add a short note, e.g. Withdrawal.");
+        if (_errors.Any) return;
+
+        _confirmedAmount = amount;
+        _sendError = null;
+        _confirmOpen = true;
+    }
+
+    private void CloseConfirm()
+    {
+        if (_sending) return;
+        _confirmOpen = false;
+    }
+
+    private async Task Send()
+    {
+        if (_verifiedPhone is null || _networkId is null) return;
+        _sending = true;
+        _sendError = null;
+        var result = await Withdrawals.WithdrawAsync(new WithdrawFundsDto
+        {
+            EventId = Event.Id,
+            PhoneNumber = Format.ToInternational(_verifiedPhone),
+            Network = _networkId,
+            Amount = _confirmedAmount,
+            Remarks = _remarks.Trim()
+        });
+        _sending = false;
+
+        if (result.Failed)
+        {
+            _sendError = result.Message;
+            return;
+        }
+
+        _confirmOpen = false;
+        Toasts.Success("Withdrawal sent");
+        ResetForm();
+        await LoadAsync();
+        await OnWithdrawn.InvokeAsync();
+    }
+
+    private void ResetForm()
+    {
+        _networkId = null;
+        _phone = null;
+        _amount = null;
+        _remarks = "Withdrawal";
+        _verified = null;
+        _verifiedPhone = null;
+        _errors.Clear();
+    }
+}

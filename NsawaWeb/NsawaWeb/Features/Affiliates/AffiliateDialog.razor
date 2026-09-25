@@ -1,0 +1,132 @@
+@* Add an affiliate (Affiliate is null) or edit one. Saves itself; errors stay inside the dialog. *@
+@inject AffiliatesService Affiliates
+
+<Dialog Open="Open" Title="@(IsEdit ? "Edit affiliate" : "Add affiliate")"
+        Subtitle="@(IsEdit ? null : "They sign in with this phone number to help with the event.")"
+        Busy="_busy" OnClose="OnClose">
+    <ChildContent>
+        <form id="@FormId" class="form" @onsubmit="Save" novalidate>
+            <Alert Message="@_error" />
+            <div class="form-grid">
+                <Field Label="Full name" For="@Id("name")" Error="@_errors["name"]" Class="span-2">
+                    <input id="@Id("name")" class="input @(_errors.Has("name") ? "invalid" : "")" type="text" maxlength="150"
+                           autocomplete="off" @bind="_model.FullName" @bind:event="oninput" />
+                </Field>
+                <Field Label="Phone number" For="@Id("phone")" Error="@_errors["phone"]" Hint="10 digits, e.g. 0241234567">
+                    <input id="@Id("phone")" class="input @(_errors.Has("phone") ? "invalid" : "")" type="tel" inputmode="numeric"
+                           autocomplete="off" maxlength="10" placeholder="0241234567"
+                           @bind="_model.PhoneNumber" @bind:event="oninput" />
+                </Field>
+                <Field Label="Organisation" For="@Id("org")" Optional="true">
+                    <input id="@Id("org")" class="input" type="text" maxlength="150" autocomplete="off"
+                           @bind="_model.OrganizationName" @bind:event="oninput" />
+                </Field>
+                <Field Label="Address" For="@Id("address")" Optional="true" Class="span-2">
+                    <input id="@Id("address")" class="input" type="text" maxlength="250" autocomplete="off"
+                           @bind="_model.Address" @bind:event="oninput" />
+                </Field>
+                <Field Label="Roles" Error="@_errors["roles"]" Hint="Choose what they can do. A Cashier can record donations." Class="span-2">
+                    @if (Roles.Count == 0)
+                    {
+                        <p class="muted">No roles are available right now. Close this and try again later.</p>
+                    }
+                    else
+                    {
+                        <div class="chips" role="group" aria-label="Roles">
+                            @foreach (var role in Roles)
+                            {
+                                var selected = _model.RoleIds.Contains(role.Id);
+                                <label class="chip @(selected ? "selected" : "")">
+                                    <input type="checkbox" checked="@selected" @onchange="() => ToggleRole(role.Id)" />
+                                    @if (selected) { <Icon Name="check" Size="14" /> }
+                                    @role.Name
+                                </label>
+                            }
+                        </div>
+                    }
+                </Field>
+                <div class="span-2 stack" style="gap:var(--space-3)">
+                    <Switch @bind-Value="_model.NotifyDonation" Label="SMS me each donation"
+                            Description="A text message goes to this phone number each time someone gives." />
+                    <Switch @bind-Value="_model.PushNotifyDonation" Label="Push notification for each donation"
+                            Description="An alert in the Nsawa app each time someone gives." />
+                </div>
+            </div>
+        </form>
+    </ChildContent>
+    <Footer>
+        <Button Variant="secondary" Disabled="_busy" OnClick="OnClose">Cancel</Button>
+        <Button Type="submit" form="@FormId" Loading="_busy">@(IsEdit ? "Save changes" : "Add affiliate")</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    private readonly string _prefix = $"aff-{Guid.NewGuid():N}";
+    private readonly FormErrors _errors = new();
+    private AffiliateInput _model = new();
+    private string? _error;
+    private bool _busy, _wasOpen;
+
+    [Parameter] public bool Open { get; set; }
+    [Parameter, EditorRequired] public Guid EventId { get; set; }
+    /// <summary>The affiliate to edit, or null to add a new one.</summary>
+    [Parameter] public EventAffiliateViewModel? Affiliate { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<RoleViewModel> Roles { get; set; } = [];
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private bool IsEdit => Affiliate is not null;
+    private string FormId => $"{_prefix}-form";
+    private string Id(string field) => $"{_prefix}-{field}";
+
+    protected override void OnParametersSet()
+    {
+        // Reset only when the dialog opens, so typing survives parent re-renders.
+        if (Open && !_wasOpen)
+        {
+            _model = Affiliate is null ? new AffiliateInput() : AffiliateInput.From(Affiliate);
+            // Stored numbers may be international (233…); the form works with the local 10-digit form.
+            var digits = Format.DigitsOnly(_model.PhoneNumber);
+            if (digits.Length == 12 && digits.StartsWith("233")) _model.PhoneNumber = "0" + digits[3..];
+            _error = null;
+            _errors.Clear();
+        }
+        _wasOpen = Open;
+    }
+
+    private void ToggleRole(string id)
+    {
+        if (!_model.RoleIds.Remove(id)) _model.RoleIds.Add(id);
+        _errors.Clear("roles");
+    }
+
+    private async Task Save()
+    {
+        if (_busy) return;
+        _error = null;
+        _errors.Clear();
+        _model.PhoneNumber = Format.DigitsOnly(_model.PhoneNumber);
+        // Drop any role ids the server no longer offers.
+        _model.RoleIds.RemoveWhere(id => Roles.All(r => r.Id != id));
+
+        _errors.Check(string.IsNullOrWhiteSpace(_model.FullName), "name", "Enter the person's full name.")
+               .Check(string.IsNullOrEmpty(_model.PhoneNumber), "phone", "Enter their phone number.")
+               .Check(!Format.IsLocalPhone(_model.PhoneNumber), "phone", "Enter a 10-digit mobile number, e.g. 0241234567.")
+               .Check(_model.RoleIds.Count == 0, "roles", "Choose at least one role.");
+        if (_errors.Any) return;
+
+        _busy = true;
+        var result = IsEdit
+            ? await Affiliates.UpdateAsync(EventId, Affiliate!.Id, _model)
+            : await Affiliates.AddAsync(EventId, _model);
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        await OnSaved.InvokeAsync();
+    }
+}

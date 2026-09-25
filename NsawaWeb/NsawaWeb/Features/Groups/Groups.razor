@@ -1,0 +1,13 @@
+@page "/events/{EventId:guid}/groups"
+
+<PageTitle>Groups · Nova Nsawa</PageTitle>
+
+<EventPage EventId="EventId" Tab="EventTab.Groups">
+    <ChildContent Context="ctx">
+        <GroupsPanel Event="ctx.Event" />
+    </ChildContent>
+</EventPage>
+
+@code {
+    [Parameter] public Guid EventId { get; set; }
+}

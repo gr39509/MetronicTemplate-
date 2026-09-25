@@ -1,0 +1,80 @@
+@* Add a group (Group is null) or rename one. Saves itself and reports back through OnSaved. *@
+@inject GroupsService Groups
+
+<Dialog Open="Open" Title="@(IsEdit ? "Rename group" : "Add group")"
+        Subtitle="@(IsEdit ? null : "Donors can pick this group when they give.")"
+        Size="sm" Busy="_busy" OnClose="OnClose">
+    <ChildContent>
+        <form id="@_formId" class="form" @onsubmit="Save" novalidate>
+            <Alert Message="@_error" />
+            <Field Label="Group name" For="@_inputId" Error="@_errors["name"]" Hint="For example Family, Church or Old school mates.">
+                <input id="@_inputId" class="input @(_errors.Has("name") ? "invalid" : "")" type="text" maxlength="100"
+                       autocomplete="off" @bind="_name" @bind:event="oninput" />
+            </Field>
+        </form>
+    </ChildContent>
+    <Footer>
+        <Button Variant="secondary" Disabled="_busy" OnClick="OnClose">Cancel</Button>
+        <Button Type="submit" form="@_formId" Loading="_busy">@(IsEdit ? "Save name" : "Add group")</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    private readonly string _formId = $"group-form-{Guid.NewGuid():N}";
+    private readonly string _inputId = $"group-name-{Guid.NewGuid():N}";
+    private readonly FormErrors _errors = new();
+    private string? _name, _error;
+    private bool _busy, _wasOpen;
+
+    [Parameter] public bool Open { get; set; }
+    [Parameter, EditorRequired] public Guid EventId { get; set; }
+    /// <summary>The group to rename, or null to add a new one.</summary>
+    [Parameter] public EventGroupViewModel? Group { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<string> OnSaved { get; set; }
+
+    private bool IsEdit => Group is not null;
+
+    protected override void OnParametersSet()
+    {
+        // Reset only when the dialog opens, so typing survives parent re-renders.
+        if (Open && !_wasOpen)
+        {
+            _name = Group?.GroupName ?? string.Empty;
+            _error = null;
+            _errors.Clear();
+        }
+        _wasOpen = Open;
+    }
+
+    private async Task Save()
+    {
+        if (_busy) return;
+        _error = null;
+        _errors.Clear();
+        var name = _name?.Trim() ?? string.Empty;
+        _errors.Check(name.Length == 0, "name", "Enter a group name.")
+               .Check(name.Length > 100, "name", "Keep the name to 100 characters or fewer.");
+        if (_errors.Any) return;
+
+        if (IsEdit && name == Group!.GroupName?.Trim())
+        {
+            await OnClose.InvokeAsync();
+            return;
+        }
+
+        _busy = true;
+        var result = IsEdit
+            ? await Groups.RenameAsync(EventId, Group!.Id, name)
+            : await Groups.CreateAsync(EventId, name);
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        await OnSaved.InvokeAsync(name);
+    }
+}

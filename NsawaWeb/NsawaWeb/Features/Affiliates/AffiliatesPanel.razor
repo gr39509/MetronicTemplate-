@@ -1,0 +1,231 @@
+@* Affiliates tab body: people who help run the event, with add, edit and remove. *@
+@inject AffiliatesService Affiliates
+@inject LookupService Lookups
+@inject ToastService Toasts
+
+<div class="stack">
+    <p class="muted">
+        Affiliates are people who help you run this event. Their roles decide what they can do,
+        for example a Cashier can record cash, cheque and mobile money donations.
+    </p>
+
+    <Card Title="Affiliates" Subtitle="@CountText" Flush="true">
+        <HeaderActions>
+            @if (_affiliates is { Count: > 0 })
+            {
+                <Button Icon="user-plus" Size="sm" OnClick="OpenAdd">Add affiliate</Button>
+            }
+        </HeaderActions>
+        <ChildContent>
+            @if (_loading)
+            {
+                <TableSkeleton Rows="4" Columns="6" />
+            }
+            else if (_error is not null)
+            {
+                <ErrorState Message="@_error" OnRetry="LoadAsync" />
+            }
+            else if (_affiliates is not { Count: > 0 })
+            {
+                <EmptyState Icon="handshake" Title="No affiliates yet"
+                            Text="Add someone you trust, such as a family member who will collect donations at the event.">
+                    <Action>
+                        <Button Icon="user-plus" OnClick="OpenAdd">Add affiliate</Button>
+                    </Action>
+                </EmptyState>
+            }
+            else
+            {
+                <div class="table-wrap collapse-mobile">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Person</th>
+                                <th>Phone</th>
+                                <th>Roles</th>
+                                <th>SMS</th>
+                                <th>Push</th>
+                                <th>Added</th>
+                                <th class="actions"><span class="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var a in _affiliates)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="row" style="flex-wrap:nowrap;gap:var(--space-3)">
+                                            <span class="avatar" aria-hidden="true">@Format.Initials(a.FullName)</span>
+                                            <div>
+                                                <span class="cell-strong">@Name(a)</span>
+                                                @if (!string.IsNullOrWhiteSpace(a.OrganizationName))
+                                                {
+                                                    <span class="cell-sub">@a.OrganizationName</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="white-space:nowrap">@Phone(a)</td>
+                                    <td>@RoleBadges(a)</td>
+                                    <td>@OnOff(a.NotifyDonation)</td>
+                                    <td>@OnOff(a.PushNotifyDonation)</td>
+                                    <td>@Format.Date(a.CreatedAt)</td>
+                                    <td class="actions">
+                                        <Button Variant="ghost" Size="sm" IconOnly="true" Icon="edit"
+                                                aria-label="@($"Edit {Name(a)}")" title="Edit" OnClick="() => OpenEdit(a)" />
+                                        <Button Variant="ghost" Size="sm" IconOnly="true" Icon="trash"
+                                                aria-label="@($"Remove {Name(a)}")" title="Remove" OnClick="() => AskRemove(a)" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="list-cards">
+                    @foreach (var a in _affiliates)
+                    {
+                        <div class="list-card">
+                            <div class="row row--between" style="flex-wrap:nowrap">
+                                <div class="row" style="flex-wrap:nowrap;gap:var(--space-3)">
+                                    <span class="avatar" aria-hidden="true">@Format.Initials(a.FullName)</span>
+                                    <div>
+                                        <span class="cell-strong">@Name(a)</span>
+                                        <span class="cell-sub">@Phone(a)@(string.IsNullOrWhiteSpace(a.OrganizationName) ? "" : $" · {a.OrganizationName}")</span>
+                                    </div>
+                                </div>
+                                <div class="row" style="flex-wrap:nowrap">
+                                    <Button Variant="ghost" Size="sm" IconOnly="true" Icon="edit"
+                                            aria-label="@($"Edit {Name(a)}")" OnClick="() => OpenEdit(a)" />
+                                    <Button Variant="ghost" Size="sm" IconOnly="true" Icon="trash"
+                                            aria-label="@($"Remove {Name(a)}")" OnClick="() => AskRemove(a)" />
+                                </div>
+                            </div>
+                            <div class="row">@RoleBadges(a)</div>
+                            <div class="list-card__row">
+                                <span class="muted">SMS @OnOff(a.NotifyDonation) · Push @OnOff(a.PushNotifyDonation)</span>
+                                <span class="muted">Added @Format.Date(a.CreatedAt)</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </ChildContent>
+    </Card>
+</div>
+
+<AffiliateDialog Open="_dialogOpen" EventId="Event.Id" Affiliate="_editing" Roles="_roles"
+                 OnClose="CloseDialog" OnSaved="Saved" />
+
+<ConfirmDialog Open="_removing is not null" Title="Remove this affiliate?"
+               Message="@($"{Name(_removing)} will lose access to this event straight away. You can add them again later.")"
+               ConfirmText="Remove affiliate" Danger="true" Busy="_removeBusy" Error="@_removeError"
+               OnConfirm="Remove" OnCancel="CancelRemove" />
+
+@code {
+    private IReadOnlyList<EventAffiliateViewModel>? _affiliates;
+    private IReadOnlyList<RoleViewModel> _roles = [];
+    private EventAffiliateViewModel? _editing, _removing;
+    private string? _error, _removeError;
+    private bool _loading = true, _dialogOpen, _removeBusy;
+
+    [Parameter, EditorRequired] public EventViewModel Event { get; set; } = default!;
+
+    private string? CountText => _affiliates is { Count: > 0 } a ? (a.Count == 1 ? "1 person" : $"{a.Count} people") : null;
+
+    private static string Name(EventAffiliateViewModel? a) =>
+        string.IsNullOrWhiteSpace(a?.FullName) ? "This affiliate" : a.FullName;
+
+    private static string Phone(EventAffiliateViewModel a) =>
+        string.IsNullOrWhiteSpace(a.PhoneNumber) ? "—" : a.PhoneNumber;
+
+    private static RenderFragment OnOff(bool on) => @<Badge Kind="@(on ? "success" : null)">@(on ? "On" : "Off")</Badge>;
+
+    private static RenderFragment RoleBadges(EventAffiliateViewModel a) =>
+        @<span class="row">
+            @if (a.Roles is { Count: > 0 } roles)
+            {
+                @foreach (var role in roles) { <Badge Kind="brand">@role</Badge> }
+            }
+            else
+            {
+                <span class="muted">No role</span>
+            }
+        </span>;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = _affiliates is null;
+        _error = null;
+
+        var listTask = Affiliates.ListAsync(Event.Id);
+        var rolesTask = Lookups.RolesAsync();
+        await Task.WhenAll(listTask, rolesTask);
+
+        if (listTask.Result.Failed) _error = listTask.Result.Message;
+        else if (rolesTask.Result.Failed) _error = rolesTask.Result.Message;
+        else
+        {
+            _affiliates = listTask.Result.Value ?? [];
+            _roles = rolesTask.Result.Value ?? [];
+        }
+
+        _loading = false;
+    }
+
+    private void OpenAdd()
+    {
+        _editing = null;
+        _dialogOpen = true;
+    }
+
+    private void OpenEdit(EventAffiliateViewModel affiliate)
+    {
+        _editing = affiliate;
+        _dialogOpen = true;
+    }
+
+    private void CloseDialog() => _dialogOpen = false;
+
+    private async Task Saved()
+    {
+        var edited = _editing is not null;
+        _dialogOpen = false;
+        _editing = null;
+        Toasts.Success(edited ? "Affiliate updated" : "Affiliate added");
+        await LoadAsync();
+    }
+
+    private void AskRemove(EventAffiliateViewModel affiliate)
+    {
+        _removeError = null;
+        _removing = affiliate;
+    }
+
+    private void CancelRemove()
+    {
+        if (_removeBusy) return;
+        _removing = null;
+    }
+
+    private async Task Remove()
+    {
+        if (_removing is null) return;
+        _removeBusy = true;
+        _removeError = null;
+        var result = await Affiliates.RemoveAsync(_removing.Id);
+        _removeBusy = false;
+
+        if (result.Failed)
+        {
+            _removeError = result.Message;
+            return;
+        }
+
+        _removing = null;
+        Toasts.Success("Affiliate removed");
+        await LoadAsync();
+    }
+}
