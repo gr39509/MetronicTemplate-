@@ -1,20 +1,20 @@
-@* Step 2: the 6-digit code we texted, plus an optional name. *@
+@* Step 2: the 4-digit code we texted, plus an optional name. *@
 @implements IDisposable
 @inject DonationsService Donations
 
 <div class="donate-step">
     <div class="donate-step__head">
         <h2>Enter the code we sent</h2>
-        <p class="muted">We texted a 6-digit code to <strong class="num">@DonateText.Phone(Phone)</strong>. It can take a minute to arrive.</p>
+        <p class="muted">We texted a 4-digit code to <strong class="num">@DonateText.Phone(Phone)</strong>. It can take a minute to arrive.</p>
     </div>
 
     <Alert Message="@_error" />
     <Alert Kind="success" Message="@_notice" />
 
     <form class="form" @onsubmit="Confirm" novalidate>
-        <Field Label="6-digit code" For="donor-code" Error="@_errors["code"]">
+        <Field Label="4-digit code" For="donor-code" Error="@_errors["code"]">
             <input id="donor-code" class="input otp-input @(_errors.Has("code") ? "invalid" : "")" type="text"
-                   inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="••••••"
+                   inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="4" placeholder="••••"
                    @ref="_codeInput" @bind="_code" @bind:event="oninput" />
         </Field>
         <Field Label="Your name" For="donor-name" Optional="true" Hint="So the family knows who gave. You can still give anonymously in the next step." Error="@_errors["name"]">
@@ -68,7 +68,7 @@
         var code = Format.DigitsOnly(_code);
         _code = code;
         _errors.Check(code.Length == 0, "code", "Enter the code from the text message.")
-               .Check(code.Length != 6, "code", "The code has 6 digits.");
+               .Check(code.Length != 4, "code", "The code has 4 digits.");
         if (_errors.Any) return;
 
         _busy = true;
