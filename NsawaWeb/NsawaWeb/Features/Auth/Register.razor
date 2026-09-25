@@ -1,0 +1,126 @@
+@page "/register"
+@layout AuthLayout
+@inject AccountService Account
+@inject AuthService Auth
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+
+<PageTitle>Create account · Nova Nsawa</PageTitle>
+
+<div class="auth__panel auth__panel--wide">
+    <img class="auth__mobile-logo" src="icons/Logo.jpg" alt="Nova Nsawa" width="170" height="29" />
+    <div class="auth__heading">
+        <h2>Create an organiser account</h2>
+        <p>Set up events, collect donations and withdraw to mobile money. You'll sign in with your phone number.</p>
+    </div>
+
+    <Alert Message="@_error" />
+
+    <form class="form" @onsubmit="CreateAccount" novalidate>
+        <div class="form-grid">
+            <Field Label="Full name" For="reg-name" Error="@_errors["name"]" Class="span-2">
+                <input id="reg-name" class="input @(_errors.Has("name") ? "invalid" : "")" type="text"
+                       autocomplete="name" maxlength="120" placeholder="Ama Mensah"
+                       @bind="_fullName" @bind:event="oninput" />
+            </Field>
+            <Field Label="Phone number" For="reg-phone" Error="@_errors["phone"]" Hint="10 digits, e.g. 0241234567. You'll use it to sign in.">
+                <input id="reg-phone" class="input @(_errors.Has("phone") ? "invalid" : "")" type="tel" inputmode="numeric"
+                       autocomplete="tel-national" maxlength="10" placeholder="0241234567"
+                       @bind="_phone" @bind:event="oninput" />
+            </Field>
+            <Field Label="Email" For="reg-email" Optional="true" Error="@_errors["email"]">
+                <input id="reg-email" class="input @(_errors.Has("email") ? "invalid" : "")" type="email"
+                       autocomplete="email" maxlength="200" placeholder="ama@example.com"
+                       @bind="_email" @bind:event="oninput" />
+            </Field>
+            <Field Label="Organisation" For="reg-org" Optional="true" Hint="Family, church or company name donors will recognise.">
+                <input id="reg-org" class="input" type="text" autocomplete="organization" maxlength="150"
+                       @bind="_organization" @bind:event="oninput" />
+            </Field>
+            <Field Label="Address" For="reg-address" Optional="true">
+                <input id="reg-address" class="input" type="text" autocomplete="street-address" maxlength="200"
+                       placeholder="Town or area"
+                       @bind="_address" @bind:event="oninput" />
+            </Field>
+            <Field Label="Password" For="reg-password" Error="@_errors["password"]" Hint="At least 6 characters.">
+                <PasswordInput Id="reg-password" @bind-Value="_password" Autocomplete="new-password" Invalid="@(_errors.Has("password"))" />
+            </Field>
+            <Field Label="Confirm password" For="reg-confirm" Error="@_errors["confirm"]">
+                <PasswordInput Id="reg-confirm" @bind-Value="_confirm" Autocomplete="new-password" Invalid="@(_errors.Has("confirm"))" />
+            </Field>
+        </div>
+        <Button Type="submit" Size="lg" Block="true" Loading="_busy">Create account</Button>
+    </form>
+
+    <p class="auth__alt">Already have an account? <a href="/">Sign in</a></p>
+</div>
+
+@code {
+    private readonly FormErrors _errors = new();
+    private string? _fullName, _phone, _email, _organization, _address, _password, _confirm, _error;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await Auth.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo("/home", replace: true);
+        }
+    }
+
+    private async Task CreateAccount()
+    {
+        _error = null;
+        _errors.Clear();
+        _phone = Format.DigitsOnly(_phone);
+        _email = _email?.Trim();
+
+        _errors.Check(string.IsNullOrWhiteSpace(_fullName), "name", "Enter your full name.")
+               .Check(string.IsNullOrEmpty(_phone), "phone", "Enter your phone number.")
+               .Check(_phone.Length != 10, "phone", "Phone numbers have 10 digits.")
+               .Check(!string.IsNullOrEmpty(_email) && !IsValidEmail(_email), "email", "Enter a valid email address, or leave it blank.")
+               .Check(string.IsNullOrEmpty(_password), "password", "Choose a password.")
+               .Check((_password?.Length ?? 0) is > 0 and < 6, "password", "Use at least 6 characters.")
+               .Check(string.IsNullOrEmpty(_confirm), "confirm", "Type the password again.")
+               .Check(!string.IsNullOrEmpty(_confirm) && _confirm != _password, "confirm", "The passwords don't match.");
+        if (_errors.Any) return;
+
+        _busy = true;
+        var result = await Account.RegisterAsync(new SignupDto
+        {
+            FullName = _fullName!.Trim(),
+            PhoneNumber = _phone,
+            Email = OrNull(_email)!,
+            OrganizationName = OrNull(_organization)!,
+            Address = OrNull(_address)!,
+            Password = _password!,
+            ConfirmPassword = _confirm!
+        });
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        Toasts.Success("Account created. Sign in to continue.");
+        Navigation.NavigateTo("/");
+    }
+
+    // Blank optional fields are sent as null; the API client omits nulls from the request.
+    private static string? OrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            var address = new System.Net.Mail.MailAddress(email);
+            return address.Address == email && email.Contains('.', StringComparison.Ordinal);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+}
