@@ -130,7 +130,10 @@
 
     private string? _displayName;
 
-    private string ShownAs => _anonymous || string.IsNullOrWhiteSpace(_displayName) ? "Anonymous" : _displayName.Trim();
+    private string ShownAs =>
+        _anonymous ? "Anonymous"
+        : string.IsNullOrWhiteSpace(_displayName) ? "No name given"
+        : _displayName.Trim();
 
     protected override Task OnInitializedAsync()
     {

@@ -102,11 +102,11 @@
         _ => "Step 4 of 4 · Payment"
     };
 
-    /// <summary>Suggested name for the gift: what the donor just typed, else what we already hold for this number.</summary>
-    private string DonorName =>
-        !string.IsNullOrWhiteSpace(_name) ? _name.Trim()
-        : !string.IsNullOrWhiteSpace(_donor?.FullName) ? _donor.FullName.Trim()
-        : string.Empty;
+    /// <summary>
+    /// Name for the gift: only what the donor typed in this visit. The name the API has stored
+    /// for the number can be stale (e.g. a test name), so it is never shown or reused.
+    /// </summary>
+    private string DonorName => string.IsNullOrWhiteSpace(_name) ? string.Empty : _name.Trim();
 
     private void CodeSent(string phone)
     {
