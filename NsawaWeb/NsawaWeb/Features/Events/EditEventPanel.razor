@@ -26,7 +26,7 @@
     {
         _error = null;
         _busy = true;
-        var result = await Events.UpdateAsync(Page.Event.Id, submission.Input, submission.Banner);
+        var result = await Events.UpdateAsync(Page.Event.Id, submission.Input, submission.Banner, Page.Event.Banner);
         _busy = false;
 
         if (result.Failed)

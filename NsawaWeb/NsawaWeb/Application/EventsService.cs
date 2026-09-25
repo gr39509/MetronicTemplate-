@@ -51,7 +51,7 @@ public sealed record EventAccess(bool IsOwner, IReadOnlyCollection<string> Roles
     public bool CanViewDonations => IsOwner || IsAffiliate;
 }
 
-public sealed class EventsService(ApiClient api, ApiRunner runner)
+public sealed class EventsService(ApiClient api, ApiRunner runner, IHttpClientFactory httpClientFactory, ILogger<EventsService> logger)
 {
     /// <summary>Placeholder the API has always received because the form has no location picker.</summary>
     public const double DefaultCoordinate = 10;
@@ -110,8 +110,18 @@ public sealed class EventsService(ApiClient api, ApiRunner runner)
             notifyAffiliateOrganizers: input.NotifyAffiliateOrganizers,
             expiryDate: Utc(input.ExpiryDate ?? input.EndDate.AddYears(1))), "create the event");
 
-    public Task<Result<EventViewModel>> UpdateAsync(Guid id, EventInput input, BannerUpload? newBanner) =>
-        runner.RunAsync<EventViewModel>(async () => await api.UpdateEventAsync(
+    /// <param name="currentBanner">The banner file name the event has now; re-sent when no new image is chosen.</param>
+    public async Task<Result<EventViewModel>> UpdateAsync(Guid id, EventInput input, BannerUpload? newBanner, string? currentBanner)
+    {
+        // The API needs a banner on every update and rejects an empty file,
+        // so keeping the current image means sending it back unchanged.
+        var banner = newBanner ?? await DownloadBannerAsync(currentBanner);
+        if (banner is null)
+        {
+            return Result<EventViewModel>.Fail("We couldn't reuse the current banner. Choose the image again, then save.");
+        }
+
+        return await runner.RunAsync<EventViewModel>(async () => await api.UpdateEventAsync(
             eventId: id,
             title: input.Title.Trim(),
             description: input.Description.Trim(),
@@ -119,16 +129,39 @@ public sealed class EventsService(ApiClient api, ApiRunner runner)
             location: input.Location.Trim(),
             longitude: input.Longitude,
             latitude: input.Latitude,
-            // The API requires a banner part; an empty file means "keep the current banner".
-            banner: newBanner is null
-                ? new FileParameter(new MemoryStream(), "no-change.bin", "application/octet-stream")
-                : ToFile(newBanner),
+            banner: ToFile(banner),
             startDate: Utc(input.StartDate),
             endDate: Utc(input.EndDate),
             rSVP: input.Rsvp?.Trim() ?? string.Empty,
             notifyOrganizer: input.NotifyOrganizer,
             notifyAffiliateOrganizers: input.NotifyAffiliateOrganizers,
             expiryDate: Utc(input.ExpiryDate ?? input.EndDate.AddYears(1))), "save the event");
+    }
+
+    private async Task<BannerUpload?> DownloadBannerAsync(string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)) return null;
+        try
+        {
+            var client = httpClientFactory.CreateClient(ImageProxyClient.Name);
+            using var response = await client.GetAsync($"api/files/{Uri.EscapeDataString(fileName)}");
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Current banner {FileName} returned {Status}", fileName, (int)response.StatusCode);
+                return null;
+            }
+
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            if (bytes.Length == 0) return null;
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
+            return new BannerUpload(bytes, Path.GetFileName(fileName), contentType);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            logger.LogWarning(ex, "Could not download current banner {FileName}", fileName);
+            return null;
+        }
+    }
 
     public Task<Result> DeactivateAsync(Guid id) =>
         runner.RunAsync(async () => await api.DeactivateAsync(new DeactivateEventDto { EventId = id }), "close the event");
