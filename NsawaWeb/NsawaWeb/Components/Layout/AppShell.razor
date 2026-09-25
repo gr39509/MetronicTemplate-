@@ -108,7 +108,7 @@
     {
         _menuOpen = false;
         await Account.SignOutAsync();
-        Navigation.NavigateTo("/", replace: true);
+        Navigation.NavigateTo("/login", replace: true);
     }
 
     public void Dispose() => Navigation.LocationChanged -= OnLocationChanged;

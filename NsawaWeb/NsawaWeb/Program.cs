@@ -11,6 +11,8 @@ builder.Services.AddOptions<ApiOptions>()
     .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _), "Api:BaseUrl must be an absolute URL.")
     .ValidateOnStart();
 
+builder.Services.Configure<ContactOptions>(builder.Configuration.GetSection(ContactOptions.SectionName));
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 

@@ -1,0 +1,274 @@
+@page "/"
+@layout EmptyLayout
+@using Microsoft.Extensions.Options
+@inject AuthService Auth
+@inject IOptions<ContactOptions> ContactSettings
+
+<PageTitle>Nova Nsawa · Funeral donations by mobile money</PageTitle>
+<HeadContent>
+    <meta name="description" content="Nova Nsawa helps Ghanaian families collect funeral and memorial donations by MTN MoMo, Telecel Cash and AT Money, with cash and cheque recorded at the event." />
+</HeadContent>
+
+<div class="landing">
+    <header class="nav">
+        <div class="wrap nav__inner">
+            <a class="nav__logo" href="/" aria-label="Nova Nsawa home"><img src="icons/Logo.jpg" alt="Nova Nsawa" width="170" height="29" /></a>
+            <nav class="nav__links" aria-label="Page sections">
+                <a href="#how">How it works</a>
+                <a href="#features">Features</a>
+                <a href="#donors">For donors</a>
+                <a href="#faq">Questions</a>
+            </nav>
+            <div class="nav__actions">
+                @if (_signedIn)
+                {
+                    <Button Href="/home" Icon="dashboard">Go to dashboard</Button>
+                }
+                else
+                {
+                    <Button Href="/login" Variant="ghost">Sign in</Button>
+                    <Button Href="/register">Create account</Button>
+                }
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="wrap hero__inner">
+                <div class="hero__copy">
+                    <span class="eyebrow">For families, churches and funeral committees</span>
+                    <h1>Collect funeral donations with care.</h1>
+                    <p class="lead">
+                        Create an event, share one link or QR code, and let family and friends give by mobile money
+                        from anywhere. Every cedi is recorded as it arrives, and you withdraw to a verified wallet when you're ready.
+                    </p>
+                    <div class="hero__cta">
+                        @if (_signedIn)
+                        {
+                            <Button Href="/home" Size="lg" Icon="dashboard">Go to dashboard</Button>
+                            <Button Href="/create-event" Size="lg" Variant="secondary" Icon="plus">Create an event</Button>
+                        }
+                        else
+                        {
+                            <Button Href="/register" Size="lg">Create an account</Button>
+                            <Button Href="/login" Size="lg" Variant="secondary">Sign in</Button>
+                        }
+                    </div>
+                    <ul class="hero__proof">
+                        <li><Icon Name="check" Size="16" />MTN MoMo, Telecel Cash and AT Money</li>
+                        <li><Icon Name="check" Size="16" />Cash and cheque recorded too</li>
+                        <li><Icon Name="check" Size="16" />Donors need no account</li>
+                    </ul>
+                </div>
+
+                <div class="hero__visual" aria-hidden="true">
+                    <div class="device">
+                        <div class="device__screen">
+                            <div class="mini-banner">
+                                <span class="mini-code">EVT-4821</span>
+                                <strong>Final funeral rites of Opanyin Kwame Asante</strong>
+                                <span>Kumasi · 12–14 Oct</span>
+                            </div>
+                            <div class="mini-body">
+                                <div class="mini-steps"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+                                <span class="mini-label">Amount</span>
+                                <div class="mini-amounts"><span>GHS 20</span><span class="on">GHS 50</span><span>GHS 100</span></div>
+                                <span class="mini-label">Pay with</span>
+                                <div class="mini-nets"><span class="on">MTN MoMo</span><span>Telecel</span><span>AT</span></div>
+                                <span class="mini-cta">Donate GHS 50.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="float-card">
+                        <span class="float-card__icon"><Icon Name="arrow-in" Size="16" /></span>
+                        <div>
+                            <strong>GHS 200.00 received</strong>
+                            <span>Ama Owusu · Family · just now</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="how" aria-labelledby="how-title">
+            <div class="wrap">
+                <div class="section__head">
+                    <span class="eyebrow">How it works</span>
+                    <h2 id="how-title">Ready before the one-week observance</h2>
+                    <p>Setting up takes a few minutes. You can share the link the same day.</p>
+                </div>
+                <ol class="steps-row">
+                    <li>
+                        <span class="step-num">1</span>
+                        <h3>Create the event</h3>
+                        <p>Add the name, dates, venue and a photo. Nsawa gives the event its own code, donation link and QR code.</p>
+                    </li>
+                    <li>
+                        <span class="step-num">2</span>
+                        <h3>Share the link or QR code</h3>
+                        <p>Post the link on WhatsApp and print the QR code on the funeral programme or a banner at the venue.</p>
+                    </li>
+                    <li>
+                        <span class="step-num">3</span>
+                        <h3>Receive and withdraw</h3>
+                        <p>Donations appear as they happen. When you're ready, send the balance to a mobile money wallet you have verified.</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <section class="section section--tint" id="features" aria-labelledby="features-title">
+            <div class="wrap">
+                <div class="section__head">
+                    <span class="eyebrow">Features</span>
+                    <h2 id="features-title">Everything the funeral committee needs</h2>
+                    <p>One place for every donation, whether it came by phone, in cash at the gate, or by cheque.</p>
+                </div>
+                <div class="features">
+                    <article class="feature">
+                        <span class="feature__icon"><Icon Name="smartphone" /></span>
+                        <h3>Mobile money on every network</h3>
+                        <p>Donors pay with MTN MoMo, Telecel Cash or AT Money and approve the payment on their own phone.</p>
+                    </article>
+                    <article class="feature">
+                        <span class="feature__icon"><Icon Name="banknote" /></span>
+                        <h3>Cash and cheques at the event</h3>
+                        <p>Record gifts handed over in person, so the family sees one complete total instead of separate notebooks.</p>
+                    </article>
+                    <article class="feature">
+                        <span class="feature__icon"><Icon Name="layers" /></span>
+                        <h3>Groups</h3>
+                        <p>Count gifts by circle, such as Family, Church members or Old school mates, and see which groups have given.</p>
+                    </article>
+                    <article class="feature">
+                        <span class="feature__icon"><Icon Name="users" /></span>
+                        <h3>Helpers with the right roles</h3>
+                        <p>Add affiliates to help run the event. A Cashier can record donations without seeing your withdrawal controls.</p>
+                    </article>
+                    <article class="feature">
+                        <span class="feature__icon"><Icon Name="receipt" /></span>
+                        <h3>Clear records</h3>
+                        <p>Filter donations by date and payment type, open any gift for its details, and export the list to Excel as CSV.</p>
+                    </article>
+                    <article class="feature">
+                        <span class="feature__icon"><Icon Name="wallet" /></span>
+                        <h3>Safe withdrawals</h3>
+                        <p>Nsawa checks the wallet name before sending money, so you can confirm it goes to the right person.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="donors" aria-labelledby="donors-title">
+            <div class="wrap donors">
+                <div class="donors__copy">
+                    <span class="eyebrow">For donors</span>
+                    <h2 id="donors-title">Giving takes under a minute</h2>
+                    <p>Donors don't download an app or create an account. They open the link or scan the QR code and follow four short steps.</p>
+                    <ol class="donor-steps">
+                        <li><strong>Enter their mobile money number.</strong> We text them a 4-digit code.</li>
+                        <li><strong>Type the code</strong> to confirm the number is theirs.</li>
+                        <li><strong>Choose an amount and network</strong>, add a message to the family, or give anonymously.</li>
+                        <li><strong>Approve the payment</strong> on their phone.</li>
+                    </ol>
+                </div>
+                <aside class="trust">
+                    <span class="trust__icon"><Icon Name="shield" Size="22" /></span>
+                    <h3>Nsawa never asks for a PIN</h3>
+                    <p>Donors approve every payment themselves on their own phone, through their mobile money provider. Nsawa never sees or stores a PIN.</p>
+                </aside>
+            </div>
+        </section>
+
+        <section class="section section--tint" id="faq" aria-labelledby="faq-title">
+            <div class="wrap faq-wrap">
+                <div class="section__head">
+                    <span class="eyebrow">Questions</span>
+                    <h2 id="faq-title">Common questions</h2>
+                </div>
+                <div class="faq">
+                    <details>
+                        <summary>Who can create an event?</summary>
+                        <p>Anyone organising a funeral, memorial, one-week observance or thanksgiving service. Create an organiser account with your phone number, then add the event.</p>
+                    </details>
+                    <details>
+                        <summary>Do donors need an account?</summary>
+                        <p>No. They only need a mobile money number. A 4-digit code sent by text confirms the number before they give.</p>
+                    </details>
+                    <details>
+                        <summary>Can we record cash given at the funeral?</summary>
+                        <p>Yes. You or a Cashier you add can record cash and cheque donations on the event's Receive donation page, so every gift is in one list.</p>
+                    </details>
+                    <details>
+                        <summary>How do we get the money?</summary>
+                        <p>Open the event's Withdraw tab, verify the mobile money wallet, and send any amount up to the available balance. Service fees are already taken off the balance you see.</p>
+                    </details>
+                    <details>
+                        <summary>Can someone give without showing their name?</summary>
+                        <p>Yes. Donors can switch on "Give anonymously" and the family will see the gift as Anonymous.</p>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <section class="closing">
+            <div class="wrap closing__inner">
+                <div>
+                    <h2>Set up your event today</h2>
+                    <p>Create your organiser account in a few minutes. You can share the donation link as soon as the event is saved.</p>
+                </div>
+                <div class="closing__cta">
+                    @if (_signedIn)
+                    {
+                        <Button Href="/create-event" Size="lg" Icon="plus">Create an event</Button>
+                    }
+                    else
+                    {
+                        <Button Href="/register" Size="lg">Create an account</Button>
+                        <Button Href="/login" Size="lg" Variant="secondary" Class="btn--on-dark">Sign in</Button>
+                    }
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="foot">
+        <div class="wrap foot__inner">
+            <img src="icons/Logo.jpg" alt="Nova Nsawa" width="140" height="24" />
+            @if (_contact.Any)
+            {
+                <ul class="foot__contact" aria-label="Contact">
+                    @if (!string.IsNullOrWhiteSpace(_contact.Phone))
+                    {
+                        <li><Icon Name="phone" Size="15" /><a href="tel:@_contact.Phone">@_contact.Phone</a></li>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_contact.WhatsApp))
+                    {
+                        <li><Icon Name="smartphone" Size="15" /><a href="https://wa.me/@Format.DigitsOnly(_contact.WhatsApp)" target="_blank" rel="noopener">WhatsApp @_contact.WhatsApp</a></li>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_contact.Email))
+                    {
+                        <li><Icon Name="info" Size="15" /><a href="mailto:@_contact.Email">@_contact.Email</a></li>
+                    }
+                </ul>
+            }
+            <nav class="foot__links" aria-label="Account">
+                <a href="/login">Sign in</a>
+                <a href="/register">Create account</a>
+            </nav>
+            <p class="foot__copy">© @DateTime.Now.Year F &amp; F ICT Solutions</p>
+        </div>
+    </footer>
+</div>
+
+@code {
+    private bool _signedIn;
+    private ContactOptions _contact = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _contact = ContactSettings.Value;
+        _signedIn = await Auth.IsAuthenticatedAsync();
+    }
+}

@@ -4,7 +4,7 @@
     protected override void OnInitialized()
     {
         var returnUrl = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
-        var target = returnUrl is "/" or "/home" ? "/" : $"/?returnUrl={Uri.EscapeDataString(returnUrl)}";
+        var target = returnUrl is "/" or "/home" ? "/login" : $"/login?returnUrl={Uri.EscapeDataString(returnUrl)}";
         Navigation.NavigateTo(target, replace: true);
     }
 }

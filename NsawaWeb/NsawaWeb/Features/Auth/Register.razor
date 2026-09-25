@@ -8,7 +8,7 @@
 <PageTitle>Create account · Nova Nsawa</PageTitle>
 
 <div class="auth__panel auth__panel--wide">
-    <img class="auth__mobile-logo" src="icons/Logo.jpg" alt="Nova Nsawa" width="170" height="29" />
+    <a href="/" aria-label="Nova Nsawa home"><img class="auth__mobile-logo" src="icons/Logo.jpg" alt="Nova Nsawa" width="170" height="29" /></a>
     <div class="auth__heading">
         <h2>Create an organiser account</h2>
         <p>Set up events, collect donations and withdraw to mobile money. You'll sign in with your phone number.</p>
@@ -52,7 +52,7 @@
         <Button Type="submit" Size="lg" Block="true" Loading="_busy">Create account</Button>
     </form>
 
-    <p class="auth__alt">Already have an account? <a href="/">Sign in</a></p>
+    <p class="auth__alt">Already have an account? <a href="/login">Sign in</a></p>
 </div>
 
 @code {
@@ -105,7 +105,7 @@
         }
 
         Toasts.Success("Account created. Sign in to continue.");
-        Navigation.NavigateTo("/");
+        Navigation.NavigateTo("/login");
     }
 
     // Blank optional fields are sent as null; the API client omits nulls from the request.
