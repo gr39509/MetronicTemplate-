@@ -1,0 +1,272 @@
+@page "/events/{EventId:guid}"
+@inject EventsService Events
+@inject QrCodeService QrCodes
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Event overview · Nova Nsawa</PageTitle>
+
+<EventPage EventId="EventId" Tab="EventTab.Overview">
+    <HeaderActions Context="ctx">
+        @if (ctx.Event.Active)
+        {
+            <Button Icon="arrow-in" Href="@($"/events/{EventId}/donate")">Receive donation</Button>
+            <span class="danger-ghost">
+                <Button Variant="ghost" Icon="power" OnClick="OpenCloseConfirm">Close event</Button>
+            </span>
+        }
+    </HeaderActions>
+    <ChildContent Context="ctx">
+        <div class="stack stack--lg">
+            @if (_summaryError is not null)
+            {
+                <Card><ErrorState Title="We couldn't load the totals" Message="@_summaryError" OnRetry="LoadSummaryAsync" /></Card>
+            }
+            else
+            {
+                <div class="stats">
+                    <StatCard Label="Total donations" Amount="_summary?.TotalDonations" Loading="_summaryLoading"
+                              Hint="@(_summary is null ? null : DonationCountText(_summary.DonationsCount))" />
+                    <StatCard Label="Withdrawn" Amount="_summary?.TotalWithdrawals" Loading="_summaryLoading" />
+                    <StatCard Label="Service fee" Amount="_summary?.ServiceFee" Loading="_summaryLoading" />
+                    <StatCard Label="Withdrawable balance" Amount="_summary?.WithdrawableBalance" Loading="_summaryLoading" Highlight="true"
+                              Hint="Available to send to a mobile wallet" />
+                </div>
+            }
+
+            <div class="grid-2">
+                <Card Title="Share with donors" Subtitle="Donors use this link or QR code to give by mobile money.">
+                    @if (ctx.Event.Active)
+                    {
+                        <div class="stack">
+                            <Field Label="Donation link" For="overview-donate-link">
+                                <div class="copy-field">
+                                    <input id="overview-donate-link" class="input" type="text" readonly value="@DonateUrl" />
+                                    <Button Variant="secondary" Icon="copy" OnClick="CopyLinkAsync">Copy link</Button>
+                                </div>
+                            </Field>
+                            <div class="row">
+                                <Button Variant="secondary" Icon="qr" OnClick="ShowQr">Show QR code</Button>
+                                <Button Variant="ghost" Icon="external" Href="@DonateUrl" target="_blank" rel="noopener">Open donation page</Button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <EmptyState Icon="power" Title="This event is closed" Text="The donation page no longer accepts gifts, so there is nothing to share." />
+                    }
+                </Card>
+
+                <Card Title="By payment method" Subtitle="Donations received through each channel.">
+                    @if (_summaryLoading)
+                    {
+                        <div class="stack" aria-hidden="true">
+                            <span class="skeleton" style="height:14px;width:90%"></span>
+                            <span class="skeleton" style="height:14px;width:80%"></span>
+                            <span class="skeleton" style="height:14px;width:85%"></span>
+                        </div>
+                    }
+                    else if (_summary is not null)
+                    {
+                        <div>
+                            <div class="summary-line"><span>Mobile money</span><strong>@Format.Cedis(_summary.MobileWalletDonations)</strong></div>
+                            <div class="summary-line"><span>Cash</span><strong>@Format.Cedis(_summary.CashDonations)</strong></div>
+                            <div class="summary-line"><span>Cheque</span><strong>@Format.Cedis(_summary.ChequeDonations)</strong></div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="muted">Totals are unavailable right now.</p>
+                    }
+                </Card>
+            </div>
+
+            <Card Title="Event details">
+                <HeaderActions>
+                    <Button Variant="ghost" Size="sm" Icon="edit" Href="@($"/events/{EventId}/edit")">Edit details</Button>
+                </HeaderActions>
+                <ChildContent>
+                    <dl class="details">
+                        <div class="span-2">
+                            <dt>Description</dt>
+                            <dd>@OrDash(ctx.Event.Description)</dd>
+                        </div>
+                        <div>
+                            <dt>Event type</dt>
+                            <dd>@OrDash(ctx.Event.EventType?.Name)</dd>
+                        </div>
+                        <div>
+                            <dt>Organiser</dt>
+                            <dd>@OrDash(OrganiserName(ctx.Event))</dd>
+                        </div>
+                        <div>
+                            <dt>RSVP contact</dt>
+                            <dd>@OrDash(ctx.Event.Rsvp)</dd>
+                        </div>
+                        <div>
+                            <dt>Created</dt>
+                            <dd>@Format.Date(ctx.Event.CreatedAt)</dd>
+                        </div>
+                        <div>
+                            <dt>Donation alerts to you</dt>
+                            <dd>@(ctx.Event.NotifyOrganizer ? "On" : "Off")</dd>
+                        </div>
+                        <div>
+                            <dt>Donation alerts to affiliates</dt>
+                            <dd>@(ctx.Event.NotifyAffiliateOrganizers ? "On" : "Off")</dd>
+                        </div>
+                    </dl>
+                </ChildContent>
+            </Card>
+        </div>
+
+        <Dialog Open="_qrOpen" Title="Donation QR code" Subtitle="Print it or show it on a screen at the event." OnClose="() => _qrOpen = false">
+            <ChildContent>
+                <div class="qr">
+                    @if (_qrDataUri is not null)
+                    {
+                        <img src="@_qrDataUri" alt="QR code linking to the donation page for @Format.EventTitle(ctx.Event.Title)" />
+                    }
+                    else
+                    {
+                        <Alert Message="We couldn't create the QR code. Copy the link instead." />
+                    }
+                    <p class="muted">Scanning opens @DonateUrl</p>
+                </div>
+            </ChildContent>
+            <Footer>
+                <Button Variant="ghost" OnClick="() => _qrOpen = false">Close</Button>
+                @if (_qrDataUri is not null)
+                {
+                    <a class="btn btn--secondary" href="@_qrDataUri" download="@($"{QrFileStem(ctx.Event)}_QR.png")">
+                        <Icon Name="download" Size="16" />Download PNG
+                    </a>
+                }
+            </Footer>
+        </Dialog>
+
+        <ConfirmDialog Open="_confirmClose" Title="Close this event?" Danger="true" ConfirmText="Close event"
+                       Message="Donors will no longer be able to give. This can't be undone from the portal."
+                       Busy="_closing" Error="@_closeError"
+                       OnConfirm="() => CloseEventAsync(ctx)" OnCancel="CancelClose" />
+    </ChildContent>
+</EventPage>
+
+@code {
+    private DonationSummaryViewModel? _summary;
+    private string? _summaryError;
+    private bool _summaryLoading = true;
+    private Guid _loadedId;
+
+    private bool _qrOpen;
+    private string? _qrDataUri;
+    private string? _qrForUrl;
+
+    private bool _confirmClose;
+    private bool _closing;
+    private string? _closeError;
+
+    [Parameter] public Guid EventId { get; set; }
+
+    private string DonateUrl => $"{Navigation.BaseUri}donate/{EventId}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId != EventId)
+        {
+            _loadedId = EventId;
+            _summary = null;
+            _qrDataUri = null;
+            _qrForUrl = null;
+            await LoadSummaryAsync();
+        }
+    }
+
+    private async Task LoadSummaryAsync()
+    {
+        _summaryLoading = true;
+        _summaryError = null;
+        var result = await Events.GetSummaryAsync(EventId);
+        if (result.Failed)
+        {
+            _summaryError = result.Message;
+        }
+        else
+        {
+            _summary = result.Value;
+        }
+        _summaryLoading = false;
+    }
+
+    private async Task CopyLinkAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", DonateUrl);
+            Toasts.Success("Link copied");
+        }
+        catch (Exception)
+        {
+            Toasts.Error("We couldn't copy the link. Select it and copy it yourself.");
+        }
+    }
+
+    private void ShowQr()
+    {
+        if (_qrForUrl != DonateUrl)
+        {
+            try
+            {
+                _qrDataUri = QrCodes.CreateDonationQrDataUri(DonateUrl);
+            }
+            catch (Exception)
+            {
+                _qrDataUri = null;
+            }
+            _qrForUrl = DonateUrl;
+        }
+        _qrOpen = true;
+    }
+
+    private void OpenCloseConfirm()
+    {
+        _closeError = null;
+        _confirmClose = true;
+    }
+
+    private void CancelClose()
+    {
+        if (_closing) return;
+        _confirmClose = false;
+        _closeError = null;
+    }
+
+    private async Task CloseEventAsync(EventPageContext ctx)
+    {
+        _closing = true;
+        _closeError = null;
+        var result = await Events.DeactivateAsync(EventId);
+        _closing = false;
+
+        if (result.Failed)
+        {
+            _closeError = result.Message;
+            return;
+        }
+
+        _confirmClose = false;
+        Toasts.Success("Event closed");
+        await ctx.ReloadAsync();
+    }
+
+    private static string DonationCountText(int count) => count == 1 ? "1 donation" : $"{count:N0} donations";
+
+    private static string? OrganiserName(EventViewModel e) =>
+        !string.IsNullOrWhiteSpace(e.Organizer?.OrganizationName) ? e.Organizer.OrganizationName : e.Organizer?.FullName;
+
+    private static string OrDash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private static string QrFileStem(EventViewModel e) =>
+        string.IsNullOrWhiteSpace(e.EventCode) ? "Nsawa" : e.EventCode.Trim();
+}

@@ -1,0 +1,4 @@
+/* "Close event" is a ghost button in the danger colour. */
+.danger-ghost { display: contents; }
+.danger-ghost ::deep .btn--ghost { color: var(--danger); }
+.danger-ghost ::deep .btn--ghost:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }

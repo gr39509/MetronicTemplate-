@@ -1,0 +1,7 @@
+/* Form on the left, sticky summary with the submit button on the right; stacked on narrow screens. */
+.pos { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-5); align-items: start; }
+.pos__aside { position: sticky; top: var(--space-5); }
+@media (max-width: 900px) {
+    .pos { grid-template-columns: minmax(0, 1fr); }
+    .pos__aside { position: static; }
+}

@@ -1,0 +1,349 @@
+@page "/events/{EventId:guid}/donate"
+@inject DonationsService DonationsApi
+@inject LookupService Lookups
+@inject GroupsService Groups
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+
+<PageTitle>Receive donation · Nova Nsawa</PageTitle>
+
+<EventPage EventId="EventId" Tab="EventTab.Receive">
+    <ChildContent Context="ctx">
+        @if (!ctx.Event.Active)
+        {
+            <Card>
+                <EmptyState Icon="power" Title="This event is closed" Text="Closed events can't take new donations. You can still view the ones already recorded.">
+                    <Action><Button Variant="secondary" Href="@DonationsHref">View donations</Button></Action>
+                </EmptyState>
+            </Card>
+        }
+        else if (_loading)
+        {
+            <Card><LoadingState Text="Loading payment options…" /></Card>
+        }
+        else if (_loadError is not null)
+        {
+            <Card><ErrorState Title="We couldn't load payment options" Message="@_loadError" OnRetry="LoadAsync" /></Card>
+        }
+        else if (_paymentTypes.Count == 0)
+        {
+            <Card>
+                <EmptyState Icon="wallet" Title="No payment methods are set up" Text="Contact Nova Nsawa support to enable mobile money, cash or cheque for your account.">
+                    <Action><Button Variant="secondary" Href="@DonationsHref">Back to donations</Button></Action>
+                </EmptyState>
+            </Card>
+        }
+        else
+        {
+            <form class="pos" @onsubmit="SubmitAsync" novalidate>
+                <Card Title="Record a donation" Subtitle="For gifts received in person at the event.">
+                    <div class="form">
+                        <Alert Message="@_error" />
+
+                        <section class="form-section">
+                            <div class="field">
+                                <span class="field__label" id="pos-method-label">Payment method</span>
+                                <div class="chips" role="radiogroup" aria-labelledby="pos-method-label">
+                                    @foreach (var pt in _paymentTypes)
+                                    {
+                                        var selected = _method?.Id == pt.Id;
+                                        <label class="chip @(selected ? "selected" : "")">
+                                            <input type="radio" name="pos-method" value="@pt.Id" checked="@selected" @onchange="() => SelectMethod(pt)" />
+                                            @pt.Name
+                                        </label>
+                                    }
+                                </div>
+                                @if (_errors.Has("method")) { <span class="field__error" role="alert">@_errors["method"]</span> }
+                            </div>
+
+                            @if (_method?.IsMoMo == true)
+                            {
+                                <div class="field">
+                                    <span class="field__label" id="pos-network-label">Mobile network</span>
+                                    <div class="chips" role="radiogroup" aria-labelledby="pos-network-label">
+                                        @foreach (var n in _networks)
+                                        {
+                                            var selected = _networkId == n.Id;
+                                            <label class="chip @(selected ? "selected" : "")">
+                                                <input type="radio" name="pos-network" value="@n.Id" checked="@selected" @onchange="() => SelectNetwork(n.Id)" />
+                                                @Format.Network(n.Id)
+                                            </label>
+                                        }
+                                    </div>
+                                    @if (_errors.Has("network")) { <span class="field__error" role="alert">@_errors["network"]</span> }
+                                    else { <span class="field__hint">The donor gets a prompt on this network to approve the payment.</span> }
+                                </div>
+                            }
+                        </section>
+
+                        <section class="form-section">
+                            <div class="field">
+                                <span class="field__label" id="pos-amount-label">Amount</span>
+                                <div class="amounts" role="group" aria-labelledby="pos-amount-label">
+                                    @foreach (var value in QuickAmounts)
+                                    {
+                                        <button type="button" class="amount @(_amount == value ? "selected" : "")" aria-pressed="@(_amount == value ? "true" : "false")"
+                                                @onclick="() => SetAmount(value)">
+                                            @value
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                            <Field Label="Or enter an amount" For="pos-amount" Error="@_errors["amount"]">
+                                <div class="input-group @(_errors.Has("amount") ? "invalid" : "")">
+                                    <span class="input-group__addon">GHS</span>
+                                    <input id="pos-amount" class="input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"
+                                           @bind="_amount" @bind:event="oninput" />
+                                </div>
+                            </Field>
+                        </section>
+
+                        <section class="form-section">
+                            <h3 class="form-section__title">Donor</h3>
+                            <div class="form-grid">
+                                <Field Label="Donor phone number" For="pos-phone" Error="@_errors["phone"]" Hint="10 digits, e.g. 0241234567">
+                                    <input id="pos-phone" class="input @(_errors.Has("phone") ? "invalid" : "")" type="tel" inputmode="numeric"
+                                           autocomplete="off" maxlength="10" placeholder="0241234567"
+                                           @bind="_phone" @bind:event="oninput" />
+                                </Field>
+                                <Field Label="Donor name" For="pos-name" Optional="true" Hint="Leave empty if the donor prefers not to be named.">
+                                    <input id="pos-name" class="input" type="text" autocomplete="off" maxlength="150"
+                                           @bind="_name" @bind:event="oninput" />
+                                </Field>
+                                @if (_groups.Count > 0)
+                                {
+                                    <Field Label="Group" For="pos-group" Optional="true" Class="span-2" Hint="Count this gift towards a circle, e.g. Family or Church.">
+                                        <select id="pos-group" class="select" @bind="_groupId">
+                                            <option value="">No group</option>
+                                            @foreach (var g in _groups)
+                                            {
+                                                <option value="@g.Id">@g.GroupName</option>
+                                            }
+                                        </select>
+                                    </Field>
+                                }
+                            </div>
+                        </section>
+
+                        @if (_method is not null && !_method.IsMoMo)
+                        {
+                            <section class="form-section">
+                                <h3 class="form-section__title">Payment record</h3>
+                                <div class="form-grid">
+                                    @if (_method.IsCheque)
+                                    {
+                                        <Field Label="Cheque number" For="pos-cheque" Error="@_errors["cheque"]">
+                                            <input id="pos-cheque" class="input @(_errors.Has("cheque") ? "invalid" : "")" type="text" autocomplete="off" maxlength="50"
+                                                   @bind="_chequeNumber" @bind:event="oninput" />
+                                        </Field>
+                                    }
+                                    <Field Label="Receipt or transaction reference" For="pos-reference" Optional="true"
+                                           Hint="We create one for you if you leave this empty.">
+                                        <input id="pos-reference" class="input" type="text" autocomplete="off" maxlength="100"
+                                               @bind="_reference" @bind:event="oninput" />
+                                    </Field>
+                                </div>
+                            </section>
+                        }
+
+                        <section class="form-section">
+                            <Field Label="Message" For="pos-message" Optional="true" Error="@_errors["message"]"
+                                   Hint="@($"{(_message?.Length ?? 0)} / {MessageLimit} characters")">
+                                <textarea id="pos-message" class="textarea @(_errors.Has("message") ? "invalid" : "")" maxlength="@MessageLimit"
+                                          placeholder="A note from the donor, e.g. condolences to the family" @bind="_message" @bind:event="oninput"></textarea>
+                            </Field>
+                        </section>
+                    </div>
+                </Card>
+
+                <div class="pos__aside">
+                    <Card Title="Summary">
+                        <div class="stack">
+                            <div>
+                                <div class="summary-line"><span>Amount</span><strong>@(_amount > 0 ? Format.Cedis(_amount.Value) : "—")</strong></div>
+                                <div class="summary-line"><span>Method</span><strong>@MethodLabel</strong></div>
+                                <div class="summary-line"><span>Donor</span><strong>@(string.IsNullOrWhiteSpace(_name) ? "Anonymous" : _name.Trim())</strong></div>
+                                @if (_groups.Count > 0)
+                                {
+                                    <div class="summary-line"><span>Group</span><strong>@GroupLabel</strong></div>
+                                }
+                            </div>
+                            <Button Type="submit" Size="lg" Block="true" Loading="_busy" Icon="@(_method?.IsMoMo == true ? "smartphone" : "check")">@SubmitText</Button>
+                            <Button Variant="ghost" Block="true" Href="@DonationsHref">Cancel</Button>
+                        </div>
+                    </Card>
+                </div>
+            </form>
+        }
+
+        <Dialog Open="_payUrl is not null" Title="Approve the payment" Subtitle="The donor will get a prompt on their phone."
+                OnClose="() => _payUrl = null">
+            <ChildContent>
+                <p class="muted">Ask the donor to approve the mobile money prompt. If the payment page doesn't open by itself, continue below.</p>
+            </ChildContent>
+            <Footer>
+                <Button Variant="ghost" Href="@DonationsHref">Back to donations</Button>
+                <Button Icon="external" OnClick="ContinueToPayment">Continue to payment</Button>
+            </Footer>
+        </Dialog>
+    </ChildContent>
+</EventPage>
+
+@code {
+    private const int MessageLimit = 500;
+    private static readonly int[] QuickAmounts = [20, 50, 100, 200, 500];
+
+    private readonly FormErrors _errors = new();
+    private IReadOnlyList<PaymentTypeViewModel> _paymentTypes = [];
+    private IReadOnlyList<NetworkType> _networks = [];
+    private IReadOnlyList<EventGroupViewModel> _groups = [];
+    private bool _loading = true;
+    private string? _loadError;
+    private Guid _loadedId;
+
+    private PaymentTypeViewModel? _method;
+    private string? _networkId;
+    private double? _amount;
+    private string? _phone, _name, _chequeNumber, _reference, _message;
+    private string _groupId = string.Empty;
+
+    private bool _busy;
+    private string? _error;
+    private string? _payUrl;
+
+    [Parameter] public Guid EventId { get; set; }
+
+    private string DonationsHref => $"/events/{EventId}/donations";
+
+    private string MethodLabel => _method switch
+    {
+        null => "—",
+        { IsMoMo: true } when _networkId is not null => Format.Network(_networkId),
+        _ => _method.Name
+    };
+
+    private string GroupLabel =>
+        _groups.FirstOrDefault(g => g.Id.ToString() == _groupId)?.GroupName ?? "No group";
+
+    private string SubmitText
+    {
+        get
+        {
+            var amount = _amount > 0 ? Format.Cedis(_amount.Value) : null;
+            if (_method?.IsMoMo == true) return amount is null ? "Send payment prompt" : $"Request {amount}";
+            return amount is null ? "Record donation" : $"Record {amount}";
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId == EventId) return;
+        _loadedId = EventId;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadError = null;
+
+        var typesTask = Lookups.PaymentTypesAsync();
+        var networksTask = Lookups.NetworksAsync();
+        var groupsTask = Groups.ListAsync(EventId);
+        await Task.WhenAll(typesTask, networksTask, groupsTask);
+
+        if (typesTask.Result.Failed)
+        {
+            _loadError = typesTask.Result.Message;
+        }
+        else if (networksTask.Result.Failed)
+        {
+            _loadError = networksTask.Result.Message;
+        }
+        else
+        {
+            _paymentTypes = typesTask.Result.Value ?? [];
+            _networks = networksTask.Result.Value ?? [];
+            // Groups are optional; if they fail to load the donation is simply recorded without one.
+            _groups = (groupsTask.Result.Value ?? []).Where(g => g.IsActive).ToList();
+            _method ??= _paymentTypes.FirstOrDefault();
+        }
+
+        _loading = false;
+    }
+
+    private void SelectMethod(PaymentTypeViewModel type)
+    {
+        _method = type;
+        _errors.Clear("method");
+        if (!type.IsMoMo) _networkId = null;
+    }
+
+    private void SelectNetwork(string id)
+    {
+        _networkId = id;
+        _errors.Clear("network");
+    }
+
+    private void SetAmount(int value)
+    {
+        _amount = value;
+        _errors.Clear("amount");
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_busy) return;
+        _error = null;
+        _errors.Clear();
+        _phone = Format.DigitsOnly(_phone);
+
+        _errors.Check(_method is null, "method", "Choose how the donor is paying.")
+               .Check(_method?.IsMoMo == true && string.IsNullOrEmpty(_networkId), "network", "Choose the donor's mobile network.")
+               .Check(_amount is null || _amount <= 0, "amount", "Enter an amount greater than 0.")
+               .Check(string.IsNullOrEmpty(_phone), "phone", "Enter the donor's phone number.")
+               .Check(!Format.IsLocalPhone(_phone), "phone", "Enter a 10-digit Ghana number, e.g. 0241234567.")
+               .Check(_method?.IsCheque == true && string.IsNullOrWhiteSpace(_chequeNumber), "cheque", "Enter the cheque number.")
+               .Check((_message?.Length ?? 0) > MessageLimit, "message", $"Keep the message under {MessageLimit} characters.");
+        if (_errors.Any) return;
+
+        var method = _method!;
+        _busy = true;
+        var result = await DonationsApi.ReceiveAsync(new DonationViaPOSDto
+        {
+            PaymentTypeId = method.Id,
+            EventId = EventId,
+            PhoneNumber = _phone,
+            FullName = _name?.Trim() ?? string.Empty,
+            Amount = Math.Round(_amount!.Value, 2),
+            Network = method.IsMoMo ? _networkId! : string.Empty,
+            Message = _message?.Trim() ?? string.Empty,
+            Anonymous = false,
+            ChequeNumber = method.IsCheque ? _chequeNumber!.Trim() : string.Empty,
+            TransactionId = string.IsNullOrWhiteSpace(_reference) || method.IsMoMo ? Guid.NewGuid().ToString() : _reference.Trim(),
+            GroupId = Guid.TryParse(_groupId, out var groupId) ? groupId : null
+        });
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.Value?.PayUrl))
+        {
+            _payUrl = result.Value.PayUrl;
+            ContinueToPayment();
+            return;
+        }
+
+        Toasts.Success("Donation recorded");
+        Navigation.NavigateTo(DonationsHref);
+    }
+
+    private void ContinueToPayment()
+    {
+        if (_payUrl is not null) Navigation.NavigateTo(_payUrl, forceLoad: true);
+    }
+}

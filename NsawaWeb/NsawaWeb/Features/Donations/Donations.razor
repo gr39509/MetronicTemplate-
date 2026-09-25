@@ -1,0 +1,313 @@
+@page "/events/{EventId:guid}/donations"
+@inject EventsService Events
+@inject DonationsService DonationsApi
+@inject LookupService Lookups
+
+<PageTitle>Donations · Nova Nsawa</PageTitle>
+
+<EventPage EventId="EventId" Tab="EventTab.Donations">
+    <HeaderActions Context="ctx">
+        @if (ctx.Access.CanReceiveDonations && ctx.Event.Active)
+        {
+            <Button Icon="arrow-in" Href="@($"/events/{EventId}/donate")">Receive donation</Button>
+        }
+    </HeaderActions>
+    <ChildContent Context="ctx">
+        <div class="stack stack--lg">
+            @if (_summaryError is not null)
+            {
+                <Alert Kind="warning" Title="We couldn't load the totals" Message="@_summaryError">
+                    <div><Button Variant="secondary" Size="sm" Icon="refresh" OnClick="LoadSummaryAsync">Try again</Button></div>
+                </Alert>
+            }
+            else
+            {
+                <div class="stats">
+                    <StatCard Label="Total donations" Amount="_summary?.TotalDonations" Loading="_summaryLoading"
+                              Hint="@(_summary is null ? null : CountText(_summary.DonationsCount))" />
+                    <StatCard Label="Withdrawable" Amount="_summary?.WithdrawableBalance" Loading="_summaryLoading" Highlight="true" />
+                    <StatCard Label="Withdrawn" Amount="_summary?.TotalWithdrawals" Loading="_summaryLoading" />
+                    <StatCard Label="Service fee" Amount="_summary?.ServiceFee" Loading="_summaryLoading" />
+                </div>
+                <div class="stats">
+                    <StatCard Label="Mobile money" Amount="_summary?.MobileWalletDonations" Loading="_summaryLoading" />
+                    <StatCard Label="Cash" Amount="_summary?.CashDonations" Loading="_summaryLoading" />
+                    <StatCard Label="Cheque" Amount="_summary?.ChequeDonations" Loading="_summaryLoading" />
+                </div>
+            }
+
+            <Card Flush="true" Title="Donations" Subtitle="@ListSubtitle" Footer="@(PageCount > 1 ? Pager : null)">
+                <HeaderActions>
+                    @if (_rows is { Count: > 0 })
+                    {
+                        <Button Variant="secondary" Size="sm" Icon="download" Href="@_csvHref" download="donations.csv">Export CSV</Button>
+                    }
+                </HeaderActions>
+                <ChildContent>
+                    <form class="filters" @onsubmit="ApplyAsync" novalidate>
+                        <Field Label="From" For="donations-from" Error="@_errors["from"]">
+                            <input id="donations-from" class="input @(_errors.Has("from") ? "invalid" : "")" type="date" @bind="_from" />
+                        </Field>
+                        <Field Label="To" For="donations-to" Error="@_errors["to"]">
+                            <input id="donations-to" class="input @(_errors.Has("to") ? "invalid" : "")" type="date" @bind="_to" />
+                        </Field>
+                        <Field Label="Payment type" For="donations-type">
+                            <select id="donations-type" class="select" @bind="_paymentType">
+                                <option value="">All payment types</option>
+                                @foreach (var pt in _paymentTypes)
+                                {
+                                    <option value="@pt.Name">@pt.Name</option>
+                                }
+                            </select>
+                        </Field>
+                        <div class="filters__actions">
+                            <Button Type="submit" Size="sm" Loading="_listLoading">Apply</Button>
+                            <Button Variant="ghost" Size="sm" Disabled="_listLoading" OnClick="ResetAsync">Clear filters</Button>
+                        </div>
+                    </form>
+
+                    @if (_listLoading && _rows is null)
+                    {
+                        <TableSkeleton Rows="6" Columns="6" />
+                    }
+                    else if (_listError is not null)
+                    {
+                        <ErrorState Title="We couldn't load donations" Message="@_listError" OnRetry="LoadListAsync" />
+                    }
+                    else if (_rows is { Count: 0 })
+                    {
+                        @if (IsFiltered)
+                        {
+                            <EmptyState Icon="search" Title="No donations match these filters" Text="Try a wider date range or a different payment type.">
+                                <Action><Button Variant="secondary" OnClick="ResetAsync">Clear filters</Button></Action>
+                            </EmptyState>
+                        }
+                        else
+                        {
+                            <EmptyState Icon="heart" Title="No donations yet"
+                                        Text="Share the donation link from the Overview tab, or record a gift received in person.">
+                                <Action>
+                                    @if (ctx.Access.CanReceiveDonations && ctx.Event.Active)
+                                    {
+                                        <Button Icon="arrow-in" Href="@($"/events/{EventId}/donate")">Receive donation</Button>
+                                    }
+                                </Action>
+                            </EmptyState>
+                        }
+                    }
+                    else if (_rows is not null)
+                    {
+                        <div class="table-wrap collapse-mobile">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Donor</th>
+                                        <th>Payment type</th>
+                                        <th>Group</th>
+                                        <th>Source</th>
+                                        <th class="num">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var d in PageRows)
+                                    {
+                                        <tr class="is-clickable" tabindex="0" @onclick="() => _selected = d" @onkeydown="e => OnRowKey(e, d)"
+                                            aria-label="@($"View donation of {Format.Cedis(d.Amount)} from {DonationDisplay.DonorName(d)}")">
+                                            <td>@Format.DateTime(d.DateDonated)</td>
+                                            <td>
+                                                <span class="cell-strong">@DonationDisplay.DonorName(d)</span>
+                                                @if (!string.IsNullOrWhiteSpace(d.DonorPhoneNumber))
+                                                {
+                                                    <span class="cell-sub">@d.DonorPhoneNumber</span>
+                                                }
+                                            </td>
+                                            <td>@PaymentBadge(d)</td>
+                                            <td>@(d.Group?.GroupName ?? "—")</td>
+                                            <td>@DonationDisplay.Source(d)</td>
+                                            <td class="num cell-strong">@Format.Cedis(d.Amount)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="5" class="cell-strong">Total (@CountText(_rows.Count))</td>
+                                        <td class="num cell-strong">@Format.Cedis(_total)</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="list-cards">
+                            @foreach (var d in PageRows)
+                            {
+                                <div class="list-card is-clickable" role="button" tabindex="0" @onclick="() => _selected = d" @onkeydown="e => OnRowKey(e, d)">
+                                    <div class="list-card__row">
+                                        <span class="cell-strong">@DonationDisplay.DonorName(d)</span>
+                                        <span class="num cell-strong">@Format.Cedis(d.Amount)</span>
+                                    </div>
+                                    <div class="list-card__row">
+                                        <span class="muted">@Format.DateTime(d.DateDonated)</span>
+                                        @PaymentBadge(d)
+                                    </div>
+                                </div>
+                            }
+                            <div class="list-card">
+                                <div class="list-card__row">
+                                    <span class="cell-strong">Total (@CountText(_rows.Count))</span>
+                                    <span class="num cell-strong">@Format.Cedis(_total)</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </ChildContent>
+            </Card>
+        </div>
+
+        <DonationDetailDialog Donation="_selected" BadgeKind="@DonationDisplay.BadgeKind(_selected?.PaymentType, _paymentTypes)"
+                              OnClose="() => _selected = null" />
+    </ChildContent>
+</EventPage>
+
+@code {
+    private const int PageSize = 25;
+
+    private readonly FormErrors _errors = new();
+    private DonationSummaryViewModel? _summary;
+    private string? _summaryError;
+    private bool _summaryLoading = true;
+
+    private IReadOnlyList<PaymentTypeViewModel> _paymentTypes = [];
+    private IReadOnlyList<DonationViewModel>? _rows;
+    private string? _listError;
+    private bool _listLoading = true;
+    private double _total;
+    private string _csvHref = string.Empty;
+    private int _page;
+    private DonationViewModel? _selected;
+
+    private DateTime? _from = DateTime.Today.AddDays(-30);
+    private DateTime? _to = DateTime.Today;
+    private string _paymentType = string.Empty;
+
+    // Filters the current rows were loaded with, so labels match the data rather than unsaved edits.
+    private DateTime? _appliedFrom, _appliedTo;
+    private string _appliedType = string.Empty;
+
+    private Guid _loadedId;
+
+    [Parameter] public Guid EventId { get; set; }
+
+    private IEnumerable<DonationViewModel> PageRows => (_rows ?? []).Skip(_page * PageSize).Take(PageSize);
+    private int PageCount => _rows is null ? 0 : (int)Math.Ceiling(_rows.Count / (double)PageSize);
+    private bool IsFiltered => _appliedFrom is not null || _appliedTo is not null || _appliedType.Length > 0;
+
+    private string ListSubtitle
+    {
+        get
+        {
+            var period = (_appliedFrom, _appliedTo) switch
+            {
+                (null, null) => "All time",
+                ({ } f, null) => $"From {Format.Date(f)}",
+                (null, { } t) => $"Up to {Format.Date(t)}",
+                ({ } f, { } t) => Format.DateRange(f, t)
+            };
+            return _appliedType.Length > 0 ? $"{period} · {_appliedType}" : period;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId == EventId) return;
+        _loadedId = EventId;
+        _rows = null;
+        _summary = null;
+
+        var types = Lookups.PaymentTypesAsync();
+        var summary = LoadSummaryAsync();
+        var list = LoadListAsync();
+        await Task.WhenAll(types, summary, list);
+        // Payment types only drive the filter and badge colours; the page works without them.
+        _paymentTypes = types.Result.Value ?? [];
+    }
+
+    private async Task LoadSummaryAsync()
+    {
+        _summaryLoading = true;
+        _summaryError = null;
+        var result = await Events.GetSummaryAsync(EventId);
+        if (result.Failed) _summaryError = result.Message;
+        else _summary = result.Value;
+        _summaryLoading = false;
+    }
+
+    private async Task LoadListAsync()
+    {
+        _listLoading = true;
+        _listError = null;
+        _appliedFrom = _from;
+        _appliedTo = _to;
+        _appliedType = _paymentType;
+
+        var result = await DonationsApi.ListAsync(EventId, _from, _to, _paymentType);
+        if (result.Failed)
+        {
+            _listError = result.Message;
+            _rows = null;
+        }
+        else
+        {
+            _rows = result.Value ?? [];
+            _total = _rows.Sum(d => d.Amount);
+            _csvHref = "data:text/csv;charset=utf-8," + Uri.EscapeDataString("﻿" + DonationDisplay.ToCsv(_rows));
+            _page = 0;
+        }
+        _listLoading = false;
+    }
+
+    private async Task ApplyAsync()
+    {
+        _errors.Clear();
+        _errors.Check(_from is not null && _to is not null && _from > _to, "to", "The end date must be on or after the start date.");
+        if (_errors.Any) return;
+        await LoadListAsync();
+    }
+
+    private async Task ResetAsync()
+    {
+        _errors.Clear();
+        _from = null;
+        _to = null;
+        _paymentType = string.Empty;
+        await LoadListAsync();
+    }
+
+    private void OnRowKey(KeyboardEventArgs e, DonationViewModel d)
+    {
+        if (e.Key is "Enter" or " ") _selected = d;
+    }
+
+    private RenderFragment PaymentBadge(DonationViewModel d) => __builder =>
+    {
+        if (string.IsNullOrWhiteSpace(d.PaymentType))
+        {
+            <span class="muted">—</span>
+        }
+        else
+        {
+            <Badge Kind="@DonationDisplay.BadgeKind(d.PaymentType, _paymentTypes)">@d.PaymentType</Badge>
+        }
+    };
+
+    private RenderFragment Pager => __builder =>
+    {
+        <span class="muted" style="margin-right:auto;align-self:center;font-size:var(--text-sm)">
+            Showing @(_page * PageSize + 1)–@(Math.Min((_page + 1) * PageSize, _rows!.Count)) of @_rows.Count
+        </span>
+        <Button Variant="secondary" Size="sm" Icon="chevron-left" Disabled="_page == 0" OnClick="() => _page--">Previous</Button>
+        <Button Variant="secondary" Size="sm" Disabled="_page >= PageCount - 1" OnClick="() => _page++">Next</Button>
+    };
+
+    private static string CountText(int count) => count == 1 ? "1 donation" : $"{count:N0} donations";
+}
