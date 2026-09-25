@@ -1,0 +1,121 @@
+@page "/my-events"
+@inject EventsService Events
+
+<PageTitle>My events · Nova Nsawa</PageTitle>
+
+<div class="stack stack--lg">
+    <PageHeader Title="My events" Subtitle="Events you organise. Open one to see donations, withdraw funds or share the donation link.">
+        <Actions>
+            <Button Icon="plus" Href="/create-event">Create event</Button>
+        </Actions>
+    </PageHeader>
+
+    <Card Flush="true">
+        @if (_error is not null)
+        {
+            <ErrorState Message="@_error" OnRetry="LoadAsync" />
+        }
+        else
+        {
+            <div class="filters">
+                <div class="segmented" role="group" aria-label="Show events">
+                    @foreach (var option in Enum.GetValues<StatusFilter>())
+                    {
+                        <button type="button" class="@(_status == option ? "active" : "")" aria-pressed="@(_status == option ? "true" : "false")"
+                                @onclick="() => _status = option">@option</button>
+                    }
+                </div>
+                <div class="search">
+                    <Icon Name="search" Size="16" />
+                    <input class="input" type="search" placeholder="Search title, code or location" aria-label="Search events"
+                           @bind="_query" @bind:event="oninput" />
+                </div>
+            </div>
+
+            @if (_loading)
+            {
+                <TableSkeleton Rows="5" Columns="5" />
+            }
+            else if (_events.Count == 0)
+            {
+                <EmptyState Icon="calendar" Title="You haven't created any events yet"
+                            Text="Create an event to get a donation link and QR code you can share with donors.">
+                    <Action>
+                        <Button Icon="plus" Href="/create-event">Create your first event</Button>
+                    </Action>
+                </EmptyState>
+            }
+            else if (Filtered.Count == 0)
+            {
+                <EmptyState Icon="search" Title="No events match" Text="@NoResultsText">
+                    <Action>
+                        <Button Variant="secondary" OnClick="ClearFilters">Show all events</Button>
+                    </Action>
+                </EmptyState>
+            }
+            else
+            {
+                <EventsTable Events="Filtered" />
+            }
+        }
+    </Card>
+</div>
+
+@code {
+    private enum StatusFilter { Active, Closed, All }
+
+    private IReadOnlyList<EventViewModel> _events = [];
+    private StatusFilter _status = StatusFilter.Active;
+    private string? _query;
+    private string? _error;
+    private bool _loading = true;
+
+    private IReadOnlyList<EventViewModel> Filtered
+    {
+        get
+        {
+            var q = _query?.Trim();
+            return _events
+                .Where(e => _status switch
+                {
+                    StatusFilter.Active => e.Active,
+                    StatusFilter.Closed => !e.Active,
+                    _ => true
+                })
+                .Where(e => string.IsNullOrEmpty(q)
+                            || Contains(e.Title, q) || Contains(e.EventCode, q) || Contains(e.Location, q))
+                .ToList();
+        }
+    }
+
+    private string NoResultsText => string.IsNullOrWhiteSpace(_query)
+        ? $"You have no {_status.ToString().ToLowerInvariant()} events."
+        : $"Nothing matches “{_query.Trim()}”. Check the spelling or try the event code.";
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        var result = await Events.GetMyEventsAsync();
+        if (result.Failed)
+        {
+            _error = result.Message;
+        }
+        else
+        {
+            _events = result.Value ?? [];
+        }
+        _loading = false;
+    }
+
+    private void ClearFilters()
+    {
+        _query = null;
+        _status = StatusFilter.All;
+    }
+
+    private static bool Contains(string? value, string query) =>
+        value?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
+}

@@ -1,0 +1,13 @@
+@* Small square banner for an event, or its initials when there is no banner. *@
+@if (!string.IsNullOrWhiteSpace(Event.Banner))
+{
+    <img class="event-thumb" src="@Format.BannerUrl(Event.Banner)" alt="" loading="lazy" />
+}
+else
+{
+    <span class="event-thumb" aria-hidden="true">@Format.Initials(Format.EventTitle(Event.Title))</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public EventViewModel Event { get; set; } = default!;
+}

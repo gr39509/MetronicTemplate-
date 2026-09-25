@@ -1,0 +1,2 @@
+.list-card { color: var(--ink); }
+.list-card:hover { text-decoration: none; background: var(--surface-muted); }

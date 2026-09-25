@@ -1,0 +1,201 @@
+@* Event details form shared by Create event and Edit event. The parent does the saving. *@
+@inject LookupService Lookups
+
+<Card>
+    <form class="form" @onsubmit="Submit" novalidate>
+        <section class="form-section">
+            <h2 class="form-section__title">Details</h2>
+            <div class="form-grid">
+                <Field Class="span-2" Label="Event title" For="event-title" Error="@_errors["title"]"
+                       Hint="Donors see this on the donation page, e.g. Celebration of life: Madam Akosua Mensah">
+                    <input id="event-title" class="input @Invalid("title")" maxlength="200"
+                           @bind="Model.Title" @bind:event="oninput" />
+                </Field>
+
+                <Field Label="Event type" For="event-type" Error="@(_errors["type"] ?? _typesError)">
+                    <select id="event-type" class="select @Invalid("type")" disabled="@(_eventTypes is null)"
+                            @bind="Model.EventTypeId">
+                        <option value="0">@(_eventTypes is null && _typesError is null ? "Loading…" : "Choose a type")</option>
+                        @foreach (var type in _eventTypes ?? [])
+                        {
+                            <option value="@type.Id">@type.Name</option>
+                        }
+                    </select>
+                    @if (_typesError is not null)
+                    {
+                        <Button Variant="ghost" Size="sm" Icon="refresh" OnClick="LoadEventTypesAsync">Try again</Button>
+                    }
+                </Field>
+
+                <Field Label="Location" For="event-location" Error="@_errors["location"]" Hint="Town or venue, e.g. Kumasi, Manhyia">
+                    <input id="event-location" class="input @Invalid("location")" maxlength="200"
+                           @bind="Model.Location" @bind:event="oninput" />
+                </Field>
+
+                <Field Class="span-2" Label="Description" For="event-description" Error="@_errors["description"]"
+                       Hint="A few lines about the person and the event.">
+                    <textarea id="event-description" class="textarea @Invalid("description")" rows="4"
+                              @bind="Model.Description" @bind:event="oninput"></textarea>
+                </Field>
+
+                <Field Class="span-2" Label="RSVP contact" For="event-rsvp" Optional="true"
+                       Hint="Names and numbers people can call, e.g. Kofi 0241234567">
+                    <input id="event-rsvp" class="input" maxlength="300"
+                           @bind="Model.Rsvp" @bind:event="oninput" />
+                </Field>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <h2 class="form-section__title">Dates</h2>
+            <div class="form-grid">
+                <Field Label="Start date" For="event-start" Error="@_errors["start"]">
+                    <input id="event-start" class="input @Invalid("start")" type="date"
+                           @bind="Model.StartDate" @bind:format="yyyy-MM-dd" />
+                </Field>
+                <Field Label="End date" For="event-end" Error="@_errors["end"]">
+                    <input id="event-end" class="input @Invalid("end")" type="date" min="@Model.StartDate.ToString("yyyy-MM-dd")"
+                           @bind="Model.EndDate" @bind:format="yyyy-MM-dd" />
+                </Field>
+            </div>
+        </section>
+
+        <section class="form-section">
+            <h2 class="form-section__title">Banner</h2>
+            <p class="form-section__hint">Shown at the top of the donation page. A clear photo works best.</p>
+            <Field Label="Banner image" For="event-banner" Optional="!RequireBanner" Error="@_errors["banner"]"
+                   Hint="@(PreviewUrl is null ? "JPG or PNG, up to 10 MB." : "Choose another image to replace this one.")">
+                <div class="dropzone @Invalid("banner")">
+                    @if (PreviewUrl is not null)
+                    {
+                        <img class="dropzone__preview" src="@PreviewUrl" alt="Banner preview" />
+                        <span class="dropzone__overlay">@(_banner is null ? "Current banner · click to change" : $"{_banner.FileName} · click to change")</span>
+                    }
+                    else if (_readingBanner)
+                    {
+                        <span class="spinner" aria-hidden="true"></span>
+                        <span>Reading image…</span>
+                    }
+                    else
+                    {
+                        <Icon Name="image" Size="24" />
+                        <span><strong>Choose an image</strong> or drop it here</span>
+                        <span>JPG or PNG, up to 10 MB</span>
+                    }
+                    <InputFile id="event-banner" accept="image/*" OnChange="BannerSelected" disabled="@(Busy || _readingBanner)" />
+                </div>
+            </Field>
+        </section>
+
+        <section class="form-section">
+            <h2 class="form-section__title">Notifications</h2>
+            <Switch @bind-Value="Model.NotifyOrganizer" Label="Notify me about each donation"
+                    Description="Get an SMS each time someone gives." />
+            <Switch @bind-Value="Model.NotifyAffiliateOrganizers" Label="Notify affiliates about each donation"
+                    Description="People you add to help run this event also get an SMS." />
+        </section>
+
+        <div class="form-actions">
+            @if (OnCancel.HasDelegate)
+            {
+                <Button Variant="secondary" OnClick="OnCancel" Disabled="Busy">Cancel</Button>
+            }
+            <Button Type="submit" Loading="Busy" Disabled="_readingBanner">@SubmitText</Button>
+        </div>
+    </form>
+</Card>
+
+@code {
+    private const long MaxBannerBytes = 10 * 1024 * 1024;
+
+    private readonly FormErrors _errors = new();
+    private IReadOnlyList<EventTypeViewModel>? _eventTypes;
+    private string? _typesError;
+    private BannerUpload? _banner;
+    private string? _bannerPreview;
+    private bool _readingBanner;
+
+    [Parameter, EditorRequired] public EventInput Model { get; set; } = default!;
+    [Parameter] public string? CurrentBannerUrl { get; set; }
+    [Parameter] public bool RequireBanner { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string SubmitText { get; set; } = "Save";
+    [Parameter] public EventCallback<(EventInput, BannerUpload?)> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string? PreviewUrl => _bannerPreview ?? (string.IsNullOrWhiteSpace(CurrentBannerUrl) ? null : CurrentBannerUrl);
+
+    private string Invalid(string field) => _errors.Has(field) ? "invalid" : "";
+
+    protected override Task OnInitializedAsync() => LoadEventTypesAsync();
+
+    private async Task LoadEventTypesAsync()
+    {
+        _typesError = null;
+        var result = await Lookups.EventTypesAsync();
+        if (result.Failed)
+        {
+            _typesError = result.Message;
+            return;
+        }
+        _eventTypes = result.Value;
+    }
+
+    private async Task BannerSelected(InputFileChangeEventArgs e)
+    {
+        _errors.Clear("banner");
+        var file = e.File;
+
+        if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            _errors.Check(true, "banner", "Choose an image file, such as a JPG or PNG.");
+            return;
+        }
+        if (file.Size > MaxBannerBytes)
+        {
+            _errors.Check(true, "banner", "This image is larger than 10 MB. Choose a smaller one.");
+            return;
+        }
+
+        _readingBanner = true;
+        try
+        {
+            using var memory = new MemoryStream();
+            await using (var stream = file.OpenReadStream(maxAllowedSize: MaxBannerBytes))
+            {
+                await stream.CopyToAsync(memory);
+            }
+            var bytes = memory.ToArray();
+            _banner = new BannerUpload(bytes, file.Name, file.ContentType);
+            _bannerPreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}";
+        }
+        catch (Exception)
+        {
+            _banner = null;
+            _bannerPreview = null;
+            _errors.Check(true, "banner", "We couldn't read this image. Try again or choose another one.");
+        }
+        finally
+        {
+            _readingBanner = false;
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (Busy || _readingBanner) return;
+
+        _errors.Clear();
+        _errors.Check(string.IsNullOrWhiteSpace(Model.Title), "title", "Enter a title for the event.")
+               .Check(Model.EventTypeId <= 0, "type", "Choose the type of event.")
+               .Check(string.IsNullOrWhiteSpace(Model.Location), "location", "Enter where the event takes place.")
+               .Check(string.IsNullOrWhiteSpace(Model.Description), "description", "Add a short description for donors.")
+               .Check(Model.StartDate == default, "start", "Choose a start date.")
+               .Check(Model.EndDate == default, "end", "Choose an end date.")
+               .Check(Model.EndDate.Date < Model.StartDate.Date, "end", "The end date can't be before the start date.")
+               .Check(RequireBanner && _banner is null, "banner", "Add a banner image for the donation page.");
+        if (_errors.Any) return;
+
+        await OnSubmit.InvokeAsync((Model, _banner));
+    }
+}

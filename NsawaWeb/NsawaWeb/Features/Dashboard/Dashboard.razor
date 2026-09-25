@@ -1,0 +1,133 @@
+@page "/home"
+@inject EventsService Events
+@inject AuthService Auth
+
+<PageTitle>Dashboard · Nova Nsawa</PageTitle>
+
+<div class="stack stack--lg">
+    <PageHeader Eyebrow="@Format.Date(DateTimeOffset.UtcNow)" Title="@Greeting"
+                Subtitle="Here is how your events are doing.">
+        <Actions>
+            <Button Icon="plus" Href="/create-event">Create event</Button>
+        </Actions>
+    </PageHeader>
+
+    @if (_error is not null)
+    {
+        <Card><ErrorState Message="@_error" OnRetry="LoadAsync" /></Card>
+    }
+    else
+    {
+        <div class="stats">
+            <StatCard Label="Total donations" Amount="@(_loading ? null : TotalDonations)" Loading="_loading" />
+            <StatCard Label="Withdrawn" Amount="@(_loading ? null : TotalWithdrawn)" Loading="_loading" />
+            <StatCard Label="Active events" Value="@ActiveCount.ToString()" Loading="_loading"
+                      Hint="@(_loading ? null : $"of {_events.Count} in total")" />
+            <StatCard Label="Available" Amount="@(_loading ? null : TotalDonations - TotalWithdrawn)" Loading="_loading"
+                      Highlight="true" Hint="Estimate, before service fees" />
+        </div>
+
+        <Card Title="Recent events" Subtitle="Your latest events and what they have raised" Flush="true">
+            <HeaderActions>
+                @if (!_loading && _events.Count > 0)
+                {
+                    <Button Variant="ghost" Size="sm" Href="/my-events">View all events</Button>
+                }
+            </HeaderActions>
+            <ChildContent>
+                @if (_loading)
+                {
+                    <TableSkeleton Rows="4" Columns="5" />
+                }
+                else if (_events.Count == 0)
+                {
+                    <EmptyState Icon="calendar" Title="No events yet"
+                                Text="Create an event to get a donation link and QR code you can share with donors.">
+                        <Action>
+                            <Button Icon="plus" Href="/create-event">Create your first event</Button>
+                        </Action>
+                    </EmptyState>
+                }
+                else
+                {
+                    <EventsTable Events="Recent" />
+                }
+            </ChildContent>
+        </Card>
+
+        @if (_affiliateCount > 0)
+        {
+            <Card>
+                <div class="row row--between">
+                    <div class="row" style="gap:var(--space-3)">
+                        <Icon Name="handshake" Size="20" />
+                        <div>
+                            <p class="cell-strong">You help run @_affiliateCount @(_affiliateCount == 1 ? "event" : "events")</p>
+                            <span class="cell-sub">Events where an organiser added you as an affiliate.</span>
+                        </div>
+                    </div>
+                    <Button Variant="secondary" Size="sm" Href="/affiliate-events">See affiliate events</Button>
+                </div>
+            </Card>
+        }
+    }
+</div>
+
+@code {
+    private const int RecentCount = 8;
+
+    private IReadOnlyList<EventViewModel> _events = [];
+    private int _affiliateCount;
+    private string? _error;
+    private bool _loading = true;
+    private string? _name;
+
+    private double TotalDonations => _events.Sum(e => e.TotalDonations);
+    private double TotalWithdrawn => _events.Sum(e => e.TotalWithdrawals);
+    private int ActiveCount => _events.Count(e => e.Active);
+    private IReadOnlyList<EventViewModel> Recent => _events.Take(RecentCount).ToList();
+
+    private string Greeting
+    {
+        get
+        {
+            // Ghana is UTC+0, so UTC hours are local hours.
+            var hour = DateTime.UtcNow.Hour;
+            var part = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+            var first = _name?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            return first is null ? part : $"{part}, {first}";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _name = await Auth.GetDisplayNameAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        var mineTask = Events.GetMyEventsAsync();
+        var affiliateTask = Events.GetAffiliateEventsAsync();
+        await Task.WhenAll(mineTask, affiliateTask);
+
+        var mine = mineTask.Result;
+        if (mine.Failed)
+        {
+            _error = mine.Message;
+        }
+        else
+        {
+            _events = mine.Value ?? [];
+        }
+
+        // Affiliate events are a side note here; if they fail to load, just hide the card.
+        var affiliated = affiliateTask.Result;
+        _affiliateCount = affiliated.Succeeded ? affiliated.Value?.Count ?? 0 : 0;
+
+        _loading = false;
+    }
+}

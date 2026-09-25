@@ -1,0 +1,132 @@
+@page "/affiliate-events"
+@inject EventsService Events
+@inject NavigationManager Navigation
+
+<PageTitle>Affiliate events · Nova Nsawa</PageTitle>
+
+<div class="stack stack--lg">
+    <PageHeader Title="Affiliate events"
+                Subtitle="Events where an organiser added you to help, for example as a cashier. Your roles decide what you can do on each one." />
+
+    <Card Flush="true">
+        @if (_loading)
+        {
+            <TableSkeleton Rows="4" Columns="7" />
+        }
+        else if (_error is not null)
+        {
+            <ErrorState Message="@_error" OnRetry="LoadAsync" />
+        }
+        else if (_events.Count == 0)
+        {
+            <EmptyState Icon="handshake" Title="No one has added you to an event yet"
+                        Text="When an organiser adds you as an affiliate using your phone number, their event shows up here.">
+                <Action>
+                    <Button Variant="secondary" Href="/my-events">Go to my events</Button>
+                </Action>
+            </EmptyState>
+        }
+        else
+        {
+            <div class="table-wrap collapse-mobile">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Code</th>
+                            <th>Dates</th>
+                            <th>Organiser</th>
+                            <th>Your roles</th>
+                            <th class="num">Donations</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in _events)
+                        {
+                            <tr class="is-clickable" @onclick="() => Open(e)">
+                                <td>
+                                    <div class="event-cell">
+                                        <EventThumb Event="e" />
+                                        <div>
+                                            <a class="cell-strong" href="@Href(e)" @onclick:stopPropagation="true">@Format.EventTitle(e.Title)</a>
+                                            <span class="cell-sub">@EventsTable.Meta(e)</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@(string.IsNullOrWhiteSpace(e.EventCode) ? "—" : e.EventCode)</td>
+                                <td>@Format.DateRange(e.StartDate, e.EndDate)</td>
+                                <td>
+                                    <span class="cell-strong">@Organiser(e)</span>
+                                    @if (!string.IsNullOrWhiteSpace(e.Organizer?.PhoneNumber))
+                                    {
+                                        <span class="cell-sub">@e.Organizer.PhoneNumber</span>
+                                    }
+                                </td>
+                                <td><RoleBadges Roles="e.AffiliationRoles" /></td>
+                                <td class="num">@Format.Cedis(e.TotalDonations)</td>
+                                <td><EventStatus Active="e.Active" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="list-cards">
+                @foreach (var e in _events)
+                {
+                    <a class="list-card" href="@Href(e)">
+                        <div class="event-cell">
+                            <EventThumb Event="e" />
+                            <div>
+                                <span class="cell-strong">@Format.EventTitle(e.Title)</span>
+                                <span class="cell-sub">@Format.DateRange(e.StartDate, e.EndDate)</span>
+                            </div>
+                        </div>
+                        <div class="list-card__row"><span class="muted">Organiser</span><span>@Organiser(e)</span></div>
+                        <div class="list-card__row"><span class="muted">Your roles</span><RoleBadges Roles="e.AffiliationRoles" /></div>
+                        <div class="list-card__row"><span class="muted">Donations</span><span class="num">@Format.Cedis(e.TotalDonations)</span></div>
+                        <div class="list-card__row"><span class="muted">Status</span><EventStatus Active="e.Active" /></div>
+                    </a>
+                }
+            </div>
+        }
+    </Card>
+</div>
+
+@code {
+    private IReadOnlyList<EventViewModel> _events = [];
+    private string? _error;
+    private bool _loading = true;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        var result = await Events.GetAffiliateEventsAsync();
+        if (result.Failed)
+        {
+            _error = result.Message;
+        }
+        else
+        {
+            _events = result.Value ?? [];
+        }
+        _loading = false;
+    }
+
+    private static string Href(EventViewModel e) => $"/events/{e.Id}/donations";
+
+    private void Open(EventViewModel e) => Navigation.NavigateTo(Href(e));
+
+    private static string Organiser(EventViewModel e)
+    {
+        var o = e.Organizer;
+        if (o is null) return "—";
+        return !string.IsNullOrWhiteSpace(o.OrganizationName) ? o.OrganizationName
+             : !string.IsNullOrWhiteSpace(o.FullName) ? o.FullName
+             : "—";
+    }
+}

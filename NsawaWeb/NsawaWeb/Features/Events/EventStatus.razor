@@ -1,0 +1,13 @@
+@* Active / Closed badge for an event. *@
+@if (Active)
+{
+    <Badge Kind="success" Dot="true">Active</Badge>
+}
+else
+{
+    <Badge Dot="true">Closed</Badge>
+}
+
+@code {
+    [Parameter] public bool Active { get; set; }
+}

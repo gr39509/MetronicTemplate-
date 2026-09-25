@@ -1,0 +1,43 @@
+@page "/create-event"
+@inject EventsService Events
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+
+<PageTitle>Create event · Nova Nsawa</PageTitle>
+
+<div class="stack stack--lg">
+    <PageHeader Title="Create event" BackHref="/my-events" BackLabel="My events"
+                Subtitle="Set up the event and you'll get a donation link and QR code to share." />
+
+    <Alert Message="@_error" />
+
+    <EventForm Model="_model" RequireBanner="true" Busy="_busy" SubmitText="Create event"
+               OnSubmit="CreateAsync" OnCancel="Cancel" />
+</div>
+
+@code {
+    private readonly EventInput _model = new();
+    private string? _error;
+    private bool _busy;
+
+    private async Task CreateAsync((EventInput Input, BannerUpload? Banner) submission)
+    {
+        if (submission.Banner is null) return; // EventForm requires a banner on create.
+
+        _error = null;
+        _busy = true;
+        var result = await Events.CreateAsync(submission.Input, submission.Banner);
+        _busy = false;
+
+        if (result.Failed)
+        {
+            _error = result.Message;
+            return;
+        }
+
+        Toasts.Success("Event created");
+        Navigation.NavigateTo(result.Value is { } created ? $"/events/{created.Id}" : "/my-events");
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/my-events");
+}
