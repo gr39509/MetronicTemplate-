@@ -3,6 +3,8 @@
 @using Microsoft.Extensions.Options
 @inject AuthService Auth
 @inject IOptions<ContactOptions> ContactSettings
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>Nova Nsawa · Ghana's funeral donation platform</PageTitle>
 <HeadContent>
@@ -13,7 +15,7 @@
     <meta property="og:locale" content="en_GH" />
 </HeadContent>
 
-<div class="landing">
+<div class="landing" @ref="_root">
     <header class="nav">
         <div class="wrap nav__inner">
             <a class="nav__logo" href="/" aria-label="Nova Nsawa home"><img src="icons/Logo.jpg" alt="Nova Nsawa" width="170" height="29" /></a>
@@ -68,21 +70,21 @@
 
         <section class="values" aria-label="Why families choose Nova Nsawa">
             <div class="wrap values__grid">
-                <div class="value">
+                <div class="value" data-reveal style="--i:0">
                     <span class="value__icon"><Icon Name="receipt" /></span>
                     <div>
                         <h2>Comprehensive</h2>
                         <p>Track every donation with detailed reporting, so the family sees exactly what was given.</p>
                     </div>
                 </div>
-                <div class="value">
+                <div class="value" data-reveal style="--i:1">
                     <span class="value__icon"><Icon Name="clock" /></span>
                     <div>
                         <h2>Efficient</h2>
                         <p>Less time with notebooks and counting, more time for what matters during a difficult week.</p>
                     </div>
                 </div>
-                <div class="value">
+                <div class="value" data-reveal style="--i:2">
                     <span class="value__icon"><Icon Name="heart" /></span>
                     <div>
                         <h2>Worldwide</h2>
@@ -94,7 +96,7 @@
 
         <section class="section" aria-labelledby="about-title">
             <div class="wrap split">
-                <div class="split__copy">
+                <div class="split__copy" data-reveal>
                     <span class="eyebrow">About Nova Nsawa</span>
                     <h2 id="about-title">Simplify funeral donations with a platform built for Ghana</h2>
                     <p>
@@ -108,7 +110,7 @@
                         <li><Icon Name="check" Size="16" />A donation link and QR code for every event</li>
                     </ul>
                 </div>
-                <figure class="split__media">
+                <figure class="split__media" data-reveal style="--i:1">
                     <img src="images/landing/product.jpg" alt="The Nova Nsawa dashboard on a laptop and POS terminal, with cedi notes and payment cards" width="1200" height="591" loading="lazy" />
                 </figure>
             </div>
@@ -116,14 +118,14 @@
 
         <section class="section section--tint" id="packages" aria-labelledby="packages-title">
             <div class="wrap">
-                <div class="section__head section__head--center">
+                <div class="section__head section__head--center" data-reveal>
                     <span class="eyebrow">Packages</span>
                     <h2 id="packages-title">Choose how much help you want</h2>
                     <p>Run the collections yourselves, or let our team handle everything while you focus on the family.</p>
                 </div>
 
                 <div class="packages">
-                    <article class="package package--green">
+                    <article class="package package--green" data-reveal style="--i:0">
                         <header class="package__head">
                             <span class="package__badge">Nsawa Green</span>
                             <h3>Self-managed</h3>
@@ -143,7 +145,7 @@
                         <Button Href="/register" Block="true" Size="lg">Start with Green</Button>
                     </article>
 
-                    <article class="package package--red">
+                    <article class="package package--red" data-reveal style="--i:1">
                         <header class="package__head">
                             <span class="package__badge">Nsawa Red</span>
                             <h3>White-glove service</h3>
@@ -173,7 +175,7 @@
                     </article>
                 </div>
 
-                <div class="compare">
+                <div class="compare" data-reveal>
                     <div class="table-wrap">
                         <table class="compare__table">
                             <caption class="sr-only">What each package includes</caption>
@@ -209,41 +211,41 @@
 
         <section class="section" id="features" aria-labelledby="features-title">
             <div class="wrap">
-                <div class="section__head">
+                <div class="section__head" data-reveal>
                     <span class="eyebrow">Features</span>
                     <h2 id="features-title">Everything the funeral committee needs</h2>
                 </div>
                 <div class="features-layout">
-                    <figure class="features-layout__media">
+                    <figure class="features-layout__media" data-reveal>
                         <img src="images/landing/qr-funeral.jpg" alt="Mourners in red and black cloth seated at a funeral, beside a large donation QR code" width="1200" height="591" loading="lazy" />
                     </figure>
                     <div class="features">
-                        <article class="feature">
+                        <article class="feature" data-reveal style="--i:0">
                             <span class="feature__icon"><Icon Name="wallet" /></span>
                             <h3>Smart donation management</h3>
                             <p>Collect and track cash, mobile money and card donations in one list, with totals that update as gifts arrive.</p>
                         </article>
-                        <article class="feature">
+                        <article class="feature" data-reveal style="--i:1">
                             <span class="feature__icon"><Icon Name="qr" /></span>
                             <h3>Instant QR code donations</h3>
                             <p>Print the event's QR code on the programme or a banner. Sympathisers scan it and give from their phones.</p>
                         </article>
-                        <article class="feature">
+                        <article class="feature" data-reveal style="--i:2">
                             <span class="feature__icon"><Icon Name="calendar" /></span>
                             <h3>Complete event management</h3>
                             <p>Run several events, from the one-week observance to the thanksgiving service, each with its own records.</p>
                         </article>
-                        <article class="feature">
+                        <article class="feature" data-reveal style="--i:3">
                             <span class="feature__icon"><Icon Name="external" /></span>
                             <h3>Effortless sharing</h3>
                             <p>Share the donation link on WhatsApp, by SMS or on social media to reach family and friends anywhere.</p>
                         </article>
-                        <article class="feature">
+                        <article class="feature" data-reveal style="--i:4">
                             <span class="feature__icon"><Icon Name="users" /></span>
                             <h3>Groups and helpers</h3>
                             <p>Count gifts by circle, such as Family or Church, and add a Cashier to record donations at the gate.</p>
                         </article>
-                        <article class="feature">
+                        <article class="feature" data-reveal style="--i:5">
                             <span class="feature__icon"><Icon Name="smartphone" /></span>
                             <h3>Every network</h3>
                             <p>MTN MoMo, Telecel Cash and AT Money, plus Visa and Mastercard, with the cash recorded too.</p>
@@ -253,30 +255,30 @@
             </div>
         </section>
 
-        <section class="photo-band" aria-hidden="true">
+        <section class="photo-band" aria-hidden="true" data-reveal>
             <img src="images/landing/procession.jpg" alt="" width="900" height="599" loading="lazy" />
             <img src="images/landing/pos-at-funeral.jpg" alt="" width="1200" height="591" loading="lazy" />
         </section>
 
         <section class="section" id="how" aria-labelledby="how-title">
             <div class="wrap">
-                <div class="section__head">
+                <div class="section__head" data-reveal>
                     <span class="eyebrow">How it works</span>
                     <h2 id="how-title">Ready before the one-week observance</h2>
                     <p>Setting up takes a few minutes. You can share the link the same day.</p>
                 </div>
                 <ol class="steps-row">
-                    <li>
+                    <li data-reveal style="--i:0">
                         <span class="step-num">1</span>
                         <h3>Create the event</h3>
                         <p>Add the name, dates, venue and a photo. Nsawa gives the event its own code, donation link and QR code.</p>
                     </li>
-                    <li>
+                    <li data-reveal style="--i:1">
                         <span class="step-num">2</span>
                         <h3>Share the link or QR code</h3>
                         <p>Post the link on WhatsApp and print the QR code on the funeral programme or a banner at the venue.</p>
                     </li>
-                    <li>
+                    <li data-reveal style="--i:2">
                         <span class="step-num">3</span>
                         <h3>Receive and withdraw</h3>
                         <p>Donations appear as they happen. When you're ready, send the balance to a mobile money wallet you have verified.</p>
@@ -287,7 +289,7 @@
 
         <section class="section section--tint" id="donors" aria-labelledby="donors-title">
             <div class="wrap donors">
-                <div class="donors__copy">
+                <div class="donors__copy" data-reveal>
                     <span class="eyebrow">For donors</span>
                     <h2 id="donors-title">Giving takes under a minute</h2>
                     <p>Donors don't download an app or create an account. They open the link or scan the QR code and follow four short steps.</p>
@@ -298,7 +300,7 @@
                         <li><strong>Approve the payment</strong> on their phone.</li>
                     </ol>
                 </div>
-                <aside class="trust">
+                <aside class="trust" data-reveal style="--i:1">
                     <span class="trust__icon"><Icon Name="shield" Size="22" /></span>
                     <h3>Nsawa never asks for a PIN</h3>
                     <p>Donors approve every payment themselves on their own phone, through their mobile money provider. Nsawa never sees or stores a PIN.</p>
@@ -308,11 +310,11 @@
 
         <section class="section" id="faq" aria-labelledby="faq-title">
             <div class="wrap faq-wrap">
-                <div class="section__head">
+                <div class="section__head" data-reveal>
                     <span class="eyebrow">Questions</span>
                     <h2 id="faq-title">Common questions</h2>
                 </div>
-                <div class="faq">
+                <div class="faq" data-reveal>
                     <details>
                         <summary>How much does Nova Nsawa cost?</summary>
                         <p>Creating an account is free, and cash collections are free. With Nsawa Green, mobile money donations carry a 1% fee capped at GH₵50, and card payments 4%. Nsawa Red is a 10% service fee on collections we manage, capped at GH₵50,000.</p>
@@ -339,7 +341,7 @@
 
         <section class="closing">
             <img class="closing__photo" src="images/landing/family.jpg" alt="" width="1356" height="668" loading="lazy" />
-            <div class="wrap closing__inner">
+            <div class="wrap closing__inner" data-reveal>
                 <div>
                     <h2>Let us carry the collections</h2>
                     <p>Create your account in a few minutes and share your donation link the same day.</p>
@@ -362,7 +364,7 @@
         {
             <section class="section" id="contact" aria-labelledby="contact-title">
                 <div class="wrap">
-                    <div class="section__head">
+                    <div class="section__head" data-reveal>
                         <span class="eyebrow">Contact</span>
                         <h2 id="contact-title">We're here to help</h2>
                         <p>Call, email or chat with us on WhatsApp. We'll help you set up or run the collections.</p>
@@ -370,7 +372,7 @@
                     <div class="contact">
                         @if (_contact.Address.Count > 0)
                         {
-                            <div class="contact__card">
+                            <div class="contact__card" data-reveal style="--i:0">
                                 <span class="contact__icon"><Icon Name="map-pin" /></span>
                                 <h3>Visit us</h3>
                                 <address>
@@ -383,7 +385,7 @@
                         }
                         @if (!string.IsNullOrWhiteSpace(_contact.Phone))
                         {
-                            <div class="contact__card">
+                            <div class="contact__card" data-reveal style="--i:1">
                                 <span class="contact__icon"><Icon Name="phone" /></span>
                                 <h3>Call us</h3>
                                 <a class="contact__main" href="@Tel(_contact.Phone)">@_contact.Phone</a>
@@ -395,7 +397,7 @@
                         }
                         @if (!string.IsNullOrWhiteSpace(_contact.Email) || !string.IsNullOrWhiteSpace(_contact.WhatsApp))
                         {
-                            <div class="contact__card">
+                            <div class="contact__card" data-reveal style="--i:2">
                                 <span class="contact__icon"><Icon Name="info" /></span>
                                 <h3>Write to us</h3>
                                 @if (!string.IsNullOrWhiteSpace(_contact.Email))
@@ -450,6 +452,8 @@
 @code {
     private bool _signedIn;
     private ContactOptions _contact = new();
+    private ElementReference _root;
+    private IJSObjectReference? _reveal;
 
     private sealed record CompareRow(string Feature, bool Green, bool Red);
 
@@ -474,6 +478,28 @@
     {
         _contact = ContactSettings.Value;
         _signedIn = await Auth.IsAuthenticatedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _reveal = await JS.InvokeAsync<IJSObjectReference>("import", "./js/reveal.js");
+            await _reveal.InvokeVoidAsync("init", _root);
+        }
+        catch (JSException) { /* The page is fully readable without the effect. */ }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_reveal is null) return;
+        try
+        {
+            await _reveal.InvokeVoidAsync("dispose", _root);
+            await _reveal.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
     }
 
     private static RenderFragment Mark(bool included) => included

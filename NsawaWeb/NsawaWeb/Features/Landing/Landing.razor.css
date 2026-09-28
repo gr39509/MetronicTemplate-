@@ -202,3 +202,17 @@ img { max-width: 100%; }
 .foot a { color: var(--sidebar-ink); }
 .foot__bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); padding-block: var(--space-5); border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: var(--text-xs); }
 @media (max-width: 800px) { .foot__grid { grid-template-columns: 1fr 1fr; } .foot__brand { grid-column: 1 / -1; } }
+
+/* ---------- Scroll reveal (see wwwroot/js/reveal.js) ---------- */
+/* Only hidden once the script has marked the page ready, so content never depends on JS. */
+.reveal-ready [data-reveal] {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 700ms var(--ease), transform 700ms var(--ease);
+    transition-delay: calc(var(--i, 0) * 90ms);
+}
+.reveal-ready [data-reveal].is-visible { opacity: 1; transform: none; }
+.reveal-ready .photo-band[data-reveal] { transform: none; transition-duration: 1000ms; }
+@media (prefers-reduced-motion: reduce) {
+    .reveal-ready [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
