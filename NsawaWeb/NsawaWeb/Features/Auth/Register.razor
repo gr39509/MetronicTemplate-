@@ -33,11 +33,11 @@
                        autocomplete="email" maxlength="200" placeholder="ama@example.com"
                        @bind="_email" @bind:event="oninput" />
             </Field>
-            <Field Label="Organisation" For="reg-org" Optional="true" Hint="Family, church or company name donors will recognise.">
+            <Field Label="Organisation" For="reg-org" Optional="false" Hint="Family, church or company name donors will recognise.">
                 <input id="reg-org" class="input" type="text" autocomplete="organization" maxlength="150"
                        @bind="_organization" @bind:event="oninput" />
             </Field>
-            <Field Label="Address" For="reg-address" Optional="true">
+            <Field Label="Address" For="reg-address" Optional="false">
                 <input id="reg-address" class="input" type="text" autocomplete="street-address" maxlength="200"
                        placeholder="Town or area"
                        @bind="_address" @bind:event="oninput" />

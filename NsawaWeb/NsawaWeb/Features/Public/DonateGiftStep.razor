@@ -89,7 +89,7 @@
             <div class="summary-line"><span>Shown as</span><strong>@ShownAs</strong></div>
         </div>
 
-        <Button Type="submit" Size="lg" Block="true" Icon="heart" Loading="_busy">
+        <Button Type="submit" Variant="donate" Size="lg" Block="true" Icon="heart" Loading="_busy">
             @(Amount is { } total ? $"Donate {Format.Cedis(total)}" : "Donate")
         </Button>
     </form>

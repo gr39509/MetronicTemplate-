@@ -1,4 +1,6 @@
-/* Nova Nsawa design tokens — "Emerald & Charcoal".
+/* Nova Nsawa design tokens, taken from the NovaDonate brand assets:
+   logo charcoal #3A3A3C and grey #D0D0D4, Adinkra icon green #046838,
+   donation red #DA0B03 and maroon #6E0F02 from the original donor pages.
    Every colour, size and font in the app comes from here. */
 :root {
     /* Type */
@@ -13,40 +15,48 @@
     --text-3xl: 2.25rem;
 
     /* Neutrals (warm, biased toward the logo's charcoal) */
-    --canvas: #f4f4f1;
+    --canvas: #f4f4f5;
     --surface: #ffffff;
-    --surface-muted: #fafaf8;
-    --ink: #1f2124;
-    --ink-soft: #45484d;
-    --muted: #6a6d72;
-    --faint: #9a9da2;
-    --line: #e6e6e1;
-    --line-strong: #d3d3cd;
+    --surface-muted: #fafafb;
+    --ink: #1f1f21;
+    --ink-soft: #444447;
+    --muted: #6c6c70;
+    --faint: #9c9ca1;
+    --line: #e4e4e7;
+    --line-strong: #d0d0d4;
 
     /* Shell */
-    --sidebar: #2b2d30;
-    --sidebar-hover: #34373b;
-    --sidebar-active: #3d4045;
-    --sidebar-ink: #e9e9e5;
-    --sidebar-muted: #9ea1a6;
+    --sidebar: #3a3a3c;
+    --sidebar-hover: #444447;
+    --sidebar-active: #4c4c50;
+    --sidebar-ink: #ececee;
+    --sidebar-muted: #a8a8ad;
 
     /* Brand */
-    --primary: #0e6b53;
-    --primary-hover: #0b5a45;
-    --primary-pressed: #094a39;
-    --primary-soft: #e2f0ea;
-    --primary-ink: #0b5642;
+    --primary: #046838;
+    --primary-hover: #03572f;
+    --primary-pressed: #024625;
+    --primary-soft: #e2f2e8;
+    --primary-ink: #035a30;
     --on-primary: #ffffff;
+    --primary-rgb: 4 104 56;
+    --primary-on-dark: #6fcf97;       /* green that reads on the charcoal panels */
+    --primary-on-dark-rgb: 111 207 151;
+
+    /* Donation red: the original donor pages' Donate button. Donor-facing calls to action only. */
+    --donate: #da0b03;
+    --donate-hover: #b30902;
+    --donate-pressed: #6e0f02;
     --gold: #9a7424;
     --gold-soft: #f6eedb;
 
     /* Status */
-    --success: #1b7a4b;
-    --success-soft: #e3f3ea;
+    --success: #0c8f49;
+    --success-soft: #e3f5ea;
     --warning: #9a5b05;
     --warning-soft: #fdf1dc;
-    --danger: #b42318;
-    --danger-hover: #971c13;
+    --danger: #b3190f;
+    --danger-hover: #6e0f02;
     --danger-soft: #fdecea;
     --info: #1d5fa8;
     --info-soft: #e8f0fa;
@@ -56,10 +66,10 @@
     --radius: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
-    --shadow-sm: 0 1px 2px rgba(31, 33, 36, 0.06);
-    --shadow: 0 1px 3px rgba(31, 33, 36, 0.08), 0 4px 12px rgba(31, 33, 36, 0.05);
-    --shadow-lg: 0 12px 32px rgba(31, 33, 36, 0.16);
-    --focus-ring: 0 0 0 3px rgba(14, 107, 83, 0.28);
+    --shadow-sm: 0 1px 2px rgba(31, 31, 33, 0.06);
+    --shadow: 0 1px 3px rgba(31, 31, 33, 0.08), 0 4px 12px rgba(31, 31, 33, 0.05);
+    --shadow-lg: 0 12px 32px rgba(31, 31, 33, 0.16);
+    --focus-ring: 0 0 0 3px rgb(var(--primary-rgb) / 0.28);
 
     /* Space */
     --space-1: 4px;
