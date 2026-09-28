@@ -495,11 +495,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
     display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-8);
     padding: var(--space-10);
 }
-.auth__aside::before {
-    content: ""; position: absolute; inset: auto -20% -35% auto; width: 80%; aspect-ratio: 1; border-radius: 50%;
-    background: radial-gradient(closest-side, rgb(var(--primary-rgb) / 0.55), transparent);
-    pointer-events: none;
-}
 .auth__logo { display: inline-block; background: #fff; border-radius: var(--radius); padding: 8px 12px; width: 200px; }
 .auth__pitch { position: relative; display: grid; gap: var(--space-4); max-width: 44ch; }
 .auth__pitch h1 { font-size: var(--text-3xl); color: #fff; }
