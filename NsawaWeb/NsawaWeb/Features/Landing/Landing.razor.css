@@ -80,13 +80,13 @@ img { max-width: 100%; }
     box-shadow: var(--shadow);
 }
 .package::before { content: ""; position: absolute; left: var(--space-8); right: var(--space-8); top: -1px; height: 4px; border-radius: 0 0 4px 4px; }
-.package--green::before { background: var(--primary); }
+.package--green::before { background: var(--package-green); }
 .package--red::before { background: var(--donate); }
 .package__head { display: grid; gap: var(--space-2); }
 .package__head h3 { font-family: var(--font-display); font-weight: 500; font-size: var(--text-2xl); }
 .package__head p { color: var(--muted); }
 .package__badge { justify-self: start; font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
-.package--green .package__badge { background: var(--primary-soft); color: var(--primary-ink); }
+.package--green .package__badge { background: var(--package-green-soft); color: var(--package-green); }
 .package--red .package__badge { background: var(--danger-soft); color: var(--donate-pressed); }
 .package__price { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; padding-block: var(--space-4); border-block: 1px solid var(--line); }
 .package__price strong { font-family: var(--font-display); font-size: 2.5rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -94,9 +94,11 @@ img { max-width: 100%; }
 .package__list { display: grid; gap: var(--space-3); padding: 0; margin: 0; list-style: none; flex: 1; align-content: start; }
 .package__list li { display: flex; gap: var(--space-3); align-items: flex-start; }
 .package__list ::deep svg { flex: none; margin-top: 3px; }
-.package--green .package__list ::deep svg { color: var(--primary); }
+.package--green .package__list ::deep svg { color: var(--package-green); }
 .package--red .package__list ::deep svg { color: var(--donate); }
 .package a.btn--donate { color: #fff; }
+.package--green ::deep .btn--primary { background: var(--sidebar); }
+.package--green ::deep .btn--primary:hover { background: var(--ink); }
 @media (max-width: 800px) { .packages { grid-template-columns: minmax(0, 1fr); } .package { padding: var(--space-6); } }
 
 .compare { max-width: 980px; margin: var(--space-10) auto 0; }

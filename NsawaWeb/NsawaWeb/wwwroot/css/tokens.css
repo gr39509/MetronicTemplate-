@@ -1,6 +1,7 @@
-/* Nova Nsawa design tokens, taken from the NovaDonate brand assets:
-   logo charcoal #3A3A3C and grey #D0D0D4, Adinkra icon green #046838,
-   donation red #DA0B03 and maroon #6E0F02 from the original donor pages.
+/* Nova Nsawa design tokens: Ghanaian funeral colours.
+   Red and black as the base (logo charcoal #3A3A3C, grey #D0D0D4, donation red #DA0B03,
+   maroon #6E0F02), with a little gold as the accent. Green is kept only for success states
+   and the "Nsawa Green" package name.
    Every colour, size and font in the app comes from here. */
 :root {
     /* Type */
@@ -33,30 +34,33 @@
     --sidebar-muted: #a8a8ad;
 
     /* Brand */
-    --primary: #046838;
-    --primary-hover: #03572f;
-    --primary-pressed: #024625;
-    --primary-soft: #e2f2e8;
-    --primary-ink: #035a30;
+    --primary: #b80d05;               /* funeral red, deep enough for white text */
+    --primary-hover: #960a04;
+    --primary-pressed: #6e0f02;
+    --primary-soft: #fcebea;
+    --primary-ink: #8e0b04;
     --on-primary: #ffffff;
-    --primary-rgb: 4 104 56;
-    --primary-on-dark: #6fcf97;       /* green that reads on the charcoal panels */
-    --primary-on-dark-rgb: 111 207 151;
+    --primary-rgb: 184 13 5;
+    --primary-on-dark: #d9a441;       /* gold accent that reads on the charcoal panels */
+    --primary-on-dark-rgb: 217 164 65;
 
     /* Donation red: the original donor pages' Donate button. Donor-facing calls to action only. */
     --donate: #da0b03;
     --donate-hover: #b30902;
     --donate-pressed: #6e0f02;
     --gold: #9a7424;
-    --gold-soft: #f6eedb;
+    --gold-bright: #d9a441;
+    --gold-soft: #f7eeda;
+    --package-green: #046838;         /* the "Nsawa Green" package only */
+    --package-green-soft: #e2f2e8;
 
     /* Status */
     --success: #0c8f49;
     --success-soft: #e3f5ea;
     --warning: #9a5b05;
     --warning-soft: #fdf1dc;
-    --danger: #b3190f;
-    --danger-hover: #6e0f02;
+    --danger: #7a1209;                /* darker than the brand red so delete never looks like a main action */
+    --danger-hover: #5a0d06;
     --danger-soft: #fdecea;
     --info: #1d5fa8;
     --info-soft: #e8f0fa;
@@ -69,7 +73,7 @@
     --shadow-sm: 0 1px 2px rgba(31, 31, 33, 0.06);
     --shadow: 0 1px 3px rgba(31, 31, 33, 0.08), 0 4px 12px rgba(31, 31, 33, 0.05);
     --shadow-lg: 0 12px 32px rgba(31, 31, 33, 0.16);
-    --focus-ring: 0 0 0 3px rgb(var(--primary-rgb) / 0.28);
+    --focus-ring: 0 0 0 3px rgb(217 164 65 / 0.45);
 
     /* Space */
     --space-1: 4px;

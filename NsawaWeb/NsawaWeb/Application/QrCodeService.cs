@@ -6,7 +6,7 @@ namespace NsawaWeb.Application;
 /// <summary>Builds the printable donation QR code shown at events.</summary>
 public sealed class QrCodeService
 {
-    private static readonly SKColor BrandGreen = new(0x04, 0x68, 0x38);
+    private static readonly SKColor BrandRed = new(0xB8, 0x0D, 0x05);
 
     /// <returns>A PNG as a data URI, ready for an img src or a download link.</returns>
     public string CreateDonationQrDataUri(string donateUrl)
@@ -24,7 +24,7 @@ public sealed class QrCodeService
         // A badge in the centre; error correction level H leaves room for it.
         float cx = source.Width / 2f, cy = source.Height / 2f, radius = source.Width / 10f;
         using var ring = new SKPaint { Color = SKColors.White, IsAntialias = true };
-        using var fill = new SKPaint { Color = BrandGreen, IsAntialias = true };
+        using var fill = new SKPaint { Color = BrandRed, IsAntialias = true };
         canvas.DrawCircle(cx, cy, radius + 10, ring);
         canvas.DrawCircle(cx, cy, radius, fill);
 
