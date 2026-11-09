@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- shortcut: plain HTTP is allowed to every host because the Nsawa API (Api:BaseUrl) has no HTTPS yet.
+     Delete this file and the manifest attribute once it does. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

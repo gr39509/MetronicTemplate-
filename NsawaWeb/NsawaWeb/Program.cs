@@ -36,6 +36,7 @@ builder.Services.AddHttpClient(ImageProxyClient.Name, (sp, http) =>
     http.Timeout = TimeSpan.FromSeconds(20);
 });
 
+builder.Services.AddScoped<ITokenStorage, BrowserTokenStorage>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
@@ -60,6 +61,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapControllers();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(typeof(NsawaWeb.Components.Layout.AppShell).Assembly);
 
 app.Run();

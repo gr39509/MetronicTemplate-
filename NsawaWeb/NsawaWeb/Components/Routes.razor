@@ -1,4 +1,4 @@
-<Router AppAssembly="typeof(Program).Assembly">
+<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="[typeof(NsawaWeb.Components.Layout.AppShell).Assembly]">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.AppShell)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />

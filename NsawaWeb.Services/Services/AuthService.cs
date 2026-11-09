@@ -1,13 +1,12 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Microsoft.JSInterop;
 
 namespace NsawaWeb.Services.Services;
 
 /// <summary>
 /// Holds the signed-in user's JWT for the current circuit.
-/// The token is persisted in browser localStorage and cached in memory.
+/// The token is persisted through ITokenStorage (browser localStorage on the web, secure storage in the app) and cached in memory.
 /// This class never navigates; callers decide where to go after sign-in or sign-out.
 /// </summary>
 public class AuthService
@@ -16,7 +15,7 @@ public class AuthService
     private const string UserNameKey = "userName";
     private const string FullNameKey = "fullName";
 
-    private readonly IJSRuntime _jsRuntime;
+    private readonly ITokenStorage _storage;
     private readonly ILogger<AuthService> _logger;
     private string? _cachedToken;
     private ClaimsPrincipal? _cachedUser;
@@ -24,9 +23,9 @@ public class AuthService
     private bool _storageLoaded;
     private CustomAuthStateProvider? _authStateProvider;
 
-    public AuthService(IJSRuntime jsRuntime, ILogger<AuthService> logger)
+    public AuthService(ITokenStorage storage, ILogger<AuthService> logger)
     {
-        _jsRuntime = jsRuntime;
+        _storage = storage;
         _logger = logger;
     }
 
@@ -96,11 +95,11 @@ public class AuthService
 
     public async Task LoginAsync(string token, string userName, string? fullName = null)
     {
-        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TokenKey, token);
-        await _jsRuntime.InvokeVoidAsync("localStorage.setItem", UserNameKey, userName);
+        await _storage.SetAsync(TokenKey, token);
+        await _storage.SetAsync(UserNameKey, userName);
         if (!string.IsNullOrWhiteSpace(fullName))
         {
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", FullNameKey, fullName);
+            await _storage.SetAsync(FullNameKey, fullName);
         }
 
         _cachedToken = token;
@@ -126,9 +125,9 @@ public class AuthService
         {
             try
             {
-                await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", key);
+                await _storage.RemoveAsync(key);
             }
-            catch (JSException ex)
+            catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Could not clear {Key} from storage", key);
             }
@@ -141,19 +140,7 @@ public class AuthService
         _authStateProvider?.NotifyAuthenticationStateChanged();
     }
 
-    private async Task<string?> ReadStorageAsync(string key)
-    {
-        try
-        {
-            var value = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", key);
-            return string.IsNullOrWhiteSpace(value) ? null : value;
-        }
-        catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException or TaskCanceledException)
-        {
-            // JS is unavailable (no interactive circuit yet, or the circuit closed).
-            return null;
-        }
-    }
+    private Task<string?> ReadStorageAsync(string key) => _storage.GetAsync(key);
 
     private static DateTime? ReadExpiry(string token)
     {

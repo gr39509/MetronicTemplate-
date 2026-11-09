@@ -8,11 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="QRCoder" Version="1.7.0" />
-        <PackageReference Include="SkiaSharp" Version="3.119.1" />
         <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
-        <ProjectReference Include="..\..\NsawaWeb.Services\NsawaWeb.Services.csproj" />
-        <PackageReference Include="Humanizer.Core" Version="3.0.1" />
+        <ProjectReference Include="..\..\NsawaWeb.UI\NsawaWeb.UI.csproj" />
     </ItemGroup>
 
     <ItemGroup>

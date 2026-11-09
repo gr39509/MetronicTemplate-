@@ -9,6 +9,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["NsawaWeb/NsawaWeb/NsawaWeb.csproj", "NsawaWeb/NsawaWeb/"]
 COPY ["NsawaWeb.Services/NsawaWeb.Services.csproj", "NsawaWeb.Services/"]
+COPY ["NsawaWeb.UI/NsawaWeb.UI.csproj", "NsawaWeb.UI/"]
 RUN dotnet restore "NsawaWeb/NsawaWeb/NsawaWeb.csproj"
 COPY . .
 WORKDIR "/src/NsawaWeb/NsawaWeb"

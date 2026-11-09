@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage SafeAreaEdges="All" BackgroundColor="White"
+             xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:components="clr-namespace:NsawaMobile.Components"
+             x:Class="NsawaMobile.MainPage">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Native offline notice, shown while the phone has no internet. -->
+        <Label x:Name="offlineBar" IsVisible="False" Text="You're offline. Changes and new data will load when you reconnect."
+               BackgroundColor="#3A3A3C" TextColor="White" FontSize="13" Padding="16,8" HorizontalTextAlignment="Center"
+               SemanticProperties.Description="You're offline" />
+
+        <!-- Pull down from the top of any page to reload it. -->
+        <RefreshView x:Name="refreshView" Grid.Row="1" RefreshColor="#B80D05" Refreshing="OnRefreshing">
+            <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html" StartPath="/home">
+                <BlazorWebView.RootComponents>
+                    <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
+                </BlazorWebView.RootComponents>
+            </BlazorWebView>
+        </RefreshView>
+
+        <!-- App lock: covers everything until the user unlocks with fingerprint, face or screen lock. -->
+        <Grid x:Name="lockScreen" Grid.RowSpan="2" IsVisible="False" BackgroundColor="White" Padding="32"
+              RowDefinitions="*,Auto,Auto,Auto,*" RowSpacing="16">
+            <Image Grid.Row="1" Source="nsawa_logo.png" WidthRequest="200" HeightRequest="34" Aspect="AspectFit"
+                   SemanticProperties.Description="Nova Nsawa" />
+            <Label Grid.Row="2" Text="Nova Nsawa is locked" FontSize="20" FontAttributes="Bold" TextColor="#1F2023"
+                   HorizontalTextAlignment="Center" />
+            <Button Grid.Row="3" Text="Unlock" Clicked="OnUnlockClicked" BackgroundColor="#B80D05" TextColor="White"
+                    CornerRadius="10" HeightRequest="48" WidthRequest="200" HorizontalOptions="Center" />
+        </Grid>
+    </Grid>
+
+</ContentPage>

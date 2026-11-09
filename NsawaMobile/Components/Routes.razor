@@ -1,0 +1,10 @@
+﻿<Router AppAssembly="typeof(NsawaWeb.Components.Layout.AppShell).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(NsawaWeb.Components.Layout.AppShell)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Page not found · Nova Nsawa</PageTitle>
+        <NsawaWeb.Features.Common.NotFoundContent />
+    </NotFound>
+</Router>
