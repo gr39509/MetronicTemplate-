@@ -35,7 +35,7 @@
             }
             else
             {
-                <div class="table-wrap">
+                <div class="table-wrap collapse-mobile">
                     <table class="table">
                         <thead>
                             <tr>
@@ -73,6 +73,33 @@
                             }
                         </tbody>
                     </table>
+                </div>
+                <div class="list-cards">
+                    @foreach (var g in _groups)
+                    {
+                        <div class="list-card">
+                            <div class="row row--between" style="flex-wrap:nowrap">
+                                <span class="cell-strong">@g.GroupName</span>
+                                <div class="row" style="flex-wrap:nowrap">
+                                    <Button Variant="ghost" Size="sm" IconOnly="true" Icon="edit"
+                                            aria-label="@($"Rename {g.GroupName}")" OnClick="() => OpenRename(g)" />
+                                    <Button Variant="ghost" Size="sm" IconOnly="true" Icon="trash"
+                                            aria-label="@($"Delete {g.GroupName}")" OnClick="() => AskDelete(g)" />
+                                </div>
+                            </div>
+                            <div class="list-card__row">
+                                @if (g.IsActive)
+                                {
+                                    <Badge Kind="success" Dot="true">Active</Badge>
+                                }
+                                else
+                                {
+                                    <Badge Dot="true">Inactive</Badge>
+                                }
+                                <span class="muted">Added @Format.Date(g.CreatedAt)@(string.IsNullOrWhiteSpace(g.CreatedBy) ? "" : $" by {g.CreatedBy}")</span>
+                            </div>
+                        </div>
+                    }
                 </div>
             }
         </ChildContent>
